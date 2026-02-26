@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { GitMerge, Github, Instagram, Linkedin } from "lucide-react"
+import { GitMerge, Github, Instagram, Linkedin, Code2 } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -62,6 +62,15 @@ export default function Footer() {
               >
                 <Linkedin className="h-5 w-5 mr-2" />
                 <span>LinkedIn</span>
+              </Link>
+              <Link
+                href="https://leetcode.com/u/ShivamMalge/"
+                className="text-muted-foreground hover:text-foreground transition-colors flex items-center"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Code2 className="h-5 w-5 mr-2" />
+                <span>LeetCode</span>
               </Link>
               <Link
                 href="https://www.instagram.com/epsilon_edge?igsh=MTduNDFqdWd5NGlwMQ=="

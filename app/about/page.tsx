@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Github, Linkedin, Instagram } from "lucide-react"
+import { Github, Linkedin, Instagram, Code2 } from "lucide-react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 
@@ -83,6 +83,15 @@ export default function AboutPage() {
                 >
                   <Linkedin className="h-5 w-5 mr-2" />
                   <span>LinkedIn</span>
+                </a>
+                <a
+                  href="https://leetcode.com/u/ShivamMalge/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Code2 className="h-5 w-5 mr-2" />
+                  <span>LeetCode</span>
                 </a>
                 <a
                   href="https://github.com/ShivamMalge"
