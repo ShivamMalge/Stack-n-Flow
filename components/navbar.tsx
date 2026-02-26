@@ -3,12 +3,23 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X } from "lucide-react"
+import { useSession, signIn, signOut } from "next-auth/react"
+import { Menu, X, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Navbar() {
   const pathname = usePathname()
+  const { data: session, status } = useSession()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const navItems = [
@@ -39,7 +50,48 @@ export default function Navbar() {
               {item.name}
             </Link>
           ))}
-          <ModeToggle />
+
+          <div className="flex items-center gap-4 border-l pl-4 ml-2">
+            <ModeToggle />
+
+            {status === "loading" ? (
+              <Skeleton className="h-9 w-20 rounded-md" />
+            ) : session?.user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full overflow-hidden border">
+                    {session.user.image ? (
+                      <img src={session.user.image} alt="Avatar" className="object-cover" />
+                    ) : (
+                      <User className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{session.user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {session.user.email}
+                      </p>
+                      {session.user.role && (
+                        <p className="text-xs font-semibold text-primary mt-1 uppercase tracking-wider">{session.user.role}</p>
+                      )}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button onClick={() => signIn("google")} variant="default" size="sm">
+                Sign In
+              </Button>
+            )}
+          </div>
         </nav>
 
         {/* Mobile Navigation */}
@@ -72,6 +124,38 @@ export default function Navbar() {
               {item.name}
             </Link>
           ))}
+
+          <div className="border-t mt-2 pt-4 px-4 flex flex-col gap-4">
+            {status === "loading" ? (
+              <Skeleton className="h-10 w-full rounded-md" />
+            ) : session?.user ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full overflow-hidden border shrink-0">
+                    {session.user.image ? (
+                      <img src={session.user.image} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-muted flex items-center justify-center">
+                        <User className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{session.user.name}</span>
+                    <span className="text-xs text-muted-foreground">{session.user.role || "Pending Onboarding"}</span>
+                  </div>
+                </div>
+                <Button onClick={() => signOut()} variant="outline" className="w-full text-destructive" size="sm">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={() => { setIsMenuOpen(false); signIn("google"); }} className="w-full">
+                Sign In
+              </Button>
+            )}
+          </div>
         </nav>
       </div>
     </header>
