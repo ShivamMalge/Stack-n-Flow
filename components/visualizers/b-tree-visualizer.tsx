@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -91,8 +91,58 @@ export default function BTreeVisualizer() {
     initialY: 0,
   })
 
+  // Mouse move handler
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragStateRef.current.isDragging) return
+
+    const { nodeId, startX, startY, initialX, initialY } = dragStateRef.current
+    const dx = (e.clientX - startX) / scale
+    const dy = (e.clientY - startY) / scale
+
+    setNodePositions((prev) => ({
+      ...prev,
+      [nodeId!]: {
+        x: initialX + dx,
+        y: initialY + dy,
+      },
+    }))
+  }, [scale])
+
+  // Touch move handler
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!dragStateRef.current.isDragging || e.touches.length === 0) return
+
+    e.preventDefault() // Prevent scrolling while dragging
+
+    const { nodeId, startX, startY, initialX, initialY } = dragStateRef.current
+    const dx = (e.touches[0].clientX - startX) / scale
+    const dy = (e.touches[0].clientY - startY) / scale
+
+    setNodePositions((prev) => ({
+      ...prev,
+      [nodeId!]: {
+        x: initialX + dx,
+        y: initialY + dy,
+      },
+    }))
+  }, [scale])
+
+  // End handlers
+  const handleMouseUp = useCallback(() => {
+    dragStateRef.current.isDragging = false
+    document.removeEventListener("mousemove", handleMouseMove)
+    document.removeEventListener("mouseup", handleMouseUp)
+  }, [handleMouseMove]) // We'll add this to the callback signature below
+
+  const handleTouchEnd = useCallback(() => {
+    dragStateRef.current.isDragging = false
+    document.removeEventListener("touchmove", handleTouchMove)
+    document.removeEventListener("touchend", handleTouchEnd)
+  }, [handleTouchMove])
+
   // Initialize with an empty tree
   useEffect(() => {
+    isMountedRef.current = true
     setRoot(null)
     setNextId(1)
 
@@ -108,7 +158,7 @@ export default function BTreeVisualizer() {
       document.removeEventListener("touchmove", handleTouchMove)
       document.removeEventListener("touchend", handleTouchEnd)
     }
-  }, [])
+  }, [handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd])
 
   // Create a new B-Tree node
   const createNode = (isLeaf: boolean): BTreeNode => {
@@ -623,54 +673,8 @@ export default function BTreeVisualizer() {
     }
   }
 
-  // Mouse move handler
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!dragStateRef.current.isDragging) return
 
-    const { nodeId, startX, startY, initialX, initialY } = dragStateRef.current
-    const dx = (e.clientX - startX) / scale
-    const dy = (e.clientY - startY) / scale
 
-    setNodePositions((prev) => ({
-      ...prev,
-      [nodeId!]: {
-        x: initialX + dx,
-        y: initialY + dy,
-      },
-    }))
-  }
-
-  // Touch move handler
-  const handleTouchMove = (e: TouchEvent) => {
-    if (!dragStateRef.current.isDragging || e.touches.length === 0) return
-
-    e.preventDefault() // Prevent scrolling while dragging
-
-    const { nodeId, startX, startY, initialX, initialY } = dragStateRef.current
-    const dx = (e.touches[0].clientX - startX) / scale
-    const dy = (e.touches[0].clientY - startY) / scale
-
-    setNodePositions((prev) => ({
-      ...prev,
-      [nodeId!]: {
-        x: initialX + dx,
-        y: initialY + dy,
-      },
-    }))
-  }
-
-  // End handlers
-  const handleMouseUp = () => {
-    dragStateRef.current.isDragging = false
-    document.removeEventListener("mousemove", handleMouseMove)
-    document.removeEventListener("mouseup", handleMouseUp)
-  }
-
-  const handleTouchEnd = () => {
-    dragStateRef.current.isDragging = false
-    document.removeEventListener("touchmove", handleTouchMove)
-    document.removeEventListener("touchend", handleTouchEnd)
-  }
 
   // Define zoom and pan functions
   const handleZoomIn = () => {

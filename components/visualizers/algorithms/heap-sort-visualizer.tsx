@@ -74,7 +74,7 @@ function generateHeapSort(values: number[]): AnimationFrame<HSSFrame>[] {
             arr[i].state = "swapping"; arr[largest].state = "swapping"
             frames.push(frame(arr, phase, hs, `Swap ${arr[i].value} ↔ ${arr[largest].value}`, 5, HEAPIFY_CODE));
             [arr[i].value, arr[largest].value] = [arr[largest].value, arr[i].value]
-            heapifyDown(largest, hs)
+            heapifyDown(largest, hs, phase)
         }
     }
 
