@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Play, RotateCcw, Plus, ArrowDown, ArrowUp } from "lucide-react"
+import { RotateCcw, Plus, ArrowDown, ArrowUp, Shuffle } from "lucide-react"
+import AnimationControls from "@/components/ui/animation-controls"
+import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
 type ArrayItem = {
   id: number
@@ -15,252 +17,218 @@ type ArrayItem = {
   merged?: boolean
 }
 
+type DivideConquerFrame = {
+  array: ArrayItem[]
+  currentPhase: "divide" | "merge" | "none"
+  dividePhase: { arrays: number[][]; level: number }[]
+  mergePhase: { arrays: number[][]; level: number }[]
+  stepDescription: string
+}
+
 export default function DivideConquerVisualizer() {
   const [array, setArray] = useState<ArrayItem[]>([])
   const [inputValue, setInputValue] = useState("")
-  const [animating, setAnimating] = useState(false)
-  const [steps, setSteps] = useState<string[]>([])
-  const [currentStep, setCurrentStep] = useState(0)
   const [nextId, setNextId] = useState(1)
+  const [steps, setSteps] = useState<string[]>([])
+  const [currentPhase, setCurrentPhase] = useState<"divide" | "merge" | "none">("none")
   const [dividePhase, setDividePhase] = useState<{ arrays: number[][]; level: number }[]>([])
   const [mergePhase, setMergePhase] = useState<{ arrays: number[][]; level: number }[]>([])
-  const [currentPhase, setCurrentPhase] = useState<"divide" | "merge" | "none">("none")
 
-  // Function to add a new element to the array
+  const onFrameChange = useCallback((snapshot: DivideConquerFrame) => {
+    setArray(snapshot.array)
+    setCurrentPhase(snapshot.currentPhase)
+    setDividePhase(snapshot.dividePhase)
+    setMergePhase(snapshot.mergePhase)
+  }, [])
+
+  const player = useAnimationPlayer<DivideConquerFrame>(onFrameChange)
+
   const handleAddElement = () => {
-    if (!inputValue || animating) return
-
+    if (!inputValue || player.isPlaying) return
     const value = Number.parseInt(inputValue)
-
-    // Add validation to limit value to 500
-    if (value > 500) {
-      alert("Please enter a value not greater than 500")
+    if (isNaN(value) || value > 500) {
+      if (value > 500) alert("Please enter a value not greater than 500")
       return
     }
-
-    // Add the new element
-    setArray([...array, { id: nextId, value }])
-    setNextId(nextId + 1)
-
+    setArray((prev) => [...prev, { id: nextId, value }])
+    setNextId((prev) => prev + 1)
     setInputValue("")
   }
 
-  // Function to clear the array
   const handleClearArray = () => {
-    if (animating) return
-
+    if (player.isPlaying) return
     setArray([])
     setSteps([])
-    setCurrentStep(0)
+    setCurrentPhase("none")
     setDividePhase([])
     setMergePhase([])
+    player.clear()
+  }
+
+  const handleGenerateRandom = () => {
+    if (player.isPlaying) return
+    const count = Math.floor(Math.random() * 5) + 4
+    const newArray: ArrayItem[] = []
+    let id = nextId
+    for (let i = 0; i < count; i++) {
+      newArray.push({ id: id++, value: Math.floor(Math.random() * 80) + 1 })
+    }
+    setNextId(id)
+    setArray(newArray)
+    setSteps([])
     setCurrentPhase("none")
+    setDividePhase([])
+    setMergePhase([])
+    player.clear()
   }
 
   const handleMergeSort = () => {
-    if (animating || array.length <= 1) return
+    if (player.isPlaying || array.length <= 1) return
 
-    setAnimating(true)
-    setSteps([])
-    setCurrentStep(0)
-    setDividePhase([])
-    setMergePhase([])
-    setCurrentPhase("none")
-
-    // Reset all highlights
-    setArray((array) =>
-      array.map((item) => ({
-        ...item,
-        highlighted: false,
-        divideLevel: undefined,
-        merging: false,
-        merged: false,
-      })),
-    )
-
-    const animations: (() => void)[] = []
+    const frames: AnimationFrame<DivideConquerFrame>[] = []
     const sortingSteps: string[] = []
-    const arrayCopy = [...array]
 
-    sortingSteps.push("Starting Merge Sort algorithm")
+    const cleanArray = array.map((item) => ({
+      ...item,
+      highlighted: false,
+      divideLevel: undefined,
+      merging: false,
+      merged: false,
+    }))
 
-    // Track the divide and merge phases for visualization
+    const arr = cleanArray.map((item) => ({ ...item }))
     const dividePhaseArrays: { arrays: number[][]; level: number }[] = []
     const mergePhaseArrays: { arrays: number[][]; level: number }[] = []
 
-    // Merge sort implementation with animations
+    sortingSteps.push("Starting Merge Sort algorithm")
+    frames.push({
+      snapshot: {
+        array: arr.map((i) => ({ ...i })),
+        currentPhase: "none",
+        dividePhase: [],
+        mergePhase: [],
+        stepDescription: "Starting Merge Sort",
+      },
+      description: "Starting Merge Sort algorithm",
+    })
+
     const mergeSort = (arr: ArrayItem[], start: number, end: number, level = 0) => {
-      if (start >= end) {
-        return
-      }
+      if (start >= end) return
 
       const mid = Math.floor((start + end) / 2)
 
-      // Divide phase
-      sortingSteps.push(
-        `Dividing array at level ${level}: [${arr
-          .slice(start, end + 1)
-          .map((item) => item.value)
-          .join(", ")}]`,
-      )
+      const desc = `Dividing [${arr.slice(start, end + 1).map((i) => i.value).join(", ")}] at level ${level}`
+      sortingSteps.push(desc)
 
-      // Record the divide phase for visualization
       const currentArrays = []
-      if (start <= mid) {
-        currentArrays.push(arr.slice(start, mid + 1).map((item) => item.value))
-      }
-      if (mid + 1 <= end) {
-        currentArrays.push(arr.slice(mid + 1, end + 1).map((item) => item.value))
-      }
-
+      if (start <= mid) currentArrays.push(arr.slice(start, mid + 1).map((i) => i.value))
+      if (mid + 1 <= end) currentArrays.push(arr.slice(mid + 1, end + 1).map((i) => i.value))
       dividePhaseArrays.push({ arrays: currentArrays, level })
 
-      // Highlight the divide phase
-      animations.push(() => {
-        setCurrentPhase("divide")
-        setDividePhase(dividePhaseArrays.slice(0, level + 1))
-
-        setArray((currentArray) => {
-          return currentArray.map((item, idx) => ({
+      frames.push({
+        snapshot: {
+          array: arr.map((item, idx) => ({
             ...item,
             highlighted: idx >= start && idx <= end,
             divideLevel: level,
-          }))
-        })
+          })),
+          currentPhase: "divide",
+          dividePhase: dividePhaseArrays.map((d) => ({ ...d, arrays: d.arrays.map((a) => [...a]) })),
+          mergePhase: mergePhaseArrays.map((m) => ({ ...m, arrays: m.arrays.map((a) => [...a]) })),
+          stepDescription: desc,
+        },
+        description: desc,
       })
 
-      // Recursively sort the sub-arrays
       mergeSort(arr, start, mid, level + 1)
       mergeSort(arr, mid + 1, end, level + 1)
-
-      // Merge phase
       merge(arr, start, mid, end, level)
     }
 
     const merge = (arr: ArrayItem[], start: number, mid: number, end: number, level: number) => {
-      sortingSteps.push(
-        `Merging at level ${level}: [${arr
-          .slice(start, mid + 1)
-          .map((item) => item.value)
-          .join(", ")}] and [${arr
-          .slice(mid + 1, end + 1)
-          .map((item) => item.value)
-          .join(", ")}]`,
-      )
+      const desc = `Merging [${arr.slice(start, mid + 1).map((i) => i.value).join(", ")}] and [${arr.slice(mid + 1, end + 1).map((i) => i.value).join(", ")}]`
+      sortingSteps.push(desc)
 
-      // Highlight the merge phase
-      animations.push(() => {
-        setCurrentPhase("merge")
-
-        setArray((currentArray) => {
-          return currentArray.map((item, idx) => ({
+      frames.push({
+        snapshot: {
+          array: arr.map((item, idx) => ({
             ...item,
             highlighted: idx >= start && idx <= end,
             merging: idx >= start && idx <= end,
             divideLevel: undefined,
-          }))
-        })
+          })),
+          currentPhase: "merge",
+          dividePhase: dividePhaseArrays.map((d) => ({ ...d, arrays: d.arrays.map((a) => [...a]) })),
+          mergePhase: mergePhaseArrays.map((m) => ({ ...m, arrays: m.arrays.map((a) => [...a]) })),
+          stepDescription: desc,
+        },
+        description: desc,
       })
 
-      // Create temporary arrays
-      const leftSize = mid - start + 1
-      const rightSize = end - mid
+      const leftArr = arr.slice(start, mid + 1).map((i) => ({ ...i }))
+      const rightArr = arr.slice(mid + 1, end + 1).map((i) => ({ ...i }))
 
-      const leftArray = []
-      const rightArray = []
-
-      for (let i = 0; i < leftSize; i++) {
-        leftArray.push({ ...arr[start + i] })
-      }
-
-      for (let i = 0; i < rightSize; i++) {
-        rightArray.push({ ...arr[mid + 1 + i] })
-      }
-
-      // Merge the temporary arrays back into arr
-      let i = 0,
-        j = 0,
-        k = start
-
-      while (i < leftSize && j < rightSize) {
-        if (leftArray[i].value <= rightArray[j].value) {
-          arr[k] = { ...leftArray[i], merged: true }
-          i++
+      let i = 0, j = 0, k = start
+      while (i < leftArr.length && j < rightArr.length) {
+        if (leftArr[i].value <= rightArr[j].value) {
+          arr[k] = { ...leftArr[i], merged: true }; i++
         } else {
-          arr[k] = { ...rightArray[j], merged: true }
-          j++
+          arr[k] = { ...rightArr[j], merged: true }; j++
         }
         k++
       }
+      while (i < leftArr.length) { arr[k] = { ...leftArr[i], merged: true }; i++; k++ }
+      while (j < rightArr.length) { arr[k] = { ...rightArr[j], merged: true }; j++; k++ }
 
-      // Copy the remaining elements of leftArray, if any
-      while (i < leftSize) {
-        arr[k] = { ...leftArray[i], merged: true }
-        i++
-        k++
-      }
-
-      // Copy the remaining elements of rightArray, if any
-      while (j < rightSize) {
-        arr[k] = { ...rightArray[j], merged: true }
-        j++
-        k++
-      }
-
-      // Record the merge phase for visualization
-      const mergedArray = arr.slice(start, end + 1).map((item) => item.value)
+      const mergedArray = arr.slice(start, end + 1).map((i) => i.value)
       mergePhaseArrays.push({ arrays: [mergedArray], level })
 
-      // Show the merged array
-      animations.push(() => {
-        setMergePhase(mergePhaseArrays.slice(0, mergePhaseArrays.length))
+      const mergedDesc = `Merged into [${mergedArray.join(", ")}]`
+      sortingSteps.push(mergedDesc)
 
-        setArray((currentArray) => {
-          const newArray = [...currentArray]
-          for (let i = start; i <= end; i++) {
-            newArray[i] = { ...arr[i], merging: false, merged: true }
-          }
-          return newArray
-        })
+      frames.push({
+        snapshot: {
+          array: arr.map((item, idx) => ({
+            ...item,
+            merging: false,
+            merged: idx >= start && idx <= end,
+          })),
+          currentPhase: "merge",
+          dividePhase: dividePhaseArrays.map((d) => ({ ...d, arrays: d.arrays.map((a) => [...a]) })),
+          mergePhase: mergePhaseArrays.map((m) => ({ ...m, arrays: m.arrays.map((a) => [...a]) })),
+          stepDescription: mergedDesc,
+        },
+        description: mergedDesc,
       })
     }
 
-    // Start the sorting process
-    mergeSort(arrayCopy, 0, arrayCopy.length - 1)
+    mergeSort(arr, 0, arr.length - 1)
 
-    // Final animation to show the sorted array
-    animations.push(() => {
-      setArray(arrayCopy.map((item) => ({ ...item, merged: true })))
-      sortingSteps.push("Array is now sorted!")
+    sortingSteps.push("Array is now sorted!")
+    frames.push({
+      snapshot: {
+        array: arr.map((item) => ({ ...item, merged: true, merging: false, highlighted: false })),
+        currentPhase: "none",
+        dividePhase: [],
+        mergePhase: [],
+        stepDescription: "Array is now sorted!",
+      },
+      description: "Array is now sorted!",
     })
 
     setSteps(sortingSteps)
-
-    // Animate the steps
-    let stepIndex = 0
-
-    const animateStep = () => {
-      if (stepIndex < animations.length) {
-        animations[stepIndex]()
-        setCurrentStep(stepIndex)
-        stepIndex++
-        setTimeout(animateStep, 2000)
-      } else {
-        setAnimating(false)
-        setCurrentPhase("none")
-      }
-    }
-
-    animateStep()
+    player.loadFrames(frames)
+    player.play()
   }
+
+  const visibleStepIndex = player.currentFrame
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Divide & Conquer - Merge Sort</CardTitle>
+            <CardTitle>Divide &amp; Conquer — Merge Sort</CardTitle>
             <CardDescription>Create an array and sort it using the Merge Sort algorithm</CardDescription>
           </CardHeader>
           <CardContent>
@@ -271,33 +239,54 @@ export default function DivideConquerVisualizer() {
                   placeholder="Enter a value to add"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  disabled={animating}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
+                  disabled={player.isPlaying}
                 />
-
-                <Button onClick={handleAddElement} disabled={animating}>
+                <Button onClick={handleAddElement} disabled={player.isPlaying}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add
                 </Button>
               </div>
 
               <div className="flex space-x-2">
-                <Button onClick={handleMergeSort} disabled={animating || array.length <= 1} className="flex-1">
-                  <Play className="mr-2 h-4 w-4" />
-                  Sort Array
+                <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
+                  <Shuffle className="mr-2 h-4 w-4" />
+                  Random
                 </Button>
-
                 <Button
                   onClick={handleClearArray}
-                  disabled={animating || array.length === 0}
+                  disabled={player.isPlaying || array.length === 0}
                   variant="outline"
                   className="flex-1"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Clear Array
+                  Clear
                 </Button>
               </div>
 
-              <div className="mt-4">
+              <Button onClick={handleMergeSort} disabled={player.isPlaying || array.length <= 1} className="w-full">
+                Sort Array (Merge Sort)
+              </Button>
+
+              {player.totalFrames > 0 && (
+                <AnimationControls
+                  currentFrame={player.currentFrame}
+                  totalFrames={player.totalFrames}
+                  isPlaying={player.isPlaying}
+                  isPaused={player.isPaused}
+                  isComplete={player.isComplete}
+                  speed={player.speed}
+                  onPlay={player.play}
+                  onPause={player.pause}
+                  onStepForward={player.stepForward}
+                  onStepBackward={player.stepBackward}
+                  onReset={() => { player.reset(); setCurrentPhase("none"); setDividePhase([]); setMergePhase([]) }}
+                  onSpeedChange={player.setSpeed}
+                  onFrameChange={player.goToFrame}
+                />
+              )}
+
+              <div>
                 <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
                 <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
                   {steps.length > 0 ? (
@@ -305,7 +294,7 @@ export default function DivideConquerVisualizer() {
                       {steps.map((step, index) => (
                         <li
                           key={index}
-                          className={`text-sm ${index <= currentStep ? "text-foreground" : "text-muted-foreground"}`}
+                          className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
                         >
                           {step}
                         </li>
@@ -315,7 +304,7 @@ export default function DivideConquerVisualizer() {
                     <p className="text-sm text-muted-foreground">
                       1. Add elements to create an array
                       <br />
-                      2. Click "Sort Array" to visualize the Merge Sort algorithm
+                      2. Click &quot;Sort Array&quot; to visualize the Merge Sort algorithm
                       <br />
                       3. Watch the divide and conquer process
                     </p>
@@ -340,25 +329,12 @@ export default function DivideConquerVisualizer() {
               <strong>Merge Sort</strong> is a classic divide and conquer algorithm with three main steps:
             </p>
             <ol className="list-decimal pl-5 space-y-1">
-              <li>
-                <strong>Divide:</strong> Split the array into two halves
-              </li>
-              <li>
-                <strong>Conquer:</strong> Recursively sort the two halves
-              </li>
-              <li>
-                <strong>Combine:</strong> Merge the sorted halves to produce a sorted array
-              </li>
+              <li><strong>Divide:</strong> Split the array into two halves</li>
+              <li><strong>Conquer:</strong> Recursively sort the two halves</li>
+              <li><strong>Combine:</strong> Merge the sorted halves to produce a sorted array</li>
             </ol>
-            <p className="mb-2">
-              <strong>Time Complexity:</strong> O(n log n) for all cases
-            </p>
-            <p className="mb-2">
-              <strong>Space Complexity:</strong> O(n) for the temporary arrays used during merging
-            </p>
-            <p className="mt-2">
-              <strong>Advantages:</strong> Stable sort with guaranteed O(n log n) performance regardless of input data
-            </p>
+            <p className="mb-2 mt-2"><strong>Time Complexity:</strong> O(n log n) for all cases</p>
+            <p className="mb-2"><strong>Space Complexity:</strong> O(n) for the temporary arrays used during merging</p>
           </CardContent>
         </Card>
       </div>
@@ -375,9 +351,8 @@ export default function DivideConquerVisualizer() {
               <div className="text-muted-foreground self-center">Add elements to create an array</div>
             ) : (
               <>
-                {/* Original Array */}
                 <div className="w-full">
-                  <h3 className="text-sm font-medium mb-2">Original Array:</h3>
+                  <h3 className="text-sm font-medium mb-2">Array:</h3>
                   <div className="flex justify-center">
                     {array.map((item, index) => (
                       <div key={item.id} className="flex flex-col items-center mx-1">
@@ -396,27 +371,27 @@ export default function DivideConquerVisualizer() {
                       </div>
                     ))}
                   </div>
+                  {player.currentDescription && (
+                    <div className="mt-2 text-center text-sm font-medium text-primary">
+                      {player.currentDescription}
+                    </div>
+                  )}
                 </div>
 
-                {/* Divide Phase Visualization */}
                 {currentPhase === "divide" && dividePhase.length > 0 && (
-                  <div className="w-full mt-4">
-                    <div className="flex items-center justify-center mb-2">
-                      <ArrowDown className="h-6 w-6 text-blue-500" />
-                      <h3 className="text-sm font-medium ml-2">Divide Phase</h3>
+                  <div className="w-full mt-2">
+                    <div className="flex items-center justify-center mb-1">
+                      <ArrowDown className="h-5 w-5 text-blue-500" />
+                      <h3 className="text-sm font-medium ml-1">Divide Phase</h3>
                     </div>
-
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {dividePhase.map((level, levelIndex) => (
                         <div key={levelIndex} className="flex justify-center">
                           {level.arrays.map((subArray, arrayIndex) => (
                             <div key={arrayIndex} className="mx-2 border border-dashed border-blue-300 p-1 rounded">
                               <div className="flex">
                                 {subArray.map((value, valueIndex) => (
-                                  <div
-                                    key={valueIndex}
-                                    className="flex items-center justify-center w-8 h-8 border border-blue-500 mx-0.5 bg-blue-50 dark:bg-blue-900"
-                                  >
+                                  <div key={valueIndex} className="flex items-center justify-center w-8 h-8 border border-blue-500 mx-0.5 bg-blue-50 dark:bg-blue-900">
                                     <span className="text-xs font-medium">{value}</span>
                                   </div>
                                 ))}
@@ -429,25 +404,20 @@ export default function DivideConquerVisualizer() {
                   </div>
                 )}
 
-                {/* Merge Phase Visualization */}
                 {currentPhase === "merge" && mergePhase.length > 0 && (
-                  <div className="w-full mt-4">
-                    <div className="flex items-center justify-center mb-2">
-                      <ArrowUp className="h-6 w-6 text-green-500" />
-                      <h3 className="text-sm font-medium ml-2">Merge Phase</h3>
+                  <div className="w-full mt-2">
+                    <div className="flex items-center justify-center mb-1">
+                      <ArrowUp className="h-5 w-5 text-green-500" />
+                      <h3 className="text-sm font-medium ml-1">Merge Phase</h3>
                     </div>
-
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {mergePhase.map((level, levelIndex) => (
                         <div key={levelIndex} className="flex justify-center">
                           {level.arrays.map((subArray, arrayIndex) => (
                             <div key={arrayIndex} className="mx-2 border border-dashed border-green-300 p-1 rounded">
                               <div className="flex">
                                 {subArray.map((value, valueIndex) => (
-                                  <div
-                                    key={valueIndex}
-                                    className="flex items-center justify-center w-8 h-8 border border-green-500 mx-0.5 bg-green-50 dark:bg-green-900"
-                                  >
+                                  <div key={valueIndex} className="flex items-center justify-center w-8 h-8 border border-green-500 mx-0.5 bg-green-50 dark:bg-green-900">
                                     <span className="text-xs font-medium">{value}</span>
                                   </div>
                                 ))}
@@ -460,7 +430,7 @@ export default function DivideConquerVisualizer() {
                   </div>
                 )}
 
-                <div className="flex justify-center mt-4 space-x-4">
+                <div className="flex justify-center mt-2 space-x-4">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900 border border-blue-500 rounded-sm mr-2"></div>
                     <span className="text-xs">Dividing</span>
@@ -482,4 +452,3 @@ export default function DivideConquerVisualizer() {
     </div>
   )
 }
-

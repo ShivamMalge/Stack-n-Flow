@@ -22,6 +22,7 @@ import BinarySearchVisualizer from "@/components/visualizers/algorithms/binary-s
 import QuickSortVisualizer from "@/components/visualizers/algorithms/quick-sort-visualizer"
 import GreedyAlgorithmVisualizer from "@/components/visualizers/algorithms/greedy-algorithm-visualizer"
 import DivideConquerVisualizer from "@/components/visualizers/algorithms/divide-conquer-visualizer"
+import SortingComparison from "@/components/visualizers/algorithms/sorting-comparison"
 
 export default function VisualizePage() {
   const searchParams = useSearchParams()
@@ -172,6 +173,9 @@ export default function VisualizePage() {
                 <TabsTrigger value="divide-conquer" className="whitespace-nowrap text-xs md:text-sm">
                   Divide & Conquer
                 </TabsTrigger>
+                <TabsTrigger value="sorting-comparison" className="whitespace-nowrap text-xs md:text-sm">
+                  ⚡ Sort Comparison
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -189,6 +193,10 @@ export default function VisualizePage() {
 
             <TabsContent value="divide-conquer">
               <DivideConquerVisualizer />
+            </TabsContent>
+
+            <TabsContent value="sorting-comparison">
+              <SortingComparison />
             </TabsContent>
           </Tabs>
         )}

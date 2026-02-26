@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Play, RotateCcw, Plus } from "lucide-react"
+import { Plus, Shuffle } from "lucide-react"
+import AnimationControls from "@/components/ui/animation-controls"
+import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
 type ArrayItem = {
   id: number
@@ -15,374 +17,207 @@ type ArrayItem = {
   isSwapping?: boolean
 }
 
+type QuickSortFrame = {
+  array: ArrayItem[]
+  stepDescription: string
+}
+
 export default function QuickSortVisualizer() {
   const [array, setArray] = useState<ArrayItem[]>([])
   const [inputValue, setInputValue] = useState("")
-  const [animating, setAnimating] = useState(false)
-  const [steps, setSteps] = useState<string[]>([])
-  const [currentStep, setCurrentStep] = useState(0)
   const [nextId, setNextId] = useState(1)
+  const [steps, setSteps] = useState<string[]>([])
 
-  // Refs for animation cleanup
-  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const isMountedRef = useRef(true)
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current)
-      }
-    }
+  const onFrameChange = useCallback((snapshot: QuickSortFrame, _frameIndex: number) => {
+    setArray(snapshot.array)
   }, [])
 
-  // Function to add a new element to the array
+  const player = useAnimationPlayer<QuickSortFrame>(onFrameChange)
+
   const handleAddElement = () => {
-    if (!inputValue || animating) return
+    if (!inputValue || player.isPlaying) return
 
     const value = Number.parseInt(inputValue)
+    if (isNaN(value)) return
 
-    // Add validation to limit value to 500
     if (value > 500) {
       alert("Please enter a value not greater than 500")
       return
     }
 
-    // Add the new element
-    setArray((prevArray) => [...prevArray, { id: nextId, value }])
-    setNextId((prevId) => prevId + 1)
-
+    setArray((prev) => [...prev, { id: nextId, value }])
+    setNextId((prev) => prev + 1)
     setInputValue("")
   }
 
-  // Function to clear the array
   const handleClearArray = () => {
-    if (animating) return
-
+    if (player.isPlaying) return
     setArray([])
     setSteps([])
-    setCurrentStep(0)
+    player.clear()
   }
 
-  // Fix the Quick Sort algorithm to properly handle sorting and ensure it works correctly
-  // Replace the handleSort function with this improved version:
+  const handleGenerateRandom = () => {
+    if (player.isPlaying) return
+    const count = Math.floor(Math.random() * 6) + 5 // 5–10 elements
+    const newArray: ArrayItem[] = []
+    let id = nextId
+    for (let i = 0; i < count; i++) {
+      newArray.push({ id: id++, value: Math.floor(Math.random() * 100) + 1 })
+    }
+    setNextId(id)
+    setArray(newArray)
+    setSteps([])
+    player.clear()
+  }
 
   const handleSort = () => {
-    if (animating || array.length <= 1) return
+    if (player.isPlaying || array.length <= 1) return
 
-    // Clean up any existing animation
-    if (animationTimeoutRef.current) {
-      clearTimeout(animationTimeoutRef.current)
-    }
+    // Pre-compute all animation frames as snapshots
+    const frames: AnimationFrame<QuickSortFrame>[] = []
+    const sortingSteps: string[] = []
 
-    setAnimating(true)
-    setSteps([])
-    setCurrentStep(0)
+    // Start with a clean array
+    const cleanArray = array.map((item) => ({
+      ...item,
+      highlighted: false,
+      isPivot: false,
+      isSorted: false,
+      isSwapping: false,
+    }))
 
-    // Reset all highlights
-    setArray((prevArray) =>
-      prevArray.map((item) => ({
+    // Initial frame
+    sortingSteps.push("Starting Quick Sort algorithm")
+    frames.push({
+      snapshot: { array: cleanArray.map((item) => ({ ...item })), stepDescription: "Starting Quick Sort algorithm" },
+      description: "Starting Quick Sort algorithm",
+    })
+
+    // Deep copy for sorting
+    const arr = cleanArray.map((item) => ({ ...item }))
+
+    const captureFrame = (
+      workingArr: ArrayItem[],
+      description: string,
+      overrides?: Record<number, Partial<ArrayItem>>
+    ) => {
+      const snap = workingArr.map((item, idx) => ({
         ...item,
         highlighted: false,
         isPivot: false,
-        isSorted: false,
         isSwapping: false,
-      })),
-    )
+        ...((overrides && overrides[idx]) || {}),
+      }))
+      sortingSteps.push(description)
+      frames.push({
+        snapshot: { array: snap, stepDescription: description },
+        description,
+      })
+    }
 
-    const animations: (() => void)[] = []
-    const sortingSteps: string[] = []
-
-    // Create a deep copy of the array to work with
-    const arrayCopy = [...array.map((item) => ({ ...item }))]
-
-    sortingSteps.push("Starting Quick Sort algorithm")
-
-    // Quick sort implementation with animations
     const quickSort = (arr: ArrayItem[], low: number, high: number) => {
       if (low < high) {
-        // Partition the array and get the pivot index
         const pivotIndex = partition(arr, low, high)
-
-        // Recursively sort the sub-arrays
         quickSort(arr, low, pivotIndex - 1)
         quickSort(arr, pivotIndex + 1, high)
+      } else if (low === high) {
+        // Single element is already sorted
+        arr[low] = { ...arr[low], isSorted: true }
+        captureFrame(arr, `Element ${arr[low].value} at index ${low} is in its sorted position`, {
+          [low]: { isSorted: true },
+        })
       }
     }
 
-    // Update the handleSort function to ensure we're not creating duplicate keys during swapping
-    // Modify the partition function to ensure proper array updates:
-
-    const partition = (arr: ArrayItem[], low: number, high: number) => {
-      // Choose the rightmost element as pivot
+    const partition = (arr: ArrayItem[], low: number, high: number): number => {
       const pivotValue = arr[high].value
-      sortingSteps.push(`Choosing pivot: ${pivotValue} (index ${high})`)
 
-      animations.push(() => {
-        if (!isMountedRef.current) return
-        setArray((currentArray) => {
-          return currentArray.map((item, index) => {
-            if (index === high) {
-              return { ...item, isPivot: true }
-            }
-            return { ...item }
-          })
-        })
+      // Show pivot selection
+      captureFrame(arr, `Choosing pivot: ${pivotValue} (index ${high})`, {
+        [high]: { isPivot: true },
       })
 
-      // Index of smaller element
       let i = low - 1
-
-      sortingSteps.push(`Partitioning array from index ${low} to ${high}`)
 
       for (let j = low; j < high; j++) {
         // Highlight current element being compared
-        animations.push(() => {
-          if (!isMountedRef.current) return
-          setArray((currentArray) => {
-            return currentArray.map((item, index) => {
-              if (index === j) {
-                return { ...item, highlighted: true }
-              }
-              return { ...item }
-            })
-          })
-        })
+        const compareOverrides: Record<number, Partial<ArrayItem>> = {
+          [high]: { isPivot: true },
+          [j]: { highlighted: true },
+        }
+        captureFrame(arr, `Comparing ${arr[j].value} with pivot ${pivotValue}`, compareOverrides)
 
-        // If current element is smaller than the pivot
         if (arr[j].value < pivotValue) {
           i++
-
-          // Swap arr[i] and arr[j]
           if (i !== j) {
-            sortingSteps.push(`Swapping ${arr[i].value} and ${arr[j].value}`)
-
-            animations.push(() => {
-              if (!isMountedRef.current) return
-              setArray((currentArray) => {
-                return currentArray.map((item, index) => {
-                  if (index === i) {
-                    return { ...item, isSwapping: true }
-                  }
-                  if (index === j) {
-                    return { ...item, isSwapping: true }
-                  }
-                  return { ...item }
-                })
-              })
+            // Show swap
+            captureFrame(arr, `${arr[j].value} < ${pivotValue}: Swapping ${arr[i].value} and ${arr[j].value}`, {
+              [high]: { isPivot: true },
+              [i]: { isSwapping: true },
+              [j]: { isSwapping: true },
             })
 
-            // Perform the swap correctly
+            // Perform swap
             const temp = { ...arr[i] }
             arr[i] = { ...arr[j] }
             arr[j] = { ...temp }
 
-            animations.push(() => {
-              if (!isMountedRef.current) return
-              setArray((currentArray) => {
-                return currentArray.map((item, index) => {
-                  if (index === i) {
-                    return {
-                      ...item,
-                      value: arr[i].value,
-                      isSwapping: true,
-                    }
-                  }
-                  if (index === j) {
-                    return {
-                      ...item,
-                      value: arr[j].value,
-                      isSwapping: true,
-                    }
-                  }
-                  return { ...item }
-                })
-              })
-            })
-
-            // Remove swap highlighting
-            animations.push(() => {
-              if (!isMountedRef.current) return
-              setArray((currentArray) => {
-                return currentArray.map((item, index) => {
-                  if (index === i) {
-                    return { ...item, isSwapping: false }
-                  }
-                  if (index === j) {
-                    return { ...item, isSwapping: false, highlighted: false }
-                  }
-                  return { ...item }
-                })
-              })
+            // Show result of swap
+            captureFrame(arr, `Swapped: array now has ${arr[i].value} at index ${i} and ${arr[j].value} at index ${j}`, {
+              [high]: { isPivot: true },
             })
           } else {
-            // Remove highlighting if no swap
-            animations.push(() => {
-              if (!isMountedRef.current) return
-              setArray((currentArray) => {
-                return currentArray.map((item, index) => {
-                  if (index === j) {
-                    return { ...item, highlighted: false }
-                  }
-                  return { ...item }
-                })
-              })
+            captureFrame(arr, `${arr[j].value} < ${pivotValue}: Already in correct position`, {
+              [high]: { isPivot: true },
             })
           }
         } else {
-          // Remove highlighting if no swap
-          animations.push(() => {
-            if (!isMountedRef.current) return
-            setArray((currentArray) => {
-              return currentArray.map((item, index) => {
-                if (index === j) {
-                  return { ...item, highlighted: false }
-                }
-                return { ...item }
-              })
-            })
+          captureFrame(arr, `${arr[j].value} >= ${pivotValue}: No swap needed`, {
+            [high]: { isPivot: true },
           })
         }
       }
 
-      // Swap arr[i+1] and arr[high] (the pivot)
+      // Place pivot in its correct position
       i++
-
       if (i !== high) {
-        sortingSteps.push(`Placing pivot ${pivotValue} at its correct position (index ${i})`)
-
-        animations.push(() => {
-          if (!isMountedRef.current) return
-          setArray((currentArray) => {
-            return currentArray.map((item, index) => {
-              if (index === i) {
-                return { ...item, isSwapping: true }
-              }
-              if (index === high) {
-                return { ...item, isSwapping: true }
-              }
-              return { ...item }
-            })
-          })
+        captureFrame(arr, `Placing pivot ${pivotValue} at its correct position (index ${i})`, {
+          [i]: { isSwapping: true },
+          [high]: { isSwapping: true, isPivot: true },
         })
 
-        // Perform the swap correctly
         const temp = { ...arr[i] }
         arr[i] = { ...arr[high] }
         arr[high] = { ...temp }
-
-        animations.push(() => {
-          if (!isMountedRef.current) return
-          setArray((currentArray) => {
-            return currentArray.map((item, index) => {
-              if (index === i) {
-                return {
-                  ...item,
-                  value: arr[i].value,
-                  isSwapping: true,
-                  isPivot: true,
-                }
-              }
-              if (index === high) {
-                return {
-                  ...item,
-                  value: arr[high].value,
-                  isSwapping: true,
-                  isPivot: false,
-                }
-              }
-              return { ...item }
-            })
-          })
-        })
-
-        // Remove swap highlighting but keep pivot
-        animations.push(() => {
-          if (!isMountedRef.current) return
-          setArray((currentArray) => {
-            return currentArray.map((item, index) => {
-              if (index === i) {
-                return { ...item, isSwapping: false, isPivot: true, isSorted: true }
-              }
-              if (index === high) {
-                return { ...item, isSwapping: false, isPivot: false }
-              }
-              return { ...item }
-            })
-          })
-        })
-      } else {
-        // Mark pivot as sorted
-        animations.push(() => {
-          if (!isMountedRef.current) return
-          setArray((currentArray) => {
-            return currentArray.map((item, index) => {
-              if (index === i) {
-                return { ...item, isPivot: true, isSorted: true }
-              }
-              return { ...item }
-            })
-          })
-        })
       }
 
-      // Remove pivot highlighting
-      animations.push(() => {
-        if (!isMountedRef.current) return
-        setArray((currentArray) => {
-          return currentArray.map((item, index) => {
-            if (index === i) {
-              return { ...item, isPivot: false, isSorted: true }
-            }
-            return { ...item }
-          })
-        })
+      // Mark pivot as sorted
+      arr[i] = { ...arr[i], isSorted: true }
+      captureFrame(arr, `Pivot ${pivotValue} is now at its sorted position (index ${i})`, {
+        [i]: { isSorted: true },
       })
 
       return i
     }
 
-    // Start the sorting process
-    quickSort(arrayCopy, 0, arrayCopy.length - 1)
+    quickSort(arr, 0, arr.length - 1)
 
-    // Final animation to show the sorted array
-    animations.push(() => {
-      if (!isMountedRef.current) return
-
-      // Create a new array with the sorted values
-      setArray((currentArray) => {
-        return currentArray.map((item, index) => ({
-          ...item,
-          value: arrayCopy[index].value,
-          isSorted: true,
-        }))
-      })
-
-      sortingSteps.push("Array is now sorted!")
+    // Final frame: all sorted
+    const finalArr = arr.map((item) => ({ ...item, isSorted: true, highlighted: false, isPivot: false, isSwapping: false }))
+    sortingSteps.push("Array is now sorted!")
+    frames.push({
+      snapshot: { array: finalArr, stepDescription: "Array is now sorted!" },
+      description: "Array is now sorted!",
     })
 
     setSteps(sortingSteps)
-
-    // Animate the steps
-    let stepIndex = 0
-
-    const animateStep = () => {
-      if (!isMountedRef.current) return
-
-      if (stepIndex < animations.length) {
-        animations[stepIndex]()
-        setCurrentStep(Math.min(stepIndex, sortingSteps.length - 1))
-        stepIndex++
-        animationTimeoutRef.current = setTimeout(animateStep, 1000)
-      } else {
-        setAnimating(false)
-        animationTimeoutRef.current = null
-      }
-    }
-
-    animateStep()
+    player.loadFrames(frames)
+    player.play()
   }
+
+  // Determine the visible step index based on player state
+  const visibleStepIndex = player.currentFrame >= 0 ? player.currentFrame : -1
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -401,33 +236,61 @@ export default function QuickSortVisualizer() {
                   placeholder="Enter a value to add"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  disabled={animating}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
+                  disabled={player.isPlaying}
                 />
-
-                <Button onClick={handleAddElement} disabled={animating}>
+                <Button onClick={handleAddElement} disabled={player.isPlaying}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add
                 </Button>
               </div>
 
               <div className="flex space-x-2">
-                <Button onClick={handleSort} disabled={animating || array.length <= 1} className="flex-1">
-                  <Play className="mr-2 h-4 w-4" />
-                  Sort Array
+                <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
+                  <Shuffle className="mr-2 h-4 w-4" />
+                  Random
                 </Button>
-
                 <Button
                   onClick={handleClearArray}
-                  disabled={animating || array.length === 0}
+                  disabled={player.isPlaying || array.length === 0}
                   variant="outline"
                   className="flex-1"
                 >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Clear Array
+                  Clear
                 </Button>
               </div>
 
-              <div className="mt-4">
+              <Button onClick={handleSort} disabled={player.isPlaying || array.length <= 1} className="w-full">
+                Sort Array
+              </Button>
+
+              {/* Animation Controls */}
+              {player.totalFrames > 0 && (
+                <AnimationControls
+                  currentFrame={player.currentFrame}
+                  totalFrames={player.totalFrames}
+                  isPlaying={player.isPlaying}
+                  isPaused={player.isPaused}
+                  isComplete={player.isComplete}
+                  speed={player.speed}
+                  disabled={false}
+                  onPlay={player.play}
+                  onPause={player.pause}
+                  onStepForward={player.stepForward}
+                  onStepBackward={player.stepBackward}
+                  onReset={() => {
+                    player.reset()
+                    // Restore the initial unsorted array
+                    if (player.totalFrames > 0) {
+                      player.goToFrame(0)
+                    }
+                  }}
+                  onSpeedChange={player.setSpeed}
+                  onFrameChange={player.goToFrame}
+                />
+              )}
+
+              <div>
                 <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
                 <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
                   {steps.length > 0 ? (
@@ -435,7 +298,8 @@ export default function QuickSortVisualizer() {
                       {steps.map((step, index) => (
                         <li
                           key={index}
-                          className={`text-sm ${index <= currentStep ? "text-foreground" : "text-muted-foreground"}`}
+                          className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"
+                            }`}
                         >
                           {step}
                         </li>
@@ -445,7 +309,7 @@ export default function QuickSortVisualizer() {
                     <p className="text-sm text-muted-foreground">
                       1. Add elements to create an array
                       <br />
-                      2. Click "Sort Array" to visualize the Quick Sort algorithm
+                      2. Click &quot;Sort Array&quot; to visualize the Quick Sort algorithm
                     </p>
                   )}
                 </div>
@@ -461,8 +325,8 @@ export default function QuickSortVisualizer() {
           </CardHeader>
           <CardContent className="text-sm">
             <p className="mb-2">
-              <strong>Quick Sort</strong> is a divide-and-conquer sorting algorithm that works by selecting a 'pivot'
-              element and partitioning the array around it.
+              <strong>Quick Sort</strong> is a divide-and-conquer sorting algorithm that works by selecting a
+              &apos;pivot&apos; element and partitioning the array around it.
             </p>
             <p className="mb-2">
               <strong>Time Complexity:</strong>
@@ -476,14 +340,12 @@ export default function QuickSortVisualizer() {
             </p>
             <ol className="list-decimal pl-5 space-y-1">
               <li>Choose a pivot element from the array</li>
-              <li>
-                Partition the array around the pivot (elements less than pivot go to the left, greater go to the right)
-              </li>
+              <li>Partition the array around the pivot (elements less than pivot go to the left, greater go to the right)</li>
               <li>Recursively apply the above steps to the sub-arrays</li>
             </ol>
             <p className="mt-2">
               <strong>Advantages:</strong> Quick Sort is often faster in practice than other O(n log n) algorithms like
-              Merge Sort, and it doesn't require additional memory for merging.
+              Merge Sort, and it doesn&apos;t require additional memory for merging.
             </p>
           </CardContent>
         </Card>
@@ -501,7 +363,7 @@ export default function QuickSortVisualizer() {
               <div className="text-muted-foreground">Add elements to create an array</div>
             ) : (
               array.map((item, index) => {
-                const height = Math.min(item.value * 2 + 20, 280) // Cap height to prevent overflow
+                const height = Math.min(item.value * 2 + 20, 280)
 
                 return (
                   <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center mx-1">
@@ -524,6 +386,13 @@ export default function QuickSortVisualizer() {
               })
             )}
           </div>
+
+          {/* Current step description */}
+          {player.currentDescription && (
+            <div className="mt-3 text-center text-sm font-medium text-primary">
+              {player.currentDescription}
+            </div>
+          )}
 
           <div className="flex justify-center mt-4 space-x-4">
             <div className="flex items-center">
@@ -548,4 +417,3 @@ export default function QuickSortVisualizer() {
     </div>
   )
 }
-
