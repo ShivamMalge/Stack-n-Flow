@@ -23,6 +23,11 @@ import QuickSortVisualizer from "@/components/visualizers/algorithms/quick-sort-
 import GreedyAlgorithmVisualizer from "@/components/visualizers/algorithms/greedy-algorithm-visualizer"
 import DivideConquerVisualizer from "@/components/visualizers/algorithms/divide-conquer-visualizer"
 import SortingComparison from "@/components/visualizers/algorithms/sorting-comparison"
+import HeapVisualizer from "@/components/visualizers/heap-visualizer"
+import HashTableVisualizer from "@/components/visualizers/hash-table-visualizer"
+import HeapSortVisualizer from "@/components/visualizers/algorithms/heap-sort-visualizer"
+import PathfindingVisualizer from "@/components/visualizers/algorithms/pathfinding-visualizer"
+import DPVisualizer from "@/components/visualizers/algorithms/dp-visualizer"
 
 export default function VisualizePage() {
   const searchParams = useSearchParams()
@@ -100,6 +105,12 @@ export default function VisualizePage() {
                 <TabsTrigger value="array" className="whitespace-nowrap text-xs md:text-sm">
                   Array
                 </TabsTrigger>
+                <TabsTrigger value="heap" className="whitespace-nowrap text-xs md:text-sm">
+                  Heap
+                </TabsTrigger>
+                <TabsTrigger value="hash-table" className="whitespace-nowrap text-xs md:text-sm">
+                  Hash Table
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -154,6 +165,14 @@ export default function VisualizePage() {
             <TabsContent value="array">
               <ArrayVisualizer />
             </TabsContent>
+
+            <TabsContent value="heap">
+              <HeapVisualizer />
+            </TabsContent>
+
+            <TabsContent value="hash-table">
+              <HashTableVisualizer />
+            </TabsContent>
           </Tabs>
         )}
 
@@ -176,6 +195,15 @@ export default function VisualizePage() {
                 <TabsTrigger value="sorting-comparison" className="whitespace-nowrap text-xs md:text-sm">
                   ⚡ Sort Comparison
                 </TabsTrigger>
+                <TabsTrigger value="heap-sort" className="whitespace-nowrap text-xs md:text-sm">
+                  Heap Sort
+                </TabsTrigger>
+                <TabsTrigger value="pathfinding" className="whitespace-nowrap text-xs md:text-sm">
+                  🗺️ Pathfinding
+                </TabsTrigger>
+                <TabsTrigger value="dynamic-programming" className="whitespace-nowrap text-xs md:text-sm">
+                  Dynamic Programming
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -197,6 +225,18 @@ export default function VisualizePage() {
 
             <TabsContent value="sorting-comparison">
               <SortingComparison />
+            </TabsContent>
+
+            <TabsContent value="heap-sort">
+              <HeapSortVisualizer />
+            </TabsContent>
+
+            <TabsContent value="pathfinding">
+              <PathfindingVisualizer />
+            </TabsContent>
+
+            <TabsContent value="dynamic-programming">
+              <DPVisualizer />
             </TabsContent>
           </Tabs>
         )}
