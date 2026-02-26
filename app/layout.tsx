@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Stack'n'Flow",
   description: "Interactive Data Structure and Algorithm Visualizer",
+  icons: {
+    icon: "/logo.jpg",
+  },
 }
 
 export default function RootLayout({
