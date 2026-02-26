@@ -93,10 +93,10 @@ export default function Home() {
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {["Linked List", "Stack", "Queue", "Binary Tree", "BST", "AVL Tree", "B-Tree", "Graph"].map((ds) => (
+              {["Linked List", "Stack", "Queue", "Binary Tree", "BST", "AVL Tree", "B-Tree", "Graph", "Heap", "Hash Table"].map((ds) => (
                 <Link
                   key={ds}
-                  href={`/visualize?ds=${ds.toLowerCase().replace(" ", "-").replace("bst", "binary-search-tree")}`}
+                  href={`/visualize?ds=${ds.toLowerCase().replace(/ /g, "-").replace("bst", "binary-search-tree")}`}
                   className="bg-card hover:bg-card/80 border rounded-lg p-4 text-center transition-colors"
                 >
                   <h3 className="font-medium">{ds}</h3>
