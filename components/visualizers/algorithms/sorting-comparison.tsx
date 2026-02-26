@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -320,6 +320,10 @@ export default function SortingComparison() {
     const [statsB, setStatsB] = useState({ comparisons: 0, swaps: 0 })
     const [descA, setDescA] = useState("")
     const [descB, setDescB] = useState("")
+    const [stepsA, setStepsA] = useState<string[]>([])
+    const [stepsB, setStepsB] = useState<string[]>([])
+    const activeStepRefA = useRef<HTMLLIElement | null>(null)
+    const activeStepRefB = useRef<HTMLLIElement | null>(null)
 
     const onFrameA = useCallback((snap: SortFrame) => {
         setBarsA(snap.bars)
@@ -332,6 +336,10 @@ export default function SortingComparison() {
 
     const playerA = useAnimationPlayer<SortFrame>(onFrameA)
     const playerB = useAnimationPlayer<SortFrame>(onFrameB)
+
+    // Auto-scroll active step into view
+    useEffect(() => { activeStepRefA.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }) }, [playerA.currentFrame])
+    useEffect(() => { activeStepRefB.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }) }, [playerB.currentFrame])
 
     // Update descriptions from players
     const dA = playerA.currentDescription
@@ -351,6 +359,7 @@ export default function SortingComparison() {
         setStatsA({ comparisons: 0, swaps: 0 })
         setStatsB({ comparisons: 0, swaps: 0 })
         setDescA(""); setDescB("")
+        setStepsA([]); setStepsB([])
         playerA.clear(); playerB.clear()
     }
 
@@ -392,6 +401,10 @@ export default function SortingComparison() {
 
         const framesA = GENERATORS[algoA](values)
         const framesB = GENERATORS[algoB](values)
+
+        // Collect step descriptions for the steps panel
+        setStepsA(framesA.map((f) => f.description))
+        setStepsB(framesB.map((f) => f.description))
 
         playerA.setSpeed(speed)
         playerB.setSpeed(speed)
@@ -623,6 +636,71 @@ export default function SortingComparison() {
                             </div>
                         </CardContent>
                     </Card>
+                </div>
+            )}
+
+            {/* Algorithm Steps Panels — shown once frames are loaded */}
+            {stepsA.length > 0 && (
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Steps A */}
+                    <div className="rounded-lg border bg-card p-4 space-y-2">
+                        <p className="text-sm font-semibold">
+                            {ALGORITHM_NAMES[algoA]}
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">— Algorithm Steps</span>
+                        </p>
+                        <ol className="space-y-1 max-h-48 overflow-y-auto pr-1 text-xs" aria-label="Steps A">
+                            {stepsA.map((step, i) => {
+                                const isActive = i === playerA.currentFrame
+                                const isPast = i < playerA.currentFrame
+                                return (
+                                    <li
+                                        key={i}
+                                        ref={isActive ? activeStepRefA : null}
+                                        className={`flex gap-2 items-start px-2 py-1 rounded transition-colors ${isActive
+                                            ? "bg-blue-500/15 text-foreground font-medium"
+                                            : isPast
+                                                ? "text-muted-foreground"
+                                                : "text-muted-foreground/50"
+                                            }`}
+                                    >
+                                        <span className={`shrink-0 font-mono tabular-nums ${isActive ? "text-blue-500" : isPast ? "text-muted-foreground" : "text-muted-foreground/40"
+                                            }`}>{i + 1}.</span>
+                                        <span>{step}</span>
+                                    </li>
+                                )
+                            })}
+                        </ol>
+                    </div>
+
+                    {/* Steps B */}
+                    <div className="rounded-lg border bg-card p-4 space-y-2">
+                        <p className="text-sm font-semibold">
+                            {ALGORITHM_NAMES[algoB]}
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">— Algorithm Steps</span>
+                        </p>
+                        <ol className="space-y-1 max-h-48 overflow-y-auto pr-1 text-xs" aria-label="Steps B">
+                            {stepsB.map((step, i) => {
+                                const isActive = i === playerB.currentFrame
+                                const isPast = i < playerB.currentFrame
+                                return (
+                                    <li
+                                        key={i}
+                                        ref={isActive ? activeStepRefB : null}
+                                        className={`flex gap-2 items-start px-2 py-1 rounded transition-colors ${isActive
+                                            ? "bg-purple-500/15 text-foreground font-medium"
+                                            : isPast
+                                                ? "text-muted-foreground"
+                                                : "text-muted-foreground/50"
+                                            }`}
+                                    >
+                                        <span className={`shrink-0 font-mono tabular-nums ${isActive ? "text-purple-500" : isPast ? "text-muted-foreground" : "text-muted-foreground/40"
+                                            }`}>{i + 1}.</span>
+                                        <span>{step}</span>
+                                    </li>
+                                )
+                            })}
+                        </ol>
+                    </div>
                 </div>
             )}
 
