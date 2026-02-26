@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useSession, signIn, signOut } from "next-auth/react"
 import { Menu, X, LogOut, User } from "lucide-react"
@@ -34,6 +35,7 @@ export default function Navbar() {
       <div className="container flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo.png" alt="Stack'n'Flow Logo" width={32} height={32} className="rounded-md" />
             <span className="text-xl font-bold">Stack&apos;n&apos;Flow</span>
           </Link>
         </div>

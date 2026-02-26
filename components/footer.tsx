@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { GitMerge, Github, Instagram, Linkedin } from "lucide-react"
+import Image from "next/image"
+import { Github, Instagram, Linkedin } from "lucide-react"
 import { SiLeetcode } from "react-icons/si"
 
 export default function Footer() {
@@ -9,7 +10,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <GitMerge className="h-5 w-5" />
+              <Image src="/logo.png" alt="Stack'n'Flow Logo" width={28} height={28} className="rounded-md" />
               <span className="text-lg font-bold">Stack&apos;n&apos;Flow</span>
             </div>
             <p className="text-sm text-muted-foreground">
