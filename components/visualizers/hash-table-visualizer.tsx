@@ -10,9 +10,9 @@ import CodePanel from "@/components/ui/code-panel"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
 const INSERT_CODE = [
-    "function insert(key, value):",
-    "  let index = hashFn(key)",
-    "  let bucket = table[index]",
+    "def insert(key, value):",
+    "  index = hash(key) % size",
+    "  bucket = table[index]",
     "  for entry in bucket:",
     "    if entry.key == key:",
     "      entry.value = value",
@@ -22,24 +22,24 @@ const INSERT_CODE = [
 ]
 
 const SEARCH_CODE = [
-    "function search(key):",
-    "  let index = hashFn(key)",
-    "  let bucket = table[index]",
+    "def search(key):",
+    "  index = hash(key) % size",
+    "  bucket = table[index]",
     "  for entry in bucket:",
     "    if entry.key == key:",
     "      return entry.value",
-    "  return null"
+    "  return None"
 ]
 
 const DELETE_CODE = [
-    "function delete(key):",
-    "  let index = hashFn(key)",
-    "  let bucket = table[index]",
-    "  for i from 0 to bucket.length - 1:",
+    "def delete(key):",
+    "  index = hash(key) % size",
+    "  bucket = table[index]",
+    "  for i in range(len(bucket)):",
     "    if bucket[i].key == key:",
-    "      bucket.splice(i, 1)",
-    "      return true",
-    "  return false"
+    "      bucket.pop(i)",
+    "      return True",
+    "  return False"
 ]
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -235,18 +235,24 @@ export default function HashTableVisualizer() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Operations Panel - Order 1 on Mobile, Col 1 on Desktop */}
-            <div className="order-1 md:col-start-1">
+            {/* Operations Panel - Top on Mobile, Col 1 on Desktop */}
+            <div className="order-1 md:col-start-1 space-y-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Hash Table (Chaining)</CardTitle>
-                        <CardDescription>Hash function: sum of char codes mod {TABLE_SIZE}. Collisions handled via linked-list chaining.</CardDescription>
+                        <CardTitle>Hash Table Operations</CardTitle>
+                        <CardDescription>Insert, search, or delete key-value pairs</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {/* Operation tabs */}
-                        <div className="flex gap-1">
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-md mb-4">
+                            <p className="text-xs text-blue-400">
+                                <strong>How it works:</strong> Keys are hashed into an index [0-9].
+                                If multiple keys map to the same index, they are stored in a <strong>chain</strong> (linked list) inside that bucket.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-2">
                             {(["insert", "search", "delete"] as const).map((op) => (
-                                <Button key={op} size="sm" variant={operation === op ? "default" : "outline"}
+                                <Button key={op} variant={operation === op ? "default" : "outline"}
                                     onClick={() => setOperation(op)} disabled={player.isPlaying} className="flex-1 capitalize">
                                     {op}
                                 </Button>
@@ -254,33 +260,42 @@ export default function HashTableVisualizer() {
                         </div>
 
                         {operation === "insert" && (
-                            <div className="space-y-2">
-                                <Input placeholder="Key" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
-                                <Input placeholder="Value (optional, defaults to key)" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Identifier (Key)</label>
+                                    <Input placeholder="e.g. 'name' or 'id'" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Data (Value)</label>
+                                    <Input placeholder="e.g. 'John' or '123'" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
+                                </div>
                                 <Button onClick={handleInsert} disabled={player.isPlaying || !keyInput} className="w-full">
-                                    <Plus className="mr-2 h-4 w-4" /> Insert
+                                    <Plus className="mr-2 h-4 w-4" /> Add to Table
                                 </Button>
                             </div>
                         )}
 
                         {(operation === "search" || operation === "delete") && (
-                            <div className="space-y-2">
-                                <Input placeholder="Key to search/delete" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && (operation === "search" ? handleSearch() : handleDelete())}
-                                    disabled={player.isPlaying} />
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Key to find</label>
+                                    <Input placeholder="Enter the key" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && (operation === "search" ? handleSearch() : handleDelete())}
+                                        disabled={player.isPlaying} />
+                                </div>
                                 <Button onClick={operation === "search" ? handleSearch : handleDelete}
                                     disabled={player.isPlaying || !searchKey} className="w-full"
                                     variant={operation === "delete" ? "destructive" : "default"}>
-                                    {operation === "search" ? <><Search className="mr-2 h-4 w-4" /> Search</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete</>}
+                                    {operation === "search" ? <><Search className="mr-2 h-4 w-4" /> Search Key</> : <><Trash2 className="mr-2 h-4 w-4" /> Remove Key</>}
                                 </Button>
                             </div>
                         )}
 
-                        <div className="flex gap-2">
-                            <Button onClick={loadSample} disabled={player.isPlaying} variant="outline" className="flex-1">Load Sample</Button>
-                            <Button onClick={handleClear} disabled={player.isPlaying} variant="ghost">Clear</Button>
+                        <div className="flex gap-2 pt-2">
+                            <Button onClick={loadSample} disabled={player.isPlaying} variant="outline" className="flex-1 text-xs">Load Sample Data</Button>
+                            <Button onClick={handleClear} disabled={player.isPlaying} variant="ghost" className="text-xs">Clear Table</Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -290,8 +305,8 @@ export default function HashTableVisualizer() {
             <div className="order-2 md:col-start-2 md:row-span-2">
                 <Card className="h-full">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Bucket Array (size {TABLE_SIZE})</CardTitle>
-                        <CardDescription>Each row = one bucket. Chained entries shown inline.</CardDescription>
+                        <CardTitle className="text-base">Bucket Array (Chaining)</CardTitle>
+                        <CardDescription>Index = hash(key) % {TABLE_SIZE}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-1.5 max-h-[400px] md:max-h-none overflow-y-auto px-1 pt-1">
@@ -312,7 +327,7 @@ export default function HashTableVisualizer() {
                                             <div key={j}
                                                 className={`flex items-center gap-1.5 border rounded-md shadow-sm px-2.5 py-1 text-[10px] md:text-xs transition-all duration-200 whitespace-nowrap ${ENTRY_BG[entry.state]}`}>
                                                 <span className="font-semibold">{entry.key}</span>
-                                                <span className="text-muted-foreground opacity-50">|</span>
+                                                <span className="text-muted-foreground opacity-30">:</span>
                                                 <span className="truncate max-w-[80px] md:max-w-[120px]">{entry.value}</span>
                                             </div>
                                         ))}
@@ -322,8 +337,8 @@ export default function HashTableVisualizer() {
                         </div>
 
                         {/* Legend */}
-                        <div className="flex flex-wrap gap-2 mt-3 text-[10px]">
-                            {([["bg-yellow-500/30 border-yellow-500", "Active"], ["bg-green-500/30 border-green-500", "Found"], ["bg-orange-500/30 border-orange-500", "Collision"], ["bg-red-500/30 border-red-500", "Deleted"]] as const).map(([cls, lbl]) => (
+                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t text-[10px]">
+                            {([["bg-yellow-500/30 border-yellow-500", "Checking"], ["bg-green-500/30 border-green-500", "Success"], ["bg-orange-500/30 border-orange-500", "Collision"], ["bg-red-500/30 border-red-500", "Deleted"]] as const).map(([cls, lbl]) => (
                                 <div key={lbl} className="flex items-center gap-1.5">
                                     <div className={`w-3 h-3 rounded-sm border ${cls}`} />
                                     <span className="text-muted-foreground">{lbl}</span>
@@ -349,38 +364,42 @@ export default function HashTableVisualizer() {
                             />
                         )}
 
-                        {stepDesc && <p className="text-sm text-center bg-muted/30 p-2 rounded-md text-muted-foreground">{stepDesc}</p>}
+                        {stepDesc && <p className="text-xs text-center bg-muted/40 p-2.5 rounded-md text-muted-foreground italic">&quot;{stepDesc}&quot;</p>}
 
                         {/* Live Code Panel */}
-                        <div className="h-[230px]">
+                        <div className="h-[250px]">
                             <CodePanel
                                 code={player.currentSnapshot?.operation === "insert" ? INSERT_CODE : player.currentSnapshot?.operation === "delete" ? DELETE_CODE : SEARCH_CODE}
                                 activeLine={player.currentSnapshot?.activeLine ?? null}
-                                title={player.currentSnapshot?.operation === "insert" ? "Insertion Algorithm" : player.currentSnapshot?.operation === "delete" ? "Deletion Algorithm" : "Search Algorithm"}
+                                title={player.currentSnapshot?.operation === "insert" ? "def insert(key, value):" : player.currentSnapshot?.operation === "delete" ? "def delete(key):" : "def search(key):"}
                             />
                         </div>
 
                         {/* Steps */}
                         <div>
-                            <h3 className="text-sm font-medium mb-1">Algorithm Steps:</h3>
-                            <div className="bg-muted/30 rounded-md p-2 h-24 overflow-y-auto">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                Execution Trace
+                            </h3>
+                            <div className="bg-muted/30 rounded-md p-3 h-28 overflow-y-auto border border-border/50">
                                 {steps.length > 0 ? (
-                                    <ol className="pl-4 list-decimal space-y-0.5">
+                                    <ol className="pl-4 list-decimal space-y-1">
                                         {steps.map((s, i) => (
-                                            <li key={i} className={`text-xs ${i <= player.currentFrame ? "text-foreground" : "text-muted-foreground"}`}>{s}</li>
+                                            <li key={i} className={`text-[11px] leading-tight ${i === player.currentFrame ? "text-primary font-bold" : i < player.currentFrame ? "text-muted-foreground/70 line-through" : "text-muted-foreground"}`}>{s}</li>
                                         ))}
                                     </ol>
-                                ) : <p className="text-xs text-muted-foreground">Perform an operation to see steps</p>}
+                                ) : <p className="text-[11px] text-muted-foreground italic">Operation required to see execution trace...</p>}
                             </div>
                         </div>
 
                         {/* Complexity */}
-                        <div className="text-[10px] text-muted-foreground border-t pt-2 grid grid-cols-2 gap-x-4">
-                            <div>Insert: <span className="font-mono">O(1) avg</span></div>
-                            <div>Search: <span className="font-mono">O(1) avg</span></div>
-                            <div>Delete: <span className="font-mono">O(1) avg</span></div>
-                            <div>Space: <span className="font-mono">O(n)</span></div>
-                            <div className="col-span-2 mt-1">Worst case (all collisions): <span className="font-mono">O(n)</span></div>
+                        <div className="text-[10px] text-muted-foreground border-t pt-2.5 grid grid-cols-2 gap-y-1.5">
+                            <div className="flex justify-between pr-4"><span>Average Case:</span> <span className="font-mono text-primary font-bold">O(1)</span></div>
+                            <div className="flex justify-between"><span>Space Complexity:</span> <span className="font-mono text-primary font-bold">O(n)</span></div>
+                            <div className="col-span-2 flex justify-between border-t border-dashed pt-1.5 mt-1">
+                                <span>Worst Case (all collisions):</span>
+                                <span className="font-mono text-red-500 font-bold">O(n)</span>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

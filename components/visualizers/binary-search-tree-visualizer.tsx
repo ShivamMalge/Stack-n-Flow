@@ -15,38 +15,38 @@ import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPla
 import { computeTreeLayout } from "@/lib/tree-layout"
 
 const SEARCH_CODE = [
-  "function search(node, value):",
-  "  if node == null: return null",
-  "  if node.value == value: return node",
-  "  if value < node.value:",
-  "    return search(node.left, value)",
-  "  return search(node.right, value)"
+  "def search(node, value):",
+  "    if not node: return None",
+  "    if node.value == value: return node",
+  "    if value < node.value:",
+  "        return search(node.left, value)",
+  "    return search(node.right, value)"
 ]
 
 const INSERT_CODE = [
-  "function insert(node, value):",
-  "  if node == null:",
-  "    return new Node(value)",
-  "  if value < node.value:",
-  "    node.left = insert(node.left, value)",
-  "  else:",
-  "    node.right = insert(node.right, value)",
-  "  return node"
+  "def insert(node, value):",
+  "    if not node:",
+  "        return Node(value)",
+  "    if value < node.value:",
+  "        node.left = insert(node.left, value)",
+  "    else:",
+  "        node.right = insert(node.right, value)",
+  "    return node"
 ]
 
 const DELETE_CODE = [
-  "function delete(node, value):",
-  "  if node == null: return null",
-  "  if value < node.value:",
-  "    node.left = delete(node.left, value)",
-  "  else if value > node.value:",
-  "    node.right = delete(node.right, value)",
-  "  else:",
-  "    if node.left == null: return node.right",
-  "    if node.right == null: return node.left",
-  "    node.value = findMin(node.right).value",
-  "    node.right = delete(node.right, node.value)",
-  "  return node"
+  "def delete(node, value):",
+  "    if not node: return None",
+  "    if value < node.value:",
+  "        node.left = delete(node.left, value)",
+  "    elif value > node.value:",
+  "        node.right = delete(node.right, value)",
+  "    else:",
+  "        if not node.left: return node.right",
+  "        if not node.right: return node.left",
+  "        node.value = find_min(node.right).value",
+  "        node.right = delete(node.right, node.value)",
+  "    return node"
 ]
 
 type TreeNode = {

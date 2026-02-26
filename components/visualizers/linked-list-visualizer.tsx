@@ -9,46 +9,46 @@ import { ArrowRight, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 
 const INSERT_FRONT_CODE = [
-  "function insertFront(value):",
-  "  let newNode = new Node(value)",
-  "  newNode.next = head",
-  "  head = newNode",
-  "  return"
+  "def insert_front(value):",
+  "    new_node = Node(value)",
+  "    new_node.next = head",
+  "    head = new_node",
+  "    return"
 ]
 
 const INSERT_REAR_CODE = [
-  "function insertRear(value):",
-  "  let newNode = new Node(value)",
-  "  if head == null:",
-  "    head = newNode",
-  "    return",
-  "  let curr = head",
-  "  while curr.next != null:",
-  "    curr = curr.next",
-  "  curr.next = newNode",
-  "  return"
+  "def insert_rear(value):",
+  "    new_node = Node(value)",
+  "    if not head:",
+  "        head = new_node",
+  "        return",
+  "    curr = head",
+  "    while curr.next:",
+  "        curr = curr.next",
+  "    curr.next = new_node",
+  "    return"
 ]
 
 const DELETE_CODE = [
-  "function delete(value):",
-  "  if head == null: return",
-  "  if head.value == value:",
-  "    head = head.next",
-  "    return",
-  "  let curr = head",
-  "  while curr.next != null and curr.next.value != value:",
-  "    curr = curr.next",
-  "  if curr.next != null:",
-  "    curr.next = curr.next.next"
+  "def delete(value):",
+  "    if not head: return",
+  "    if head.value == value:",
+  "        head = head.next",
+  "        return",
+  "    curr = head",
+  "    while curr.next and curr.next.value != value:",
+  "        curr = curr.next",
+  "    if curr.next:",
+  "        curr.next = curr.next.next"
 ]
 
 const SEARCH_CODE = [
-  "function search(value):",
-  "  let curr = head",
-  "  while curr != null:",
-  "    if curr.value == value: return true",
-  "    curr = curr.next",
-  "  return false"
+  "def search(value):",
+  "    curr = head",
+  "    while curr:",
+  "        if curr.value == value: return True",
+  "        curr = curr.next",
+  "    return False"
 ]
 
 type Node = {

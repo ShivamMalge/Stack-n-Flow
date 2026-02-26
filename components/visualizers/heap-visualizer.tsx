@@ -22,32 +22,31 @@ type HeapFrame = {
 }
 
 const INSERT_CODE = [
-    "function insert(value):",
-    "  heap.push(value)",
-    "  let i = heap.length - 1",
-    "  while i > 0:",
-    "    let p = Math.floor((i-1)/2)",
-    "    if heap[i] satisfies property vs heap[p]:",
-    "      swap(heap[i], heap[p])",
-    "      i = p",
-    "    else: break",
-    "  return"
+    "def insert(value):",
+    "    heap.append(value)",
+    "    i = len(heap) - 1",
+    "    while i > 0:",
+    "        p = (i - 1) // 2",
+    "        if heap[i] satisfies property vs heap[p]:",
+    "            heap[i], heap[p] = heap[p], heap[i]",
+    "            i = p",
+    "        else: break"
 ]
 
 const DELETE_CODE = [
-    "function deleteRoot():",
-    "  if heap.empty: return",
-    "  heap[0] = heap.pop()",
-    "  let i = 0",
-    "  while true:",
-    "    let target = i",
-    "    let l = 2i + 1, r = 2i + 2",
-    "    if l < size and h[l] better than h[target]: target = l",
-    "    if r < size and h[r] better than h[target]: target = r",
-    "    if target != i:",
-    "      swap(heap[i], heap[target])",
-    "      i = target",
-    "    else: break"
+    "def delete_root():",
+    "    if not heap: return",
+    "    heap[0] = heap.pop()",
+    "    i = 0",
+    "    while True:",
+    "        target = i",
+    "        l, r = 2 * i + 1, 2 * i + 2",
+    "        if l < size and h[l] better than h[target]: target = l",
+    "        if r < size and h[r] better than h[target]: target = r",
+    "        if target != i:",
+    "            heap[i], heap[target] = heap[target], heap[i]",
+    "            i = target",
+    "        else: break"
 ]
 
 // ── Heap helpers ────────────────────────────────────────────────────────────

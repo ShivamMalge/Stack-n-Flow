@@ -8,26 +8,26 @@ import { Plus, Trash, Search, RotateCw } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 
 const ENQUEUE_CODE = [
-  "function enqueue(value):",
-  "  if (size == maxSize) return error",
-  "  rear = (rear + 1) % maxSize",
-  "  queue[rear] = value",
-  "  size = size + 1"
+  "def enqueue(value):",
+  "    if size == max_size: return error",
+  "    rear = (rear + 1) % max_size",
+  "    queue[rear] = value",
+  "    size += 1"
 ]
 
 const DEQUEUE_CODE = [
-  "function dequeue():",
-  "  if (size == 0) return error",
-  "  value = queue[front]",
-  "  front = (front + 1) % maxSize",
-  "  size = size - 1",
-  "  return value"
+  "def dequeue():",
+  "    if size == 0: return error",
+  "    value = queue[front]",
+  "    front = (front + 1) % max_size",
+  "    size -= 1",
+  "    return value"
 ]
 
 const PEEK_CODE = [
-  "function peek():",
-  "  if (size == 0) return error",
-  "  return queue[front]"
+  "def peek():",
+  "    if size == 0: return error",
+  "    return queue[front]"
 ]
 
 type QueueItem = {

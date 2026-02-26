@@ -12,27 +12,29 @@ import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPla
 import CodePanel from "@/components/ui/code-panel"
 
 const BFS_CODE = [
-  "function BFS(graph, start):",
-  "  queue = [start], visited = {start}",
-  "  while queue is not empty:",
-  "    u = queue.shift()",
-  "    visit(u)",
-  "    for each neighbor v of u:",
-  "      if v not in visited:",
-  "        visited.add(v)",
-  "        queue.push(v)"
+  "def bfs(graph, start):",
+  "    queue = [start]",
+  "    visited = {start}",
+  "    while queue:",
+  "        u = queue.pop(0)",
+  "        visit(u)",
+  "        for v in graph.neighbors(u):",
+  "            if v not in visited:",
+  "                visited.add(v)",
+  "                queue.append(v)"
 ]
 
 const DFS_CODE = [
-  "function DFS(graph, start):",
-  "  stack = [start], visited = {start}",
-  "  while stack is not empty:",
-  "    u = stack.pop()",
-  "    visit(u)",
-  "    for each neighbor v of u:",
-  "      if v not in visited:",
-  "        visited.add(v)",
-  "        stack.push(v)"
+  "def dfs(graph, start):",
+  "    stack = [start]",
+  "    visited = {start}",
+  "    while stack:",
+  "        u = stack.pop()",
+  "        visit(u)",
+  "        for v in graph.neighbors(u):",
+  "            if v not in visited:",
+  "                visited.add(v)",
+  "                stack.append(v)"
 ]
 
 type GraphNode = {

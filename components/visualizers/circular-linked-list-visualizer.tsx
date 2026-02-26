@@ -9,42 +9,42 @@ import { ArrowRight, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 
 const INSERT_CODE = [
-  "function insertTail(value):",
-  "  newNode = new Node(value)",
-  "  if head is null:",
-  "    head = newNode",
-  "    newNode.next = head",
-  "  else:",
-  "    temp = head",
-  "    while temp.next != head: temp = temp.next",
-  "    temp.next = newNode",
-  "    newNode.next = head"
+  "def insert_tail(value):",
+  "    new_node = Node(value)",
+  "    if not head:",
+  "        head = new_node",
+  "        new_node.next = head",
+  "    else:",
+  "        temp = head",
+  "        while temp.next != head: temp = temp.next",
+  "        temp.next = new_node",
+  "        new_node.next = head"
 ]
 
 const DELETE_CODE = [
-  "function deleteNode(value):",
-  "  if head is null: return",
-  "  if head.value == value:",
-  "    if head.next == head: head = null",
-  "    else:",
-  "      temp = head",
-  "      while temp.next != head: temp = temp.next",
-  "      temp.next = head.next",
-  "      head = head.next",
-  "    return",
-  "  // Search and delete other nodes...",
-  "  while cur.next != head and cur.next.value != value: ..."
+  "def delete_node(value):",
+  "    if not head: return",
+  "    if head.value == value:",
+  "        if head.next == head: head = None",
+  "        else:",
+  "            temp = head",
+  "            while temp.next != head: temp = temp.next",
+  "            temp.next = head.next",
+  "            head = head.next",
+  "        return",
+  "    # Search and delete other nodes...",
+  "    while cur.next != head and cur.next.value != value: ..."
 ]
 
 const SEARCH_CODE = [
-  "function search(value):",
-  "  if head is null: return false",
-  "  temp = head",
-  "  do:",
-  "    if temp.value == value: return true",
-  "    temp = temp.next",
-  "  while temp != head",
-  "  return false"
+  "def search(value):",
+  "    if not head: return False",
+  "    temp = head",
+  "    while True:",
+  "        if temp.value == value: return True",
+  "        temp = temp.next",
+  "        if temp == head: break",
+  "    return False"
 ]
 
 type Node = {

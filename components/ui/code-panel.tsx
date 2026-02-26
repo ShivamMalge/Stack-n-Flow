@@ -15,20 +15,58 @@ export default function CodePanel({ code, activeLine, title = "Pseudocode" }: Co
 
     useEffect(() => {
         if (activeLine !== null && lineRefs.current[activeLine]) {
-            lineRefs.current[activeLine]?.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-            })
+            const el = lineRefs.current[activeLine]
+            if (el && el.parentElement && el.parentElement.parentElement) {
+                const container = el.parentElement.parentElement
+                // Calculate position to scroll to center of container
+                const containerHeight = container.clientHeight
+                const targetScroll = el.offsetTop - (containerHeight / 2) + (el.clientHeight / 2)
+
+                container.scrollTo({
+                    top: Math.max(0, targetScroll),
+                    behavior: "smooth"
+                })
+            }
         }
     }, [activeLine])
 
     const formatLine = (line: string) => {
-        // Simple regex to add some basic syntax highlighting
-        return line
-            .replace(/\b(function|if|else|while|for|return|const|let|var)\b/g, '<span class="text-purple-400">$1</span>')
-            .replace(/\b(true|false|null)\b/g, '<span class="text-orange-400">$1</span>')
-            .replace(/(\/\/.*)/g, '<span class="text-muted-foreground">$1</span>')
-            .replace(/\b(\d+)\b/g, '<span class="text-yellow-400">$1</span>')
+        // Use unique markers to prevent double-highlighting
+        // Process strings/comments first, then keywords, then numbers
+
+        let formatted = line;
+
+        // 1. Comments
+        const comments: string[] = [];
+        formatted = formatted.replace(/(\/\/.*)/g, (match) => {
+            comments.push(match);
+            return `__COMMENT_${comments.length - 1}__`;
+        });
+
+        // 2. Keywords
+        const keywords = ["def", "function", "if", "elif", "else", "while", "for", "return", "const", "let", "var", "in", "from", "to"];
+        keywords.forEach(kw => {
+            const regex = new RegExp(`\\b${kw}\\b`, 'g');
+            formatted = formatted.replace(regex, `<span class="text-purple-400">${kw}</span>`);
+        });
+
+        // 3. Spacial values
+        const special = ["true", "false", "null", "None"];
+        special.forEach(val => {
+            const regex = new RegExp(`\\b${val}\\b`, 'g');
+            formatted = formatted.replace(regex, `<span class="text-orange-400">${val}</span>`);
+        });
+
+        // 4. Numbers (only if not preceded by =" or other tag characters to avoid breaking HTML)
+        // This is a simple fix to avoid highlighting numbers that are part of previously added <span> classes
+        formatted = formatted.replace(/(?<![="])\b(\d+)\b/g, '<span class="text-yellow-400">$1</span>');
+
+        // 5. Restore comments
+        comments.forEach((comment, idx) => {
+            formatted = formatted.replace(`__COMMENT_${idx}__`, `<span class="text-muted-foreground">${comment}</span>`);
+        });
+
+        return formatted;
     }
 
     return (

@@ -12,32 +12,32 @@ import { useMobile } from "@/hooks/use-mobile"
 import CodePanel from "@/components/ui/code-panel"
 
 const SEARCH_CODE = [
-  "function search(node, key):",
-  "  int i = 0",
-  "  while i < node.keys.length and key > node.keys[i]: i++",
-  "  if i < node.keys.length and key == node.keys[i]: return node",
-  "  if node.isLeaf: return null",
-  "  return search(node.children[i], key)"
+  "def search(node, key):",
+  "    i = 0",
+  "    while i < len(node.keys) and key > node.keys[i]: i += 1",
+  "    if i < len(node.keys) and key == node.keys[i]: return node",
+  "    if node.is_leaf: return None",
+  "    return search(node.children[i], key)"
 ]
 
 const INSERT_CODE = [
-  "function insert(key):",
-  "  if root is full:",
-  "    newRoot = Node(isLeaf=false)",
-  "    newRoot.children.push(root)",
-  "    splitChild(newRoot, 0, root)",
-  "    insertNonFull(newRoot, key)",
-  "  else: insertNonFull(root, key)",
+  "def insert(key):",
+  "    if root_is_full:",
+  "        new_root = Node(is_leaf=False)",
+  "        new_root.children.append(root)",
+  "        split_child(new_root, 0, root)",
+  "        insert_non_full(new_root, key)",
+  "    else: insert_non_full(root, key)",
   "",
-  "function insertNonFull(node, key):",
-  "  if node.isLeaf:",
-  "    // Find position and insert key",
-  "    while i >= 0 and node.keys[i] > key: ...",
-  "    node.keys.insert(i + 1, key)",
-  "  else:",
-  "    // Recurse to correct child",
-  "    if child is full: splitChild(node, i, child)",
-  "    insertNonFull(child, key)"
+  "def insert_non_full(node, key):",
+  "    if node.is_leaf:",
+  "        # Find position and insert key",
+  "        while i >= 0 and node.keys[i] > key: ...",
+  "        node.keys.insert(i + 1, key)",
+  "    else:",
+  "        # Recurse to correct child",
+  "        if child_is_full: split_child(node, i, child)",
+  "        insert_non_full(child, key)"
 ]
 
 // B-Tree node

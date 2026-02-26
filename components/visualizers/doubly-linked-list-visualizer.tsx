@@ -9,54 +9,54 @@ import { ArrowLeft, ArrowRight, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 
 const INSERT_FRONT_CODE = [
-  "function insertFront(value):",
-  "  newNode = new Node(value)",
-  "  if head is null:",
-  "    head = tail = newNode",
-  "  else:",
-  "    newNode.next = head",
-  "    head.prev = newNode",
-  "    head = newNode"
+  "def insert_front(value):",
+  "    new_node = Node(value)",
+  "    if not head:",
+  "        head = tail = new_node",
+  "    else:",
+  "        new_node.next = head",
+  "        head.prev = new_node",
+  "        head = new_node"
 ]
 
 const INSERT_REAR_CODE = [
-  "function insertRear(value):",
-  "  newNode = new Node(value)",
-  "  if tail is null:",
-  "    head = tail = newNode",
-  "  else:",
-  "    newNode.prev = tail",
-  "    tail.next = newNode",
-  "    tail = newNode"
+  "def insert_rear(value):",
+  "    new_node = Node(value)",
+  "    if not tail:",
+  "        head = tail = new_node",
+  "    else:",
+  "        new_node.prev = tail",
+  "        tail.next = new_node",
+  "        tail = new_node"
 ]
 
 const DELETE_FRONT_CODE = [
-  "function deleteFront():",
-  "  if head is null: return",
-  "  if head == tail:",
-  "    head = tail = null",
-  "  else:",
-  "    head = head.next",
-  "    head.prev = null"
+  "def delete_front():",
+  "    if not head: return",
+  "    if head == tail:",
+  "        head = tail = None",
+  "    else:",
+  "        head = head.next",
+  "        head.prev = None"
 ]
 
 const DELETE_REAR_CODE = [
-  "function deleteRear():",
-  "  if tail is null: return",
-  "  if head == tail:",
-  "    head = tail = null",
-  "  else:",
-  "    tail = tail.prev",
-  "    tail.next = null"
+  "def delete_rear():",
+  "    if not tail: return",
+  "    if head == tail:",
+  "        head = tail = None",
+  "    else:",
+  "        tail = tail.prev",
+  "        tail.next = None"
 ]
 
 const SEARCH_CODE = [
-  "function search(value):",
-  "  temp = head",
-  "  while temp is not null:",
-  "    if temp.value == value: return true",
-  "    temp = temp.next",
-  "  return false"
+  "def search(value):",
+  "    temp = head",
+  "    while temp:",
+  "        if temp.value == value: return True",
+  "        temp = temp.next",
+  "    return False"
 ]
 
 type Node = {

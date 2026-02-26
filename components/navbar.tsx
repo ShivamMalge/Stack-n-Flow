@@ -52,23 +52,34 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden border-b">
-          <nav className="container flex flex-col py-4">
-            {navItems.map((item) => (
+      <div
+        className={`fixed inset-0 z-40 md:hidden bg-background/80 backdrop-blur-md transition-all duration-300 ease-in-out ${isMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+        onClick={() => setIsMenuOpen(false)}
+      >
+        <div
+          className={`container flex flex-col items-center justify-center min-h-screen pt-16 pb-8 px-6 transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-y-0" : "-translate-y-4"
+            }`}
+        >
+          <nav className="flex flex-col items-center gap-8 w-full max-w-xs">
+            {navItems.map((item, index) => (
               <Link
                 key={item.path}
                 href={item.path}
-                className={`py-3 text-sm font-medium transition-colors hover:text-primary ${pathname === item.path ? "text-foreground" : "text-muted-foreground"
+                className={`w-full text-center py-4 text-2xl font-semibold transition-all hover:text-primary border-b border-border/50 ${pathname === item.path ? "text-foreground" : "text-muted-foreground"
                   }`}
-                onClick={() => setIsMenuOpen(false)}
+                style={{ transitionDelay: `${index * 50}ms` }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsMenuOpen(false)
+                }}
               >
                 {item.name}
               </Link>
             ))}
           </nav>
         </div>
-      )}
+      </div>
     </header>
   )
 }

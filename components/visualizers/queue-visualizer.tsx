@@ -8,25 +8,25 @@ import { ArrowRight, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 
 const ENQUEUE_CODE = [
-  "function enqueue(value):",
-  "  if queue.isFull(): throw Overflow",
-  "  queue[rear] = value",
-  "  rear = (rear + 1) % size",
-  "  return"
+  "def enqueue(value):",
+  "    if queue.is_full(): raise Overflow",
+  "    queue[rear] = value",
+  "    rear = (rear + 1) % size",
+  "    return"
 ]
 
 const DEQUEUE_CODE = [
-  "function dequeue():",
-  "  if queue.isEmpty(): throw Underflow",
-  "  let value = queue[front]",
-  "  front = (front + 1) % size",
-  "  return value"
+  "def dequeue():",
+  "    if queue.is_empty(): raise Underflow",
+  "    value = queue[front]",
+  "    front = (front + 1) % size",
+  "    return value"
 ]
 
 const PEEK_CODE = [
-  "function peek():",
-  "  if queue.isEmpty(): return null",
-  "  return queue[front]"
+  "def peek():",
+  "    if queue.is_empty(): return None",
+  "    return queue[front]"
 ]
 
 type QueueItem = {

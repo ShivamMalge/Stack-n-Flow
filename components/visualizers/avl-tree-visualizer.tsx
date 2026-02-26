@@ -15,31 +15,31 @@ import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPla
 import { computeTreeLayout } from "@/lib/tree-layout"
 
 const SEARCH_CODE = [
-  "function search(node, value):",
-  "  if node == null: return null",
-  "  if node.value == value: return node",
-  "  if value < node.value:",
-  "    return search(node.left, value)",
-  "  return search(node.right, value)"
+  "def search(node, value):",
+  "    if not node: return None",
+  "    if node.value == value: return node",
+  "    if value < node.value:",
+  "        return search(node.left, value)",
+  "    return search(node.right, value)"
 ]
 
 const INSERT_CODE = [
-  "function insert(node, value):",
-  "  // 1. Standard BST Insert",
-  "  if node == null: return Node(value)",
-  "  if value < node.value:",
-  "    node.left = insert(node.left, value)",
-  "  else: node.right = insert(node.right, value)",
-  "  // 2. Update height",
-  "  node.height = 1 + max(h(left), h(right))",
-  "  // 3. Balance & Rotate",
-  "  int balance = getBalance(node)",
-  "  if balance > 1 and value < node.left.value:",
-  "    return rightRotate(node)",
-  "  if balance < -1 and value > node.right.value:",
-  "    return leftRotate(node)",
-  "  // ... other cases (LR, RL)",
-  "  return node"
+  "def insert(node, value):",
+  "    # 1. Standard BST Insert",
+  "    if not node: return Node(value)",
+  "    if value < node.value:",
+  "        node.left = insert(node.left, value)",
+  "    else: node.right = insert(node.right, value)",
+  "    # 2. Update height",
+  "    node.height = 1 + max(h(left), h(right))",
+  "    # 3. Balance & Rotate",
+  "    balance = get_balance(node)",
+  "    if balance > 1 and value < node.left.value:",
+  "        return right_rotate(node)",
+  "    if balance < -1 and value > node.right.value:",
+  "        return left_rotate(node)",
+  "    # ... other cases (LR, RL)",
+  "    return node"
 ]
 
 type TreeNode = {

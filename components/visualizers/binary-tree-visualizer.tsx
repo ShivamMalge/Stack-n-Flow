@@ -15,57 +15,57 @@ import { computeTreeLayout } from "@/lib/tree-layout"
 import CodePanel from "@/components/ui/code-panel"
 
 const INSERT_CODE = [
-  "function insert(value):",
-  "  if root is null:",
-  "    root = new Node(value)",
-  "    return",
-  "  // Randomly go left or right",
-  "  if random() < 0.5:",
-  "    insertNode(node.left, value)",
-  "  else: insertNode(node.right, value)"
+  "def insert(value):",
+  "    if not root:",
+  "        root = Node(value)",
+  "        return",
+  "    # Randomly go left or right",
+  "    if random() < 0.5:",
+  "        insert_node(node.left, value)",
+  "    else: insert_node(node.right, value)"
 ]
 
 const SEARCH_CODE = [
-  "function search(value):",
-  "  queue = [root]",
-  "  while queue is not empty:",
-  "    current = queue.shift()",
-  "    if current.value == value: return true",
-  "    if current.left: queue.push(current.left)",
-  "    if current.right: queue.push(current.right)",
-  "  return false"
+  "def search(value):",
+  "    queue = [root]",
+  "    while queue:",
+  "        current = queue.pop(0)",
+  "        if current.value == value: return True",
+  "        if current.left: queue.append(current.left)",
+  "        if current.right: queue.append(current.right)",
+  "    return False"
 ]
 
 const TRAVERSAL_CODE = {
   inorder: [
-    "function inorder(node):",
-    "  if node is null: return",
-    "  inorder(node.left)",
-    "  visit(node.value)",
-    "  inorder(node.right)"
+    "def inorder(node):",
+    "    if not node: return",
+    "    inorder(node.left)",
+    "    visit(node.value)",
+    "    inorder(node.right)"
   ],
   preorder: [
-    "function preorder(node):",
-    "  if node is null: return",
-    "  visit(node.value)",
-    "  preorder(node.left)",
-    "  preorder(node.right)"
+    "def preorder(node):",
+    "    if not node: return",
+    "    visit(node.value)",
+    "    preorder(node.left)",
+    "    preorder(node.right)"
   ],
   postorder: [
-    "function postorder(node):",
-    "  if node is null: return",
-    "  postorder(node.left)",
-    "  postorder(node.right)",
-    "  visit(node.value)"
+    "def postorder(node):",
+    "    if not node: return",
+    "    postorder(node.left)",
+    "    postorder(node.right)",
+    "    visit(node.value)"
   ],
   levelorder: [
-    "function levelOrder(root):",
-    "  queue = [root]",
-    "  while queue is not empty:",
-    "    node = queue.shift()",
-    "    visit(node.value)",
-    "    if node.left: queue.push(node.left)",
-    "    if node.right: queue.push(node.right)"
+    "def level_order(root):",
+    "    queue = [root]",
+    "    while queue:",
+    "        node = queue.pop(0)",
+    "        visit(node.value)",
+    "        if node.left: queue.append(node.left)",
+    "        if node.right: queue.append(node.right)"
   ]
 }
 

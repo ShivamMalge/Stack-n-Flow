@@ -8,25 +8,25 @@ import { ArrowUp, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 
 const PUSH_CODE = [
-  "function push(value):",
-  "  if stack.isFull(): throw Overflow",
-  "  stack.top = stack.top + 1",
-  "  stack[stack.top] = value",
-  "  return"
+  "def push(value):",
+  "    if stack.is_full(): raise Overflow",
+  "    stack.top += 1",
+  "    stack[stack.top] = value",
+  "    return"
 ]
 
 const POP_CODE = [
-  "function pop():",
-  "  if stack.isEmpty(): throw Underflow",
-  "  let value = stack[stack.top]",
-  "  stack.top = stack.top - 1",
-  "  return value"
+  "def pop():",
+  "    if stack.is_empty(): raise Underflow",
+  "    value = stack[stack.top]",
+  "    stack.top -= 1",
+  "    return value"
 ]
 
 const PEEK_CODE = [
-  "function peek():",
-  "  if stack.isEmpty(): return null",
-  "  return stack[stack.top]"
+  "def peek():",
+  "    if stack.is_empty(): return None",
+  "    return stack[stack.top]"
 ]
 
 type StackItem = {

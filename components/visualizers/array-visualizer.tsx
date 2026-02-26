@@ -9,28 +9,28 @@ import { Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 
 const INSERT_CODE = [
-  "function insert(value, index):",
-  "  if index < 0 or index > size: return",
-  "  for i from size down to index + 1:",
-  "    array[i] = array[i-1]",
-  "  array[index] = value",
-  "  size = size + 1"
+  "def insert(value, index):",
+  "    if index < 0 or index > size: return",
+  "    for i in range(size, index, -1):",
+  "        array[i] = array[i-1]",
+  "    array[index] = value",
+  "    size += 1"
 ]
 
 const DELETE_CODE = [
-  "function delete(index):",
-  "  if index < 0 or index >= size: return",
-  "  for i from index to size - 2:",
-  "    array[i] = array[i+1]",
-  "  size = size - 1"
+  "def delete(index):",
+  "    if index < 0 or index >= size: return",
+  "    for i in range(index, size - 1):",
+  "        array[i] = array[i+1]",
+  "    size -= 1"
 ]
 
 const SEARCH_CODE = [
-  "function search(value):",
-  "  for i from 0 to size - 1:",
-  "    if array[i] == value:",
-  "      return i",
-  "  return -1"
+  "def search(value):",
+  "    for i in range(size):",
+  "        if array[i] == value:",
+  "            return i",
+  "    return -1"
 ]
 
 type ArrayItem = {

@@ -341,16 +341,22 @@ export default function SortingComparison() {
     const playerA = useAnimationPlayer<SortFrame>(onFrameA)
     const playerB = useAnimationPlayer<SortFrame>(onFrameB)
 
-    // Auto-scroll active step into view (disabled on mobile)
+    // Auto-scroll active step into view (without scrolling the whole page)
     useEffect(() => {
-        if (window.innerWidth > 768) {
-            activeStepRefA.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+        const elA = activeStepRefA.current
+        if (elA && elA.parentElement && window.innerWidth > 768) {
+            const container = elA.parentElement
+            const targetScroll = elA.offsetTop - (container.clientHeight / 2) + (elA.clientHeight / 2)
+            container.scrollTo({ top: Math.max(0, targetScroll), behavior: "smooth" })
         }
     }, [playerA.currentFrame])
 
     useEffect(() => {
-        if (window.innerWidth > 768) {
-            activeStepRefB.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+        const elB = activeStepRefB.current
+        if (elB && elB.parentElement && window.innerWidth > 768) {
+            const container = elB.parentElement
+            const targetScroll = elB.offsetTop - (container.clientHeight / 2) + (elB.clientHeight / 2)
+            container.scrollTo({ top: Math.max(0, targetScroll), behavior: "smooth" })
         }
     }, [playerB.currentFrame])
 

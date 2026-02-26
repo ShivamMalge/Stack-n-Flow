@@ -99,6 +99,18 @@ const dataStructures = [
     icon: LayoutGrid,
     slug: "array",
   },
+  {
+    name: "Hash Table",
+    description: "A data structure that maps keys to values using a hash function for efficient lookup.",
+    icon: Table2,
+    slug: "hash-table",
+  },
+  {
+    name: "Heap",
+    description: "A specialized tree-based data structure that satisfies the heap property (max or min).",
+    icon: ListTree,
+    slug: "heap",
+  },
 ]
 
 const algorithms = [

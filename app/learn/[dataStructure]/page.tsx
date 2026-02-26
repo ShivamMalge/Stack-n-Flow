@@ -17,6 +17,7 @@ import {
   SplitSquareVertical,
   Table2,
   Network,
+  GitBranchPlus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,7 +85,7 @@ const dataStructureInfo = {
     content: {
       intuition:
         "Think of a doubly linked list as a chain where each link is connected to both its neighbors. This allows for bidirectional traversal, making certain operations more efficient.",
-      types: ["Simple Doubly Linked List", "Circular Doubly Linked List"],
+      types: ["Simple Doubly Linked List", "Circular Linked List"],
       operations: [
         { name: "Access", complexity: "O(n)", description: "To access an element, you must traverse from either end." },
         { name: "Search", complexity: "O(n)", description: "Linear search through the list." },
@@ -260,6 +261,38 @@ const dataStructureInfo = {
       ],
     },
   },
+  "avl-tree": {
+    name: "AVL Tree",
+    icon: GitBranchPlus,
+    description: "A self-balancing binary search tree where heights of subtrees differ by at most one.",
+    content: {
+      intuition:
+        "Think of an AVL tree as a perfectionist version of a Binary Search Tree. Every time you add or remove something, it checks if the tree has become 'lopsided'. If it has, it performs balanced rotations to keep the tree symmetrical, ensuring that searching never slows down significantly.",
+      types: ["Single Rotation (LL, RR)", "Double Rotation (LR, RL)"],
+      operations: [
+        { name: "Search", complexity: "O(log n)", description: "Guaranteed logarithmic time due to balance." },
+        { name: "Insert", complexity: "O(log n)", description: "Insertion followed by potential rotations." },
+        { name: "Delete", complexity: "O(log n)", description: "Deletion followed by potential rotations." },
+        { name: "Rotation", complexity: "O(1)", description: "O(1) pointers swap to rebalance subtrees." },
+      ],
+      applications: [
+        "Systems where search is the primary operation",
+        "Databases where data is frequently searched but rarely changed",
+        "Memory management systems",
+        "Implementing balanced sets and maps",
+      ],
+      advantages: [
+        "Strictly balanced (height is always log n)",
+        "Faster search than Red-Black trees",
+        "Predictable performance",
+      ],
+      disadvantages: [
+        "Insertion/Deletion can be slower due to rotations",
+        "More complex implementation",
+        "High memory overhead (balance factors)",
+      ],
+    },
+  },
   graph: {
     name: "Graph",
     icon: GitMerge,
@@ -329,6 +362,76 @@ const dataStructureInfo = {
         "Expensive insertions and deletions",
         "Memory wastage in static arrays",
         "Contiguous memory requirement",
+      ],
+    },
+  },
+  "hash-table": {
+    name: "Hash Table",
+    icon: Table2,
+    description: "A data structure that maps keys to values using a hash function.",
+    content: {
+      intuition:
+        "Think of a hash table like a massive file cabinet where you have a magic formula (the hash function) that tells you exactly which drawer to open for any given item. This allows you to find items almost instantly, regardless of how many you have stored.",
+      types: ["Separate Chaining (using Linked Lists)", "Open Addressing (Linear Probing, Quadratic Probing)"],
+      operations: [
+        { name: "Insert", complexity: "O(1) average", description: "Calculating hash and adding to the bucket." },
+        { name: "Search", complexity: "O(1) average", description: "Go directly to the index and find the key." },
+        { name: "Delete", complexity: "O(1) average", description: "Removing the key-value pair from the bucket." },
+        { name: "Worst Case", complexity: "O(n)", description: "Occurs when many keys collide into the same bucket." },
+      ],
+      applications: [
+        "Database indexing",
+        "Caching (Memcached, Redis)",
+        "Symbol tables in compilers",
+        "Implementing Sets and Maps",
+        "Password storage (using salts)",
+      ],
+      advantages: [
+        "Extremely fast data retrieval",
+        "Flexible keys (strings, numbers, etc.)",
+        "Efficient for large datasets",
+        "Constant time complexity on average",
+      ],
+      disadvantages: [
+        "Collision handling overhead",
+        "Requires a good hash function",
+        "Higher memory usage than arrays",
+        "Not sorted (order is typically lost)",
+      ],
+    },
+  },
+  heap: {
+    name: "Heap",
+    icon: ListTree,
+    description: "A specialized tree-based data structure that satisfies the heap property.",
+    content: {
+      intuition:
+        "Think of a heap like a priority line. In a Max-Heap, the most important (largest) item is always at the top. When you remove it, the next most important item bubbles up to take its place. It's not a fully sorted tree, but it's very good at keeping the 'most important' item accessible.",
+      types: ["Max-Heap (Root is largest)", "Min-Heap (Root is smallest)", "Binary Heap", "Fibonacci Heap"],
+      operations: [
+        { name: "Insert", complexity: "O(log n)", description: "Add to bottom and 'bubble up'." },
+        { name: "Extract Max/Min", complexity: "O(log n)", description: "Remove root and 'heapify down'." },
+        { name: "Peek", complexity: "O(1)", description: "View the root element." },
+        { name: "Heapify", complexity: "O(n)", description: "Convert an arbitrary array into a heap." },
+      ],
+      applications: [
+        "Priority Queues",
+        "Heap Sort algorithm",
+        "Graph algorithms (Dijkstra, Prim)",
+        "Finding the K-th smallest/largest element",
+        "Memory management in some runtimes",
+      ],
+      advantages: [
+        "Efficient priority management",
+        "Can be stored in an array (zero pointer overhead)",
+        "Quick access to extreme values",
+        "Stable performance characteristics",
+      ],
+      disadvantages: [
+        "Slow random access (only root is O(1))",
+        "Searching for a specific value is O(n)",
+        "Only partially ordered",
+        "More complex than simple arrays",
       ],
     },
   },
@@ -619,18 +722,16 @@ const dataStructureInfo = {
       intuition:
         "Graph algorithms help us analyze networks of connected entities, similar to how we might find the shortest route on a map or determine how information spreads through social connections.",
       types: [
-        "Breadth-First Search",
-        "Depth-First Search",
-        "Dijkstra's Algorithm",
-        "Bellman-Ford",
-        "Kruskal's Algorithm",
-        "Prim's Algorithm",
+        "Pathfinding (Dijkstra, A*)",
+        "Traversal (BFS, DFS)",
+        "Minimum Spanning Tree (Kruskal, Prim)",
+        "Topological Sort",
       ],
       operations: [
         {
           name: "BFS",
           complexity: "O(V + E)",
-          description: "Explores all neighbors at the present depth before moving to nodes at the next depth level.",
+          description: "Explores all neighbors at the present depth first.",
         },
         {
           name: "DFS",
@@ -638,34 +739,32 @@ const dataStructureInfo = {
           description: "Explores as far as possible along each branch before backtracking.",
         },
         {
-          name: "Dijkstra's Algorithm",
+          name: "Dijkstra",
           complexity: "O(E log V)",
-          description: "Finds the shortest path from a source vertex to all other vertices.",
+          description: "Finds the shortest path from a source to all other nodes.",
         },
         {
-          name: "Minimum Spanning Tree",
-          complexity: "O(E log V)",
-          description: "Finds a subset of edges that connects all vertices with minimum total weight.",
+          name: "A* Search",
+          complexity: "O(E)",
+          description: "Optimized pathfinding using heuristics.",
         },
       ],
       applications: [
-        "Social network analysis",
-        "GPS navigation systems",
-        "Web page ranking",
-        "Network routing protocols",
-        "Dependency resolution in package managers",
+        "GPS Navigation (Google Maps)",
+        "Social Network Analysis",
+        "Network Routing Protocols",
+        "Recommendation Engines",
+        "Dependency Resolution (npm/pip)",
       ],
       advantages: [
-        "Model real-world network problems",
-        "Solve complex connectivity issues",
-        "Optimize paths and flows",
-        "Analyze relationships between entities",
+        "Solves complex interconnected problems",
+        "Essential for transportation and logistics",
+        "Scalable to massive networks",
       ],
       disadvantages: [
-        "Can be computationally expensive for large graphs",
-        "Memory requirements for large graphs",
-        "Some problems are NP-hard",
-        "Implementation complexity for advanced algorithms",
+        "Some problems are NP-Hard (like TSP)",
+        "Large memory requirements for huge graphs",
+        "Algorithm choice is highly dependent on graph type",
       ],
     },
   },
