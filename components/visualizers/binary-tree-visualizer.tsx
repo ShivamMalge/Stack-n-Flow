@@ -2,13 +2,15 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
+import AnimationControls from "@/components/ui/animation-controls"
+import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
 type TreeNode = {
   id: number
@@ -19,6 +21,8 @@ type TreeNode = {
   isNew?: boolean
   isDeleting?: boolean
 }
+
+type BinaryTreeFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null }
 
 export default function BinaryTreeVisualizer() {
   const [root, setRoot] = useState<TreeNode | null>(null)
@@ -31,8 +35,16 @@ export default function BinaryTreeVisualizer() {
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [steps, setSteps] = useState<string[]>([])
   const svgRef = useRef<SVGSVGElement>(null)
   const isMobile = useMobile()
+
+  const onFrameChange = useCallback((snap: BinaryTreeFrame) => {
+    setRoot(snap.root)
+    setTraversalPath(snap.traversalPath)
+    setSearchResult(snap.searchResult)
+  }, [])
+  const player = useAnimationPlayer<BinaryTreeFrame>(onFrameChange)
 
   // Initialize with an empty tree
   useEffect(() => {
@@ -97,88 +109,47 @@ export default function BinaryTreeVisualizer() {
   }
 
   const handleSearch = () => {
-    if (!inputValue || animating) return
-
+    if (!inputValue || animating || !root) return
     const value = Number.parseInt(inputValue)
-    setAnimating(true)
-    setSearchResult(null)
+    setInputValue("")
 
-    // Reset all highlights
-    const resetHighlights = (node: TreeNode | null): TreeNode | null => {
-      if (node === null) return null
+    const resetH = (n: TreeNode | null): TreeNode | null =>
+      n ? { ...n, highlighted: false, left: resetH(n.left), right: resetH(n.right) } : null
+    const setHForIds = (n: TreeNode | null, ids: Set<number>): TreeNode | null =>
+      n ? { ...n, highlighted: ids.has(n.id), left: setHForIds(n.left, ids), right: setHForIds(n.right, ids) } : null
 
-      return {
-        ...node,
-        highlighted: false,
-        left: resetHighlights(node.left),
-        right: resetHighlights(node.right),
-      }
-    }
-
-    setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-
-    // Animate search through the tree
-    const searchPath: number[] = []
+    // BFS to find the value — binary tree has no ordering, must check all nodes
+    const frames: AnimationFrame<BinaryTreeFrame>[] = []
+    const allSteps: string[] = [`Searching for ${value} via BFS`]
+    const rootCopy = JSON.parse(JSON.stringify(root)) as TreeNode
+    const queue: TreeNode[] = [rootCopy]
+    const visited: number[] = []
     let found = false
 
-    const searchTree = (node: TreeNode | null) => {
-      if (node === null) return
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: [], searchResult: null }, description: `BFS search for ${value}` })
 
-      searchPath.push(node.value)
-
-      const highlightNode = (n: TreeNode | null, path: number[]): TreeNode | null => {
-        if (n === null) return null
-
-        return {
-          ...n,
-          highlighted: path.includes(n.value),
-          left: highlightNode(n.left, path),
-          right: highlightNode(n.right, path),
-        }
-      }
-
-      setRoot(highlightNode(JSON.parse(JSON.stringify(root)), searchPath))
-
-      if (node.value === value) {
+    while (queue.length > 0) {
+      const cur = queue.shift()!
+      visited.push(cur.id)
+      const visitedSet = new Set(visited)
+      if (cur.value === value) {
         found = true
-        setSearchResult("Element found")
-        return
+        allSteps.push(`✓ Found ${value} at node id=${cur.id}`)
+        frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: visited, searchResult: "Element found!" }, description: `Found ${value}!` })
+        break
       }
-
-      // Continue searching both left and right subtrees
-      setTimeout(() => {
-        if (!found && node.left) searchTree(node.left)
-      }, 500)
-
-      setTimeout(() => {
-        if (!found && node.right) searchTree(node.right)
-      }, 1000)
+      allSteps.push(`Checking node ${cur.value}`)
+      frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: [...visited], searchResult: null }, description: `Checking node ${cur.value}` })
+      if (cur.left) queue.push(cur.left)
+      if (cur.right) queue.push(cur.right)
     }
-
-    if (root) {
-      searchTree(root)
-
-      // If not found after searching the entire tree
-      setTimeout(
-        () => {
-          if (!found) {
-            setSearchResult("Element not found")
-            setAnimating(false)
-          } else {
-            setTimeout(() => {
-              setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-              setAnimating(false)
-            }, 1000)
-          }
-        },
-        1500 * (countNodes(root) + 1),
-      ) // Approximate time based on tree size
-    } else {
-      setSearchResult("Tree is empty")
-      setAnimating(false)
+    if (!found) {
+      allSteps.push(`✗ ${value} not in tree`)
+      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: [], searchResult: "Element not found" }, description: `${value} not found` })
     }
-
-    setInputValue("")
+    setSteps(allSteps)
+    player.loadFrames(frames)
+    setTimeout(() => player.play(), 50)
   }
 
   const countNodes = (node: TreeNode | null): number => {
@@ -187,103 +158,35 @@ export default function BinaryTreeVisualizer() {
   }
 
   const handleTraversal = () => {
-    if (animating || !root) return
-
-    setAnimating(true)
-    setTraversalPath([])
-
-    // Reset all highlights
-    const resetHighlights = (node: TreeNode | null): TreeNode | null => {
-      if (node === null) return null
-
-      return {
-        ...node,
-        highlighted: false,
-        left: resetHighlights(node.left),
-        right: resetHighlights(node.right),
-      }
-    }
-
-    setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-
-    // Get traversal path based on selected type
+    if (!root) return
     const path: number[] = []
+    const inOrder = (n: TreeNode | null) => { if (!n) return; inOrder(n.left); path.push(n.value); inOrder(n.right) }
+    const preOrder = (n: TreeNode | null) => { if (!n) return; path.push(n.value); preOrder(n.left); preOrder(n.right) }
+    const postOrder = (n: TreeNode | null) => { if (!n) return; postOrder(n.left); postOrder(n.right); path.push(n.value) }
+    const levelOrder = (n: TreeNode | null) => { if (!n) return; const q = [n]; while (q.length) { const c = q.shift()!; path.push(c.value); if (c.left) q.push(c.left); if (c.right) q.push(c.right) } }
+    if (traversalType === "inorder") inOrder(root)
+    else if (traversalType === "preorder") preOrder(root)
+    else if (traversalType === "postorder") postOrder(root)
+    else levelOrder(root)
 
-    const inOrderTraversal = (node: TreeNode | null) => {
-      if (node === null) return
-      inOrderTraversal(node.left)
-      path.push(node.value)
-      inOrderTraversal(node.right)
+    const resetH = (n: TreeNode | null): TreeNode | null =>
+      n ? { ...n, highlighted: false, left: resetH(n.left), right: resetH(n.right) } : null
+    const highlightOne = (n: TreeNode | null, val: number): TreeNode | null =>
+      n ? { ...n, highlighted: n.value === val, left: highlightOne(n.left, val), right: highlightOne(n.right, val) } : null
+
+    const frames: AnimationFrame<BinaryTreeFrame>[] = []
+    const allSteps: string[] = [`${traversalType} traversal`]
+    const rootCopy = JSON.parse(JSON.stringify(root)) as TreeNode
+
+    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null }, description: `Starting ${traversalType} traversal` })
+    for (let i = 0; i < path.length; i++) {
+      allSteps.push(`Visit node ${path[i]}`)
+      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
     }
-
-    const preOrderTraversal = (node: TreeNode | null) => {
-      if (node === null) return
-      path.push(node.value)
-      preOrderTraversal(node.left)
-      preOrderTraversal(node.right)
-    }
-
-    const postOrderTraversal = (node: TreeNode | null) => {
-      if (node === null) return
-      postOrderTraversal(node.left)
-      postOrderTraversal(node.right)
-      path.push(node.value)
-    }
-
-    const levelOrderTraversal = (node: TreeNode | null) => {
-      if (node === null) return
-
-      const queue: TreeNode[] = [node]
-
-      while (queue.length > 0) {
-        const current = queue.shift()!
-        path.push(current.value)
-
-        if (current.left) queue.push(current.left)
-        if (current.right) queue.push(current.right)
-      }
-    }
-
-    if (traversalType === "inorder") {
-      inOrderTraversal(root)
-    } else if (traversalType === "preorder") {
-      preOrderTraversal(root)
-    } else if (traversalType === "postorder") {
-      postOrderTraversal(root)
-    } else {
-      levelOrderTraversal(root)
-    }
-
-    // Animate traversal
-    let index = 0
-
-    const traversalInterval = setInterval(() => {
-      if (index >= path.length) {
-        clearInterval(traversalInterval)
-        setTimeout(() => {
-          setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-          setAnimating(false)
-        }, 1000)
-        return
-      }
-
-      setTraversalPath(path.slice(0, index + 1))
-
-      const highlightNode = (node: TreeNode | null, value: number): TreeNode | null => {
-        if (node === null) return null
-
-        return {
-          ...node,
-          highlighted: node.value === value,
-          left: highlightNode(node.left, value),
-          right: highlightNode(node.right, value),
-        }
-      }
-
-      setRoot(highlightNode(JSON.parse(JSON.stringify(root)), path[index]))
-
-      index++
-    }, 800)
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null }, description: `Done: ${path.join(" → ")}` })
+    setSteps(allSteps)
+    player.loadFrames(frames)
+    setTimeout(() => player.play(), 50)
   }
 
   // Calculate tree dimensions
@@ -557,34 +460,26 @@ export default function BinaryTreeVisualizer() {
 
               {operation === "insert" && (
                 <div className="flex space-x-2 mt-4">
-                  <Input
-                    type="number"
-                    placeholder="Enter a value"
-                    value={inputValue}
+                  <Input type="number" placeholder="Enter a value" value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    disabled={animating}
+                    onKeyDown={(e) => e.key === "Enter" && handleInsert()}
+                    disabled={animating || player.isPlaying}
                   />
-
-                  <Button onClick={handleInsert} disabled={animating}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Insert
+                  <Button onClick={handleInsert} disabled={animating || player.isPlaying}>
+                    <Plus className="mr-2 h-4 w-4" /> Insert
                   </Button>
                 </div>
               )}
 
               {operation === "search" && (
                 <div className="flex space-x-2 mt-4">
-                  <Input
-                    type="number"
-                    placeholder="Enter a value"
-                    value={inputValue}
+                  <Input type="number" placeholder="Enter a value" value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    disabled={animating}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    disabled={animating || player.isPlaying}
                   />
-
-                  <Button onClick={handleSearch} disabled={animating} variant="secondary">
-                    <Search className="mr-2 h-4 w-4" />
-                    Search
+                  <Button onClick={handleSearch} disabled={animating || player.isPlaying} variant="secondary">
+                    <Search className="mr-2 h-4 w-4" /> Search
                   </Button>
                 </div>
               )}
@@ -593,11 +488,9 @@ export default function BinaryTreeVisualizer() {
             <div className="mt-6 border-t pt-4">
               <h4 className="text-sm font-medium mb-2">Tree Traversal</h4>
               <div className="flex space-x-2 items-center">
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={traversalType}
-                  onChange={(e) => setTraversalType(e.target.value)}
-                  disabled={animating}
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={traversalType} onChange={(e) => setTraversalType(e.target.value)}
+                  disabled={player.isPlaying}
                 >
                   <option value="inorder">In-order</option>
                   <option value="preorder">Pre-order</option>
@@ -605,16 +498,45 @@ export default function BinaryTreeVisualizer() {
                   <option value="levelorder">Level-order</option>
                 </select>
 
-                <Button onClick={handleTraversal} disabled={animating || !root} variant="outline">
+                <Button onClick={handleTraversal} disabled={player.isPlaying || !root} variant="outline">
                   Traverse
                 </Button>
               </div>
+
+              {player.totalFrames > 0 && (
+                <div className="mt-3">
+                  <AnimationControls
+                    currentFrame={player.currentFrame} totalFrames={player.totalFrames}
+                    isPlaying={player.isPlaying} isPaused={player.isPaused} isComplete={player.isComplete}
+                    speed={player.speed}
+                    onPlay={player.play} onPause={player.pause}
+                    onStepForward={player.stepForward} onStepBackward={player.stepBackward}
+                    onReset={() => { player.reset(); setRoot((r) => { const rst = (n: TreeNode | null): TreeNode | null => n ? { ...n, highlighted: false, left: rst(n.left), right: rst(n.right) } : null; return rst(r) }); setTraversalPath([]); setSearchResult(null) }}
+                    onSpeedChange={player.setSpeed} onFrameChange={player.goToFrame}
+                  />
+                </div>
+              )}
 
               {traversalPath.length > 0 && (
                 <div className="mt-2 text-sm overflow-x-auto">
                   <span className="font-medium">Path:</span> {traversalPath.join(" → ")}
                 </div>
               )}
+
+              <div className="mt-4">
+                <h3 className="text-sm font-medium mb-1">Steps:</h3>
+                <div className="bg-muted/30 rounded-md p-2 h-28 overflow-y-auto">
+                  {steps.length > 0 ? (
+                    <ol className="pl-4 list-decimal space-y-0.5">
+                      {steps.map((s, i) => (
+                        <li key={i} className={`text-xs ${i <= player.currentFrame ? "text-foreground" : "text-muted-foreground"}`}>{s}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Search or traverse to see steps</p>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

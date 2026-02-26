@@ -2,13 +2,15 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, Trash } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
+import AnimationControls from "@/components/ui/animation-controls"
+import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
 type TreeNode = {
   id: number
@@ -19,6 +21,8 @@ type TreeNode = {
   isNew?: boolean
   isDeleting?: boolean
 }
+
+type TreeFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null }
 
 export default function BinarySearchTreeVisualizer() {
   const [root, setRoot] = useState<TreeNode | null>(null)
@@ -31,8 +35,16 @@ export default function BinarySearchTreeVisualizer() {
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [steps, setSteps] = useState<string[]>([])
   const svgRef = useRef<SVGSVGElement>(null)
   const isMobile = useMobile()
+
+  const onFrameChange = useCallback((snap: TreeFrame) => {
+    setRoot(snap.root)
+    setTraversalPath(snap.traversalPath)
+    setSearchResult(snap.searchResult)
+  }, [])
+  const player = useAnimationPlayer<TreeFrame>(onFrameChange)
 
   // Initialize with an empty tree
   useEffect(() => {
@@ -194,170 +206,78 @@ export default function BinarySearchTreeVisualizer() {
   }
 
   const handleSearch = () => {
-    if (!inputValue || animating) return
-
+    if (!inputValue || animating || !root) return
     const value = Number.parseInt(inputValue)
-    setAnimating(true)
-    setSearchResult(null)
+    setInputValue("")
 
-    // Reset all highlights
-    const resetHighlights = (node: TreeNode | null): TreeNode | null => {
-      if (node === null) return null
+    const resetH = (node: TreeNode | null): TreeNode | null =>
+      node ? { ...node, highlighted: false, left: resetH(node.left), right: resetH(node.right) } : null
+    const setH = (node: TreeNode | null, ids: number[]): TreeNode | null =>
+      node ? { ...node, highlighted: ids.includes(node.value), left: setH(node.left, ids), right: setH(node.right, ids) } : null
 
-      return {
-        ...node,
-        highlighted: false,
-        left: resetHighlights(node.left),
-        right: resetHighlights(node.right),
-      }
-    }
-
-    setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-
-    // Animate search through the tree
+    const frames: AnimationFrame<TreeFrame>[] = []
+    const allSteps: string[] = [`BST Search for value ${value}`]
     const searchPath: number[] = []
-    let currentNode = root
+    let cur: TreeNode | null = JSON.parse(JSON.stringify(root))
     let found = false
 
-    const searchInterval = setInterval(() => {
-      if (!currentNode) {
-        clearInterval(searchInterval)
-        setAnimating(false)
-        if (!found) {
-          setSearchResult("Element not found")
-        }
-        return
-      }
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: null }, description: `Searching for ${value}` })
 
-      searchPath.push(currentNode.value)
-
-      const highlightNode = (node: TreeNode | null, path: number[]): TreeNode | null => {
-        if (node === null) return null
-
-        return {
-          ...node,
-          highlighted: path.includes(node.value),
-          left: highlightNode(node.left, path),
-          right: highlightNode(node.right, path),
-        }
-      }
-
-      setRoot(highlightNode(JSON.parse(JSON.stringify(root)), searchPath))
-
-      if (currentNode.value === value) {
+    while (cur) {
+      searchPath.push(cur.value)
+      if (cur.value === value) {
         found = true
-        setSearchResult("Element found")
-        clearInterval(searchInterval)
-        setTimeout(() => {
-          setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-          setAnimating(false)
-        }, 1500)
-        return
+        allSteps.push(`✓ Found ${value}!`)
+        frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: "Element found!" }, description: `Found ${value} at node ${cur.value}` })
+        break
       }
+      const direction = value < cur.value ? "left" : "right"
+      allSteps.push(`${cur.value}: go ${direction} (${value} ${value < cur.value ? "<" : ">"} ${cur.value})`)
+      frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: null }, description: `Visiting ${cur.value} → go ${direction}` })
+      cur = value < cur.value ? cur.left : cur.right
+    }
 
-      if (value < currentNode.value) {
-        currentNode = currentNode.left
-      } else {
-        currentNode = currentNode.right
-      }
+    if (!found) {
+      allSteps.push(`✗ ${value} not found in tree`)
+      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: "Element not found" }, description: `${value} not found` })
+    }
 
-      if (!currentNode) {
-        clearInterval(searchInterval)
-        setTimeout(() => {
-          setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-          setAnimating(false)
-          if (!found) {
-            setSearchResult("Element not found")
-          }
-        }, 1000)
-      }
-    }, 500)
-
-    setInputValue("")
+    setSteps(allSteps)
+    player.loadFrames(frames)
+    setTimeout(() => player.play(), 50)
   }
 
   const handleTraversal = () => {
-    if (animating || !root) return
-
-    setAnimating(true)
-    setTraversalPath([])
-
-    // Reset all highlights
-    const resetHighlights = (node: TreeNode | null): TreeNode | null => {
-      if (node === null) return null
-
-      return {
-        ...node,
-        highlighted: false,
-        left: resetHighlights(node.left),
-        right: resetHighlights(node.right),
-      }
-    }
-
-    setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-
-    // Get traversal path based on selected type
+    if (!root) return
     const path: number[] = []
+    const inOrder = (n: TreeNode | null) => { if (!n) return; inOrder(n.left); path.push(n.value); inOrder(n.right) }
+    const preOrder = (n: TreeNode | null) => { if (!n) return; path.push(n.value); preOrder(n.left); preOrder(n.right) }
+    const postOrder = (n: TreeNode | null) => { if (!n) return; postOrder(n.left); postOrder(n.right); path.push(n.value) }
+    const bfsOrder = (n: TreeNode | null) => { if (!n) return; const q = [n]; while (q.length) { const c = q.shift()!; path.push(c.value); if (c.left) q.push(c.left); if (c.right) q.push(c.right) } }
+    if (traversalType === "inorder") inOrder(root)
+    else if (traversalType === "preorder") preOrder(root)
+    else if (traversalType === "postorder") postOrder(root)
+    else bfsOrder(root)
 
-    const inOrderTraversal = (node: TreeNode | null) => {
-      if (node === null) return
-      inOrderTraversal(node.left)
-      path.push(node.value)
-      inOrderTraversal(node.right)
+    const resetH = (node: TreeNode | null): TreeNode | null =>
+      node ? { ...node, highlighted: false, left: resetH(node.left), right: resetH(node.right) } : null
+    const highlightOne = (node: TreeNode | null, val: number): TreeNode | null =>
+      node ? { ...node, highlighted: node.value === val, left: highlightOne(node.left, val), right: highlightOne(node.right, val) } : null
+
+    const frames: AnimationFrame<TreeFrame>[] = []
+    const allSteps: string[] = [`${traversalType} traversal of BST`]
+    const rootCopy = JSON.parse(JSON.stringify(root)) as TreeNode
+
+    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null }, description: `Starting ${traversalType} traversal` })
+    for (let i = 0; i < path.length; i++) {
+      allSteps.push(`Visit node ${path[i]}`)
+      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
     }
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null }, description: `Traversal complete: ${path.join(" → ")}` })
 
-    const preOrderTraversal = (node: TreeNode | null) => {
-      if (node === null) return
-      path.push(node.value)
-      preOrderTraversal(node.left)
-      preOrderTraversal(node.right)
-    }
-
-    const postOrderTraversal = (node: TreeNode | null) => {
-      if (node === null) return
-      postOrderTraversal(node.left)
-      postOrderTraversal(node.right)
-      path.push(node.value)
-    }
-
-    if (traversalType === "inorder") {
-      inOrderTraversal(root)
-    } else if (traversalType === "preorder") {
-      preOrderTraversal(root)
-    } else {
-      postOrderTraversal(root)
-    }
-
-    // Animate traversal
-    let index = 0
-
-    const traversalInterval = setInterval(() => {
-      if (index >= path.length) {
-        clearInterval(traversalInterval)
-        setTimeout(() => {
-          setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
-          setAnimating(false)
-        }, 1000)
-        return
-      }
-
-      setTraversalPath(path.slice(0, index + 1))
-
-      const highlightNode = (node: TreeNode | null, value: number): TreeNode | null => {
-        if (node === null) return null
-
-        return {
-          ...node,
-          highlighted: node.value === value,
-          left: highlightNode(node.left, value),
-          right: highlightNode(node.right, value),
-        }
-      }
-
-      setRoot(highlightNode(JSON.parse(JSON.stringify(root)), path[index]))
-
-      index++
-    }, 800)
+    setSteps(allSteps)
+    player.loadFrames(frames)
+    setTimeout(() => player.play(), 50)
   }
 
   // Calculate tree dimensions
@@ -672,23 +592,58 @@ export default function BinarySearchTreeVisualizer() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={traversalType}
                   onChange={(e) => setTraversalType(e.target.value)}
-                  disabled={animating}
+                  disabled={player.isPlaying}
                 >
                   <option value="inorder">In-order</option>
                   <option value="preorder">Pre-order</option>
                   <option value="postorder">Post-order</option>
                 </select>
 
-                <Button onClick={handleTraversal} disabled={animating || !root} variant="outline">
+                <Button onClick={handleTraversal} disabled={player.isPlaying || !root} variant="outline">
                   Traverse
                 </Button>
               </div>
+
+              {player.totalFrames > 0 && (
+                <div className="mt-3">
+                  <AnimationControls
+                    currentFrame={player.currentFrame}
+                    totalFrames={player.totalFrames}
+                    isPlaying={player.isPlaying}
+                    isPaused={player.isPaused}
+                    isComplete={player.isComplete}
+                    speed={player.speed}
+                    onPlay={player.play}
+                    onPause={player.pause}
+                    onStepForward={player.stepForward}
+                    onStepBackward={player.stepBackward}
+                    onReset={() => { player.reset(); setRoot((r) => { const reset = (n: TreeNode | null): TreeNode | null => n ? { ...n, highlighted: false, left: reset(n.left), right: reset(n.right) } : null; return reset(r) }); setTraversalPath([]); setSearchResult(null) }}
+                    onSpeedChange={player.setSpeed}
+                    onFrameChange={player.goToFrame}
+                  />
+                </div>
+              )}
 
               {traversalPath.length > 0 && (
                 <div className="mt-2 text-sm overflow-x-auto">
                   <span className="font-medium">Path:</span> {traversalPath.join(" → ")}
                 </div>
               )}
+
+              <div className="mt-4">
+                <h3 className="text-sm font-medium mb-1">Steps:</h3>
+                <div className="bg-muted/30 rounded-md p-2 h-28 overflow-y-auto">
+                  {steps.length > 0 ? (
+                    <ol className="pl-4 list-decimal space-y-0.5">
+                      {steps.map((s, i) => (
+                        <li key={i} className={`text-xs ${i <= player.currentFrame ? "text-foreground" : "text-muted-foreground"}`}>{s}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Run a search or traversal to see steps</p>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
