@@ -146,10 +146,10 @@ export default function LearnPage() {
       <Navbar />
 
       <main className="flex-1">
-        <section className="py-12 px-4 bg-muted/30">
+        <section className="py-8 md:py-12 px-4 bg-muted/30">
           <div className="container mx-auto max-w-5xl">
-            <h1 className="text-4xl font-bold mb-6">Learn Data Structures & Algorithms</h1>
-            <p className="text-xl text-muted-foreground mb-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 md:mb-6">Learn Data Structures &amp; Algorithms</h1>
+            <p className="text-base sm:text-xl text-muted-foreground mb-6 md:mb-8">
               Explore detailed explanations and intuition behind various data structures and algorithms.
             </p>
 

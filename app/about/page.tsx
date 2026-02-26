@@ -14,10 +14,10 @@ export default function AboutPage() {
       <Navbar />
 
       <main className="flex-1">
-        <section className="py-12 px-4 bg-muted/30">
+        <section className="py-8 md:py-12 px-4 bg-muted/30">
           <div className="container mx-auto max-w-4xl">
-            <h1 className="text-4xl font-bold mb-6">About Stack&apos;n&apos;Flow</h1>
-            <p className="text-xl text-muted-foreground mb-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 md:mb-6">About Stack&apos;n&apos;Flow</h1>
+            <p className="text-base sm:text-xl text-muted-foreground mb-6 md:mb-8">
               <strong>Stack&apos;n&apos;Flow</strong> is an interactive DSA visualizer designed and developed by{" "}
               <strong>Shivam Malge</strong>.
               <br />
@@ -65,7 +65,7 @@ export default function AboutPage() {
                 empower others on their programming journey.
               </p>
 
-              <div className="flex space-x-4 mt-8">
+              <div className="flex flex-wrap gap-4 mt-6 md:mt-8">
                 <a
                   href="https://www.instagram.com/epsilon_edge?igsh=MTduNDFqdWd5NGlwMQ=="
                   target="_blank"

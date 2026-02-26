@@ -52,11 +52,11 @@ export default function VisualizePage() {
     <div className="flex flex-col min-h-screen dark">
       <Navbar />
 
-      <main className="flex-1 container mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold mb-6">Interactive Visualizer</h1>
+      <main className="flex-1 container mx-auto py-4 md:py-8 px-4">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 md:mb-6">Interactive Visualizer</h1>
 
-        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full mb-6">
-          <TabsList className="grid grid-cols-2 w-full max-w-[400px]">
+        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full mb-4 md:mb-6">
+          <TabsList className="grid grid-cols-2 w-full max-w-sm mx-auto md:mx-0">
             <TabsTrigger value="data-structures">Data Structures</TabsTrigger>
             <TabsTrigger value="algorithms">Algorithms</TabsTrigger>
           </TabsList>
@@ -64,8 +64,8 @@ export default function VisualizePage() {
 
         {activeCategory === "data-structures" && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto pb-2">
-              <TabsList className="inline-flex min-w-full whitespace-nowrap mb-8">
+            <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+              <TabsList className="inline-flex whitespace-nowrap mb-6 md:mb-8 bg-muted/50 p-1">
                 <TabsTrigger value="linked-list" className="whitespace-nowrap text-xs md:text-sm">
                   Linked List
                 </TabsTrigger>
@@ -178,8 +178,8 @@ export default function VisualizePage() {
 
         {activeCategory === "algorithms" && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto pb-2">
-              <TabsList className="inline-flex min-w-full whitespace-nowrap mb-8">
+            <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+              <TabsList className="inline-flex whitespace-nowrap mb-6 md:mb-8 bg-muted/50 p-1">
                 <TabsTrigger value="binary-search" className="whitespace-nowrap text-xs md:text-sm">
                   Binary Search
                 </TabsTrigger>
