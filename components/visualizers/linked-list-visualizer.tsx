@@ -6,6 +6,50 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowRight, Plus, Trash, Search } from "lucide-react"
+import CodePanel from "@/components/ui/code-panel"
+
+const INSERT_FRONT_CODE = [
+  "function insertFront(value):",
+  "  let newNode = new Node(value)",
+  "  newNode.next = head",
+  "  head = newNode",
+  "  return"
+]
+
+const INSERT_REAR_CODE = [
+  "function insertRear(value):",
+  "  let newNode = new Node(value)",
+  "  if head == null:",
+  "    head = newNode",
+  "    return",
+  "  let curr = head",
+  "  while curr.next != null:",
+  "    curr = curr.next",
+  "  curr.next = newNode",
+  "  return"
+]
+
+const DELETE_CODE = [
+  "function delete(value):",
+  "  if head == null: return",
+  "  if head.value == value:",
+  "    head = head.next",
+  "    return",
+  "  let curr = head",
+  "  while curr.next != null and curr.next.value != value:",
+  "    curr = curr.next",
+  "  if curr.next != null:",
+  "    curr.next = curr.next.next"
+]
+
+const SEARCH_CODE = [
+  "function search(value):",
+  "  let curr = head",
+  "  while curr != null:",
+  "    if curr.value == value: return true",
+  "    curr = curr.next",
+  "  return false"
+]
 
 type Node = {
   id: number
@@ -25,6 +69,8 @@ export default function LinkedListVisualizer() {
   const [nextId, setNextId] = useState(4)
   // Update the search function to show search results
   const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
 
   // Add insertFront function
   const handleInsertFront = () => {
@@ -32,17 +78,29 @@ export default function LinkedListVisualizer() {
 
     const value = Number.parseInt(inputValue)
     setAnimating(true)
+    setActiveCode(INSERT_FRONT_CODE)
+    setActiveLine(0)
 
-    // Create a new node with the "isNew" flag for animation
-    const newNode = { id: nextId, value, isNew: true }
-    setNodes([newNode, ...nodes])
-    setNextId(nextId + 1)
-
-    // After animation, remove the "isNew" flag
     setTimeout(() => {
-      setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
-      setAnimating(false)
-    }, 1000)
+      setActiveLine(1)
+      setTimeout(() => {
+        setActiveLine(2)
+        // Create a new node with the "isNew" flag for animation
+        const newNode = { id: nextId, value, isNew: true }
+        setNodes([newNode, ...nodes])
+        setNextId(nextId + 1)
+
+        setTimeout(() => {
+          setActiveLine(3)
+          // After animation, remove the "isNew" flag
+          setTimeout(() => {
+            setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
+            setAnimating(false)
+            setActiveLine(null)
+          }, 500)
+        }, 500)
+      }, 500)
+    }, 500)
 
     setInputValue("")
   }
@@ -52,17 +110,45 @@ export default function LinkedListVisualizer() {
 
     const value = Number.parseInt(inputValue)
     setAnimating(true)
+    setActiveCode(INSERT_REAR_CODE)
+    setActiveLine(0)
 
-    // Create a new node with the "isNew" flag for animation
-    const newNode = { id: nextId, value, isNew: true }
-    setNodes([...nodes, newNode])
-    setNextId(nextId + 1)
-
-    // After animation, remove the "isNew" flag
     setTimeout(() => {
-      setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
-      setAnimating(false)
-    }, 1000)
+      setActiveLine(1)
+      setTimeout(() => {
+        if (nodes.length === 0) {
+          setActiveLine(2)
+          setTimeout(() => {
+            setActiveLine(3)
+            const newNode = { id: nextId, value, isNew: true }
+            setNodes([newNode])
+            setNextId(nextId + 1)
+            setTimeout(() => {
+              setNodes((nodes) => nodes.map((n) => (n.id === newNode.id ? { ...n, isNew: false } : n)))
+              setAnimating(false)
+              setActiveLine(null)
+            }, 500)
+          }, 500)
+          return
+        }
+
+        setActiveLine(5)
+        setTimeout(() => {
+          setActiveLine(6)
+          setTimeout(() => {
+            setActiveLine(8)
+            const newNode = { id: nextId, value, isNew: true }
+            setNodes([...nodes, newNode])
+            setNextId(nextId + 1)
+            setTimeout(() => {
+              setNodes((nodes) => nodes.map((n) => (n.id === newNode.id ? { ...n, isNew: false } : n)))
+              setAnimating(false)
+              setActiveLine(null)
+            }, 500)
+          }, 500)
+        }, 500)
+      }, 500)
+    }, 500)
 
     setInputValue("")
   }
@@ -76,15 +162,38 @@ export default function LinkedListVisualizer() {
     if (nodeIndex === -1) return
 
     setAnimating(true)
+    setActiveCode(DELETE_CODE)
+    setActiveLine(0)
 
-    // Mark the node for deletion animation
-    setNodes((nodes) => nodes.map((node, index) => (index === nodeIndex ? { ...node, isDeleting: true } : node)))
-
-    // After animation, remove the node
     setTimeout(() => {
-      setNodes((nodes) => nodes.filter((_, index) => index !== nodeIndex))
-      setAnimating(false)
-    }, 1000)
+      setActiveLine(2)
+      if (nodeIndex === 0) {
+        setActiveLine(3)
+        setTimeout(() => {
+          setNodes((nodes) => nodes.map((node, index) => (index === 0 ? { ...node, isDeleting: true } : node)))
+          setTimeout(() => {
+            setNodes((nodes) => nodes.slice(1))
+            setAnimating(false)
+            setActiveLine(null)
+          }, 500)
+        }, 500)
+        return
+      }
+
+      setActiveLine(5)
+      setTimeout(() => {
+        setActiveLine(6)
+        setTimeout(() => {
+          setActiveLine(9)
+          setNodes((nodes) => nodes.map((node, index) => (index === nodeIndex ? { ...node, isDeleting: true } : node)))
+          setTimeout(() => {
+            setNodes((nodes) => nodes.filter((_, index) => index !== nodeIndex))
+            setAnimating(false)
+            setActiveLine(null)
+          }, 500)
+        }, 500)
+      }, 500)
+    }, 500)
 
     setInputValue("")
   }
@@ -95,6 +204,8 @@ export default function LinkedListVisualizer() {
     const value = Number.parseInt(inputValue)
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(SEARCH_CODE)
+    setActiveLine(0)
 
     // Reset all highlights
     setNodes((nodes) => nodes.map((node) => ({ ...node, highlighted: false })))
@@ -103,43 +214,48 @@ export default function LinkedListVisualizer() {
     let currentIndex = 0
     let found = false
 
-    const searchInterval = setInterval(() => {
-      if (currentIndex >= nodes.length) {
-        clearInterval(searchInterval)
-        setAnimating(false)
-        if (!found) {
-          setSearchResult("Element not found")
-        }
-        return
-      }
-
-      setNodes((nodes) =>
-        nodes.map((node, index) => ({
-          ...node,
-          highlighted: index === currentIndex,
-        })),
-      )
-
-      // Check if current node has the value we're looking for
-      if (nodes[currentIndex].value === value) {
-        found = true
-        setSearchResult("Element found")
-        clearInterval(searchInterval)
-        setTimeout(() => {
-          setNodes((nodes) => nodes.map((node) => ({ ...node, highlighted: false })))
+    setTimeout(() => {
+      setActiveLine(1)
+      const searchInterval = setInterval(() => {
+        if (currentIndex >= nodes.length) {
+          clearInterval(searchInterval)
           setAnimating(false)
-        }, 1000)
-        return
-      }
+          if (!found) {
+            setSearchResult("Element not found")
+            setActiveLine(5)
+          }
+          setTimeout(() => setActiveLine(null), 1000)
+          return
+        }
 
-      currentIndex++
+        setNodes((nodes) =>
+          nodes.map((node, index) => ({
+            ...node,
+            highlighted: index === currentIndex,
+          })),
+        )
 
-      // If we've reached the end without finding the value
-      if (currentIndex >= nodes.length && !found) {
+        setActiveLine(2)
         setTimeout(() => {
-          setSearchResult("Element not found")
-        }, 500)
-      }
+          setActiveLine(3)
+          // Check if current node has the value we're looking for
+          if (nodes[currentIndex].value === value) {
+            found = true
+            setSearchResult("Element found")
+            clearInterval(searchInterval)
+            setTimeout(() => {
+              setNodes((nodes) => nodes.map((node) => ({ ...node, highlighted: false })))
+              setAnimating(false)
+              setActiveLine(null)
+            }, 1000)
+            return
+          }
+
+          setActiveLine(4)
+          currentIndex++
+        }, 200)
+
+      }, 800)
     }, 500)
 
     setInputValue("")
@@ -147,15 +263,14 @@ export default function LinkedListVisualizer() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Linked List Operations</CardTitle>
             <CardDescription>Insert, delete, or search for values in the linked list</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Update the Tabs component to include insertFront and insertRear (which is the existing insert) */}
             <Tabs value={operation} onValueChange={setOperation}>
               <div className="overflow-x-auto pb-2">
                 <TabsList className="inline-flex min-w-full md:grid md:grid-cols-4 mb-4">
@@ -180,6 +295,7 @@ export default function LinkedListVisualizer() {
                   placeholder="Enter a value"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (operation === "insertFront" ? handleInsertFront() : operation === "insert" ? handleInsert() : operation === "delete" ? handleDelete() : handleSearch())}
                   disabled={animating}
                 />
 
@@ -214,7 +330,76 @@ export default function LinkedListVisualizer() {
             </Tabs>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the linked list</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center overflow-auto py-8 bg-muted/5 border-t min-h-[250px] md:h-[300px]">
+              {nodes.length === 0 ? (
+                <div className="text-muted-foreground text-sm">Empty linked list</div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-center gap-y-8 gap-x-2 px-4 max-w-full">
+                  {nodes.map((node, index) => (
+                    <div key={node.id} className="flex items-center">
+                      <div
+                        className={`
+                          flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full border-2 
+                          transition-all duration-500 ease-in-out shadow-sm
+                          ${node.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
+                          ${node.isNew ? "scale-110 border-green-500" : ""}
+                          ${node.isDeleting ? "scale-75 opacity-50 border-red-500" : ""}
+                        `}
+                      >
+                        <div className="text-base md:text-lg font-bold">{node.value}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono">id: {node.id}</div>
+                      </div>
+
+                      {index < nodes.length - 1 && (
+                        <div className="flex items-center px-1">
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {searchResult && (
+              <div
+                className={`mt-4 p-2 rounded text-center ${searchResult === "Element found"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                  }`}
+              >
+                {searchResult}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={
+            activeCode === INSERT_FRONT_CODE ? "Insert Front" :
+              activeCode === INSERT_REAR_CODE ? "Insert Rear" :
+                activeCode === DELETE_CODE ? "Delete Node" :
+                  activeCode === SEARCH_CODE ? "Search Node" : "Algorithm Logic"
+          }
+        />
+      </div>
+
+      {/* Learning Panel - Last on Mobile, Left on Desktop */}
+      <div className="order-4 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -237,60 +422,6 @@ export default function LinkedListVisualizer() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the linked list</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Add horizontal scrolling to the linked list visualization */}
-          <div className="flex items-center justify-center overflow-x-auto py-12 h-[300px]">
-            {nodes.length === 0 ? (
-              <div className="text-muted-foreground">Empty linked list</div>
-            ) : (
-              <div
-                className="flex items-center overflow-x-auto pb-4 w-full"
-                style={{ minWidth: Math.max(300, nodes.length * 80) + "px" }}
-              >
-                <div className="flex items-center min-w-max">
-                  {nodes.map((node, index) => (
-                    <div key={node.id} className="flex items-center">
-                      <div
-                        className={`
-                          flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 
-                          transition-all duration-500 ease-in-out
-                          ${node.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
-                          ${node.isNew ? "scale-110 border-green-500" : ""}
-                          ${node.isDeleting ? "scale-75 opacity-50 border-red-500" : ""}
-                        `}
-                      >
-                        <div className="text-lg font-bold">{node.value}</div>
-                        <div className="text-xs text-muted-foreground">id: {node.id}</div>
-                      </div>
-
-                      {index < nodes.length - 1 && <ArrowRight className="mx-2 text-muted-foreground" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          {/* Add search result display */}
-          {searchResult && (
-            <div
-              className={`mt-4 p-2 rounded text-center ${
-                searchResult === "Element found"
-                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-              }`}
-            >
-              {searchResult}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

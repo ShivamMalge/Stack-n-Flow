@@ -10,8 +10,37 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { computeTreeLayout } from "@/lib/tree-layout"
+
+const SEARCH_CODE = [
+  "function search(node, value):",
+  "  if node == null: return null",
+  "  if node.value == value: return node",
+  "  if value < node.value:",
+  "    return search(node.left, value)",
+  "  return search(node.right, value)"
+]
+
+const INSERT_CODE = [
+  "function insert(node, value):",
+  "  // 1. Standard BST Insert",
+  "  if node == null: return Node(value)",
+  "  if value < node.value:",
+  "    node.left = insert(node.left, value)",
+  "  else: node.right = insert(node.right, value)",
+  "  // 2. Update height",
+  "  node.height = 1 + max(h(left), h(right))",
+  "  // 3. Balance & Rotate",
+  "  int balance = getBalance(node)",
+  "  if balance > 1 and value < node.left.value:",
+  "    return rightRotate(node)",
+  "  if balance < -1 and value > node.right.value:",
+  "    return leftRotate(node)",
+  "  // ... other cases (LR, RL)",
+  "  return node"
+]
 
 type TreeNode = {
   id: number
@@ -26,7 +55,7 @@ type TreeNode = {
   balanceFactor?: number
 }
 
-type AVLFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null }
+type AVLFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null; activeLine: number | null }
 
 export default function AVLTreeVisualizer() {
   const [root, setRoot] = useState<TreeNode | null>(null)
@@ -41,6 +70,8 @@ export default function AVLTreeVisualizer() {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [rotationInfo, setRotationInfo] = useState<string | null>(null)
   const [steps, setSteps] = useState<string[]>([])
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const isMobile = useMobile()
 
@@ -48,6 +79,7 @@ export default function AVLTreeVisualizer() {
     setRoot(snap.root)
     setTraversalPath(snap.traversalPath)
     setSearchResult(snap.searchResult)
+    setActiveLine(snap.activeLine)
   }, [])
   const player = useAnimationPlayer<AVLFrame>(onFrameChange)
 
@@ -189,36 +221,49 @@ export default function AVLTreeVisualizer() {
 
     setAnimating(true)
     setRotationInfo(null)
+    setActiveCode(INSERT_CODE)
+    setActiveLine(0)
 
     // Create a deep copy of the tree and insert the new node
     const newRoot = root ? JSON.parse(JSON.stringify(root)) : null
-    const result = insertNode(newRoot, value, nextId)
-    const updatedRoot = result.node
 
-    if (result.rotationType) {
-      setRotationInfo(result.rotationType)
-    }
-
-    setRoot(updatedRoot)
-    setNextId(nextId + 1)
-
-    // After animation, remove the animation flags
     setTimeout(() => {
-      const removeAnimationFlags = (node: TreeNode | null): TreeNode | null => {
-        if (node === null) return null
+      setActiveLine(2)
+      const result = insertNode(newRoot, value, nextId)
+      const updatedRoot = result.node
 
-        return {
-          ...node,
-          isNew: false,
-          isRotating: false,
-          left: removeAnimationFlags(node.left),
-          right: removeAnimationFlags(node.right),
+      setTimeout(() => {
+        setActiveLine(7)
+        if (result.rotationType) {
+          setRotationInfo(result.rotationType)
+          setActiveLine(10)
+        } else {
+          setActiveLine(15)
         }
-      }
 
-      setRoot(removeAnimationFlags(updatedRoot))
-      setAnimating(false)
-    }, 1500)
+        setRoot(updatedRoot)
+        setNextId(nextId + 1)
+
+        // After animation, remove the animation flags
+        setTimeout(() => {
+          const removeAnimationFlags = (node: TreeNode | null): TreeNode | null => {
+            if (node === null) return null
+
+            return {
+              ...node,
+              isNew: false,
+              isRotating: false,
+              left: removeAnimationFlags(node.left),
+              right: removeAnimationFlags(node.right),
+            }
+          }
+
+          setRoot(removeAnimationFlags(updatedRoot))
+          setAnimating(false)
+          setActiveLine(null)
+        }, 1000)
+      }, 500)
+    }, 500)
 
     setInputValue("")
   }
@@ -238,25 +283,27 @@ export default function AVLTreeVisualizer() {
     const searchPath: number[] = []
     let cur: TreeNode | null = JSON.parse(JSON.stringify(root))
     let found = false
+    setActiveCode(SEARCH_CODE)
 
-    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: null }, description: `Searching for ${value}` })
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: null, activeLine: 0 }, description: `Searching for ${value}` })
 
     while (cur) {
       searchPath.push(cur.value)
+      frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: null, activeLine: 2 }, description: `At ${cur.value}?` })
       if (cur.value === value) {
         found = true
         allSteps.push(`✓ Found ${value}!`)
-        frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: "Element found!" }, description: `Found ${value}` })
+        frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: "Element found!", activeLine: 2 }, description: `Found ${value}` })
         break
       }
       const dir = value < cur.value ? "left" : "right"
       allSteps.push(`${cur.value}: go ${dir}`)
-      frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: null }, description: `At ${cur.value} → go ${dir}` })
+      frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: null, activeLine: value < cur.value ? 4 : 5 }, description: `At ${cur.value} → go ${dir}` })
       cur = value < cur.value ? cur.left : cur.right
     }
     if (!found) {
       allSteps.push(`✗ ${value} not found`)
-      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: "Element not found" }, description: `${value} not found` })
+      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: "Element not found", activeLine: 1 }, description: `${value} not found` })
     }
     setSteps(allSteps)
     player.loadFrames(frames)
@@ -282,12 +329,12 @@ export default function AVLTreeVisualizer() {
     const allSteps: string[] = [`${traversalType} traversal of AVL Tree`]
     const rootCopy = JSON.parse(JSON.stringify(root)) as TreeNode
 
-    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null }, description: `Starting ${traversalType} traversal` })
+    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null, activeLine: 0 }, description: `Starting ${traversalType} traversal` })
     for (let i = 0; i < path.length; i++) {
       allSteps.push(`Visit ${path[i]}`)
-      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
+      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null, activeLine: null }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
     }
-    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null }, description: `Done: ${path.join(" → ")}` })
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null, activeLine: null }, description: `Done: ${path.join(" → ")}` })
     setSteps(allSteps)
     player.loadFrames(frames)
     setTimeout(() => player.play(), 50)
@@ -500,8 +547,8 @@ export default function AVLTreeVisualizer() {
   // Replace the Visualization Panel section with this improved version
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>AVL Tree Operations</CardTitle>
@@ -526,6 +573,7 @@ export default function AVLTreeVisualizer() {
                   placeholder="Enter a value"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (operation === "insert" ? handleInsert() : handleSearch())}
                   disabled={animating}
                 />
 
@@ -583,7 +631,7 @@ export default function AVLTreeVisualizer() {
                     onPause={player.pause}
                     onStepForward={player.stepForward}
                     onStepBackward={player.stepBackward}
-                    onReset={() => { player.reset(); setRoot((r) => { const rst = (n: TreeNode | null): TreeNode | null => n ? { ...n, highlighted: false, left: rst(n.left), right: rst(n.right) } : null; return rst(r) }); setTraversalPath([]); setSearchResult(null) }}
+                    onReset={() => { player.reset(); setRoot((r) => { const rst = (n: TreeNode | null): TreeNode | null => n ? { ...n, highlighted: false, left: rst(n.left), right: rst(n.right) } : null; return rst(r) }); setTraversalPath([]); setSearchResult(null); setActiveLine(null) }}
                     onSpeedChange={player.setSpeed}
                     onFrameChange={player.goToFrame}
                   />
@@ -613,7 +661,101 @@ export default function AVLTreeVisualizer() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>
+              Visual representation of the AVL tree (numbers inside nodes show balance factors)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-hidden">
+            {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
+
+            <div className="flex flex-wrap gap-2 mb-2 px-6">
+              <Button size="sm" variant="outline" onClick={handleZoomIn}>
+                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleZoomOut}>
+                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanLeft}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanRight}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleReset}>
+                Reset View
+              </Button>
+            </div>
+
+            <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                {root ? (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto">
+                    <svg
+                      ref={svgRef}
+                      width={svgW}
+                      height={svgH}
+                      viewBox={`0 0 ${svgW} ${svgH}`}
+                      style={{
+                        transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+                        transformOrigin: "center",
+                        transition: "transform 0.2s ease",
+                        touchAction: "none",
+                      }}
+                      className="max-w-none"
+                    >
+                      <g>{renderTree(root)}</g>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Empty tree</div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center mt-4 gap-3 text-[10px] md:text-xs px-6 border-t pt-4">
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-card border border-primary rounded-full mr-1.5"></div>
+                <span>Balanced</span>
+              </div>
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-orange-200 border border-orange-500 rounded-full mr-1.5"></div>
+                <span>Unbalanced</span>
+              </div>
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-blue-200 border border-blue-500 rounded-full mr-1.5"></div>
+                <span>Rotating</span>
+              </div>
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-green-200 border border-green-500 rounded-full mr-1.5"></div>
+                <span>New</span>
+              </div>
+            </div>
+
+            <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 mt-2">
+              Drag nodes to reposition. Balance factors shown inside nodes.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "AVL Algorithm"}
+        />
+      </div>
+
+      {/* Learning Panel - Last on Mobile, Left on Desktop */}
+      <div className="order-4 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -643,86 +785,6 @@ export default function AVLTreeVisualizer() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>
-            Visual representation of the AVL tree (numbers inside nodes show balance factors)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 overflow-hidden">
-          {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
-
-          <div className="flex flex-wrap gap-2 mb-2 px-6">
-            <Button size="sm" variant="outline" onClick={handleZoomIn}>
-              <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleZoomOut}>
-              <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanLeft}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanRight}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleReset}>
-              Reset View
-            </Button>
-          </div>
-
-          <div className="relative w-full h-[450px] overflow-auto" style={{ overscrollBehavior: "contain" }}>
-            <div className="absolute inset-0 min-w-full min-h-full" style={{ minWidth: "800px", minHeight: "600px" }}>
-              {root ? (
-                <svg
-                  ref={svgRef}
-                  width="100%"
-                  height="100%"
-                  viewBox={`${pan.x} ${pan.y} ${svgW} ${svgH}`}
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: "center",
-                    transition: "transform 0.2s ease",
-                    touchAction: "none",
-                  }}
-                  className="max-w-none"
-                >
-                  <g>{renderTree(root)}</g>
-                </svg>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">Empty tree</div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-center mt-4 space-x-2 text-xs px-6">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-card border border-primary rounded-full mr-1"></div>
-              <span>Balanced</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-orange-200 border border-orange-500 rounded-full mr-1"></div>
-              <span>Unbalanced</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-200 border border-blue-500 rounded-full mr-1"></div>
-              <span>Rotating</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-200 border border-green-500 rounded-full mr-1"></div>
-              <span>New</span>
-            </div>
-          </div>
-
-          <div className="px-6 py-3 text-xs text-center text-muted-foreground">
-            Drag nodes to reposition them. Use zoom and pan controls to navigate larger trees.
-            <br />
-            Scroll horizontally and vertically to view the entire tree structure.
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

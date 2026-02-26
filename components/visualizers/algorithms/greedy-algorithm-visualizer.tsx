@@ -338,53 +338,55 @@ export default function GreedyAlgorithmVisualizer() {
           <CardDescription>Visual representation of the coin change solution</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center h-[350px]">
+          <div className="flex flex-col items-center justify-center min-h-[300px] md:h-[350px] py-4">
             {player.currentDescription && (
-              <div className="mb-4 text-center text-sm font-medium text-primary">
+              <div className="mb-4 text-center text-xs md:text-sm font-medium text-primary bg-muted/30 p-2 rounded-md w-full">
                 {player.currentDescription}
               </div>
             )}
             {!result ? (
               coins.length === 0 ? (
-                <div className="text-muted-foreground">Add coins to start</div>
+                <div className="text-muted-foreground text-sm">Add coins to start</div>
               ) : (
                 <div className="flex flex-col items-center">
-                  <Coins className="h-16 w-16 text-muted-foreground mb-4" />
-                  <div className="text-center text-muted-foreground">
+                  <Coins className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mb-4" />
+                  <div className="text-center text-muted-foreground text-sm">
                     {player.isPlaying ? "Solving..." : "Enter a target amount and click Solve"}
                   </div>
                 </div>
               )
             ) : (
-              <div className="flex flex-col items-center">
-                <div className="text-xl font-bold mb-6">
+              <div className="flex flex-col items-center w-full">
+                <div className="text-lg md:text-xl font-bold mb-4 md:mb-6">
                   Solution: {result.total} coin{result.total !== 1 ? "s" : ""}
                 </div>
-                <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                <div className="flex flex-wrap justify-center gap-1.5 md:gap-2 max-w-full overflow-y-auto max-h-[160px] p-2 bg-muted/10 rounded-lg">
                   {result.coins.map((coin, index) => (
                     <div
                       key={`result-coin-${coin.value}-${index}`}
-                      className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 border-2 border-green-500 dark:bg-green-900"
+                      className="flex items-center justify-center w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-100 border-2 border-green-500 dark:bg-green-900 transition-all animate-in zoom-in-50 duration-300"
                     >
-                      <span className="font-bold">{coin.value}</span>
+                      <span className="text-[10px] md:text-sm font-bold">{coin.value}</span>
                     </div>
                   ))}
                 </div>
                 {result.coins.length > 0 && (
-                  <div className="mt-6 text-sm">
-                    <span className="font-medium">Coin distribution: </span>
-                    {Object.entries(
-                      result.coins.reduce((acc: Record<number, number>, coin) => {
-                        acc[coin.value] = (acc[coin.value] || 0) + 1
-                        return acc
-                      }, {})
-                    )
-                      .sort((a, b) => Number(b[0]) - Number(a[0]))
-                      .map(([value, count], index, arr) => (
-                        <span key={`dist-${value}`}>
-                          {count} × {value}{index < arr.length - 1 ? ", " : ""}
-                        </span>
-                      ))}
+                  <div className="mt-4 md:mt-6 text-[10px] md:text-xs text-center border-t pt-4 w-full">
+                    <span className="font-semibold text-muted-foreground uppercase tracking-wider">Distribution: </span>
+                    <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-1">
+                      {Object.entries(
+                        result.coins.reduce((acc: Record<number, number>, coin) => {
+                          acc[coin.value] = (acc[coin.value] || 0) + 1
+                          return acc
+                        }, {})
+                      )
+                        .sort((a, b) => Number(b[0]) - Number(a[0]))
+                        .map(([value, count]) => (
+                          <span key={`dist-${value}`} className="bg-background px-2 py-0.5 rounded border border-border shadow-sm">
+                            <span className="font-bold">{count}</span> × {value}
+                          </span>
+                        ))}
+                    </div>
                   </div>
                 )}
               </div>

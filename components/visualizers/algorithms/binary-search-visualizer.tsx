@@ -247,8 +247,8 @@ export default function BinarySearchVisualizer() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Order 1 on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Binary Search Algorithm</CardTitle>
@@ -325,8 +325,8 @@ export default function BinarySearchVisualizer() {
               {searchResult && (
                 <div
                   className={`p-2 rounded text-center ${searchResult.includes("Found")
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
                     }`}
                 >
                   {searchResult}
@@ -391,56 +391,27 @@ export default function BinarySearchVisualizer() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Learning</CardTitle>
-            <CardDescription>Understanding Binary Search</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <p className="mb-2">
-              <strong>Binary Search</strong> is a search algorithm that finds the position of a target value within a
-              sorted array.
-            </p>
-            <p className="mb-2">
-              <strong>Time Complexity:</strong> O(log n)
-            </p>
-            <p className="mb-2">
-              <strong>Key Steps:</strong>
-            </p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>Compare the target value with the middle element of the array</li>
-              <li>If they match, return the middle index</li>
-              <li>If the target is less than the middle element, search the left half</li>
-              <li>If the target is greater than the middle element, search the right half</li>
-              <li>Repeat until the value is found or the search space is empty</li>
-            </ol>
-            <p className="mt-2">
-              <strong>Requirements:</strong> The array must be sorted for binary search to work correctly.
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Visualization Panel */}
-      <Card className="h-full">
+      {/* Visualization Panel - Order 2 on Mobile, Right on Desktop */}
+      <Card className="order-2 md:col-start-2 md:row-span-2 h-full">
         <CardHeader>
           <CardTitle>Visualization</CardTitle>
           <CardDescription>Visual representation of binary search</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center overflow-x-auto py-12 h-[300px]">
+          <div className="flex items-center justify-center overflow-x-auto py-8 md:py-12 min-h-[200px] md:h-[300px]">
             {array.length === 0 ? (
-              <div className="text-muted-foreground">Add elements to create an array</div>
+              <div className="text-muted-foreground text-sm">Add elements to create an array</div>
             ) : (
-              <div className="flex flex-col">
-                <div className="flex">
+              <div className="flex flex-col w-full max-w-full overflow-x-auto pb-4 px-2">
+                <div className="flex justify-center min-w-max mx-auto">
                   {array.map((item, index) => (
-                    <div key={index} className="flex flex-col items-center mx-1">
+                    <div key={index} className="flex flex-col items-center mx-0.5 md:mx-1">
                       <div
                         className={`
-                          flex items-center justify-center w-12 h-12 border-2 
-                          transition-all duration-300 ease-in-out
+                          flex items-center justify-center w-10 h-10 md:w-12 md:h-12 border-2 
+                          transition-all duration-300 ease-in-out rounded-md
                           ${item.highlighted ? "bg-blue-100 dark:bg-blue-900 border-blue-500" : "bg-card border-primary"}
                           ${item.isMid ? "bg-purple-100 dark:bg-purple-900 border-purple-500" : ""}
                           ${item.isLow ? "border-l-4 border-l-green-500" : ""}
@@ -448,9 +419,9 @@ export default function BinarySearchVisualizer() {
                           ${item.isTarget ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : ""}
                         `}
                       >
-                        <div className="text-sm font-bold">{item.value}</div>
+                        <div className="text-xs md:text-sm font-bold">{item.value}</div>
                       </div>
-                      <div className="mt-2 text-xs">{index}</div>
+                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-muted-foreground">{index}</div>
                     </div>
                   ))}
                 </div>
@@ -481,6 +452,38 @@ export default function BinarySearchVisualizer() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Learning Panel - Order 3 on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1">
+        <Card>
+          <CardHeader>
+            <CardTitle>Learning</CardTitle>
+            <CardDescription>Understanding Binary Search</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p className="mb-2">
+              <strong>Binary Search</strong> is a search algorithm that finds the position of a target value within a
+              sorted array.
+            </p>
+            <p className="mb-2">
+              <strong>Time Complexity:</strong> O(log n)
+            </p>
+            <p className="mb-2">
+              <strong>Key Steps:</strong>
+            </p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Compare the target value with the middle element of the array</li>
+              <li>If they match, return the middle index</li>
+              <li>If the target is less than the middle element, search the left half</li>
+              <li>If the target is greater than the middle element, search the right half</li>
+              <li>Repeat until the value is found or the search space is empty</li>
+            </ol>
+            <p className="mt-2">
+              <strong>Requirements:</strong> The array must be sorted for binary search to work correctly.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

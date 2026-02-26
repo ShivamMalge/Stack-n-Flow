@@ -282,16 +282,20 @@ const BAR_COLORS: Record<BarState, string> = {
 
 function BarChart({ bars }: { bars: BarItem[] }) {
     const maxVal = Math.max(...bars.map((b) => b.value), 1)
-    const barW = Math.max(6, Math.min(32, Math.floor(340 / bars.length)))
     return (
-        <div className="flex items-end justify-center gap-[2px] h-[180px] w-full px-2">
+        <div className="flex items-end justify-center gap-[2px] h-[140px] md:h-[180px] w-full px-1">
             {bars.map((bar, idx) => {
-                const h = Math.max(4, Math.round((bar.value / maxVal) * 168))
+                const h = Math.max(4, Math.round((bar.value / maxVal) * (bars.length > 15 ? 130 : 168)))
                 return (
                     <div
                         key={idx}
                         title={String(bar.value)}
-                        style={{ height: `${h}px`, width: `${barW}px`, minWidth: `${barW}px` }}
+                        style={{
+                            height: `${h}px`,
+                            flex: "1 1 0%",
+                            maxWidth: bars.length > 20 ? "12px" : "24px",
+                            minWidth: "2px"
+                        }}
                         className={`rounded-t transition-all duration-100 ${BAR_COLORS[bar.state]}`}
                     />
                 )
@@ -337,9 +341,18 @@ export default function SortingComparison() {
     const playerA = useAnimationPlayer<SortFrame>(onFrameA)
     const playerB = useAnimationPlayer<SortFrame>(onFrameB)
 
-    // Auto-scroll active step into view
-    useEffect(() => { activeStepRefA.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }) }, [playerA.currentFrame])
-    useEffect(() => { activeStepRefB.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }) }, [playerB.currentFrame])
+    // Auto-scroll active step into view (disabled on mobile)
+    useEffect(() => {
+        if (window.innerWidth > 768) {
+            activeStepRefA.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+        }
+    }, [playerA.currentFrame])
+
+    useEffect(() => {
+        if (window.innerWidth > 768) {
+            activeStepRefB.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+        }
+    }, [playerB.currentFrame])
 
     // Update descriptions from players
     const dA = playerA.currentDescription
@@ -437,275 +450,287 @@ export default function SortingComparison() {
     const progressB = playerB.totalFrames > 0 ? Math.round(((playerB.currentFrame + 1) / playerB.totalFrames) * 100) : 0
 
     return (
-        <div className="space-y-4">
-            {/* Top Controls */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">⚡ Side-by-Side Sorting Comparison</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Algorithm selectors */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Algorithm A</p>
-                            <Select value={algoA} onValueChange={(v) => setAlgoA(v as AlgorithmKey)} disabled={isPlaying}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(ALGORITHM_NAMES).map(([k, n]) => (
-                                        <SelectItem key={k} value={k}>{n}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Algorithm B</p>
-                            <Select value={algoB} onValueChange={(v) => setAlgoB(v as AlgorithmKey)} disabled={isPlaying}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(ALGORITHM_NAMES).map(([k, n]) => (
-                                        <SelectItem key={k} value={k}>{n}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    {/* Custom array input */}
-                    <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Array Input</p>
-                        <div className="flex gap-2">
-                            <Input
-                                type="number"
-                                placeholder="Add value (1–999)"
-                                value={inputVal}
-                                onChange={(e) => setInputVal(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleAddValue()}
-                                disabled={isPlaying}
-                                className="flex-1"
-                                min={1} max={999}
-                            />
-                            <Button onClick={handleAddValue} disabled={isPlaying || !inputVal} size="icon">
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" onClick={handleRandom} disabled={isPlaying}>
-                                <Shuffle className="mr-2 h-4 w-4" />
-                                Random
-                            </Button>
-                            <Button variant="ghost" onClick={handleClearInput} disabled={isPlaying || !values.length}>
-                                Clear
-                            </Button>
+        <div className="flex flex-col gap-4">
+            {/* Top Controls - Always first */}
+            <div className="order-1">
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">⚡ Side-by-Side Sorting Comparison</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {/* Algorithm selectors */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Algorithm A</p>
+                                <Select value={algoA} onValueChange={(v) => setAlgoA(v as AlgorithmKey)} disabled={isPlaying}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(ALGORITHM_NAMES).map(([k, n]) => (
+                                            <SelectItem key={k} value={k}>{n}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Algorithm B</p>
+                                <Select value={algoB} onValueChange={(v) => setAlgoB(v as AlgorithmKey)} disabled={isPlaying}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(ALGORITHM_NAMES).map(([k, n]) => (
+                                            <SelectItem key={k} value={k}>{n}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
-                        {/* Current values display */}
-                        {values.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-md min-h-[36px]">
-                                {values.map((v, i) => (
-                                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-card border rounded text-sm">
-                                        {v}
-                                        <button
-                                            onClick={() => handleRemoveValue(i)}
-                                            disabled={isPlaying}
-                                            className="text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </button>
+                        {/* Custom array input */}
+                        <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Array Input</p>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="flex-1 flex gap-2 min-w-[200px]">
+                                    <Input
+                                        type="number"
+                                        placeholder="Add value (1–999)"
+                                        value={inputVal}
+                                        onChange={(e) => setInputVal(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleAddValue()}
+                                        disabled={isPlaying}
+                                        className="flex-1"
+                                        min={1} max={999}
+                                    />
+                                    <Button onClick={handleAddValue} disabled={isPlaying || !inputVal} size="icon" className="shrink-0">
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <Button variant="outline" onClick={handleRandom} disabled={isPlaying} className="flex-1 sm:flex-initial">
+                                        <Shuffle className="mr-2 h-4 w-4" />
+                                        Random
+                                    </Button>
+                                    <Button variant="ghost" onClick={handleClearInput} disabled={isPlaying || !values.length} className="flex-1 sm:flex-initial">
+                                        Clear
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Current values display */}
+                            {values.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-md min-h-[36px]">
+                                    {values.map((v, i) => (
+                                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-card border rounded text-sm">
+                                            {v}
+                                            <button
+                                                onClick={() => handleRemoveValue(i)}
+                                                disabled={isPlaying}
+                                                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                    <span className="text-xs text-muted-foreground self-center ml-1">
+                                        {values.length}/20 elements
                                     </span>
-                                ))}
-                                <span className="text-xs text-muted-foreground self-center ml-1">
-                                    {values.length}/20 elements
-                                </span>
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            )}
+                        </div>
 
-                    {/* Playback controls */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        {!isPlaying ? (
-                            <Button onClick={handleStart} disabled={!values.length || values.length < 2}>
-                                <Play className="mr-2 h-4 w-4" />
-                                {hasStarted && !isComplete ? "Restart" : "Start Comparison"}
-                            </Button>
-                        ) : (
-                            <Button variant="outline" onClick={handlePause}>
-                                <Pause className="mr-2 h-4 w-4" />
-                                Pause
-                            </Button>
-                        )}
-                        {!isPlaying && hasStarted && !isComplete && (
-                            <Button variant="outline" onClick={handleResume}>
-                                <Play className="mr-2 h-4 w-4" />
-                                Resume
-                            </Button>
-                        )}
-                        <Button variant="outline" size="icon" onClick={handleStepBackward} disabled={isPlaying || !hasStarted} title="Step Back">
-                            <SkipBack className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={handleStepForward} disabled={isPlaying || !hasStarted} title="Step Forward">
-                            <SkipForward className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={handleReset} disabled={isPlaying || !hasStarted} title="Reset">
-                            <RotateCcw className="h-4 w-4" />
-                        </Button>
-
-                        {/* Speed control inline */}
-                        <div className="flex items-center gap-3 ml-auto">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">Speed: {SPEED_LABELS[speedIdx]}</span>
-                            <div className="w-32">
-                                <Slider value={[speedIdx]} min={0} max={SPEED_MS.length - 1} step={1}
-                                    onValueChange={([v]) => handleSpeedChange(v)} disabled={isPlaying} />
+                        {/* Playback controls */}
+                        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                            <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+                                {!isPlaying ? (
+                                    <Button onClick={handleStart} disabled={!values.length || values.length < 2} className="w-full sm:w-auto">
+                                        <Play className="mr-2 h-4 w-4" />
+                                        {hasStarted && !isComplete ? "Restart" : "Start Comparison"}
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" onClick={handlePause} className="w-full sm:w-auto">
+                                        <Pause className="mr-2 h-4 w-4" />
+                                        Pause
+                                    </Button>
+                                )}
+                                {!isPlaying && hasStarted && !isComplete && (
+                                    <Button variant="outline" onClick={handleResume} className="w-full sm:w-auto">
+                                        <Play className="mr-2 h-4 w-4" />
+                                        Resume
+                                    </Button>
+                                )}
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="icon" onClick={handleStepBackward} disabled={isPlaying || !hasStarted} title="Step Back" className="h-9 w-9">
+                                        <SkipBack className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="icon" onClick={handleStepForward} disabled={isPlaying || !hasStarted} title="Step Forward" className="h-9 w-9">
+                                        <SkipForward className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="icon" onClick={handleReset} disabled={isPlaying || !hasStarted} title="Reset" className="h-9 w-9">
+                                        <RotateCcw className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="flex gap-1 text-[10px] text-muted-foreground">
-                                {SPEED_LABELS.map((l) => <span key={l}>{l}</span>)}
+
+                            {/* Speed control inline */}
+                            <div className="flex items-center gap-4 w-full sm:w-auto sm:ml-auto bg-muted/30 p-2 rounded-lg">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap min-w-[70px]">Speed: {SPEED_LABELS[speedIdx]}</span>
+                                <div className="flex-1 sm:w-32">
+                                    <Slider value={[speedIdx]} min={0} max={SPEED_MS.length - 1} step={1}
+                                        onValueChange={([v]) => handleSpeedChange(v)} disabled={isPlaying} />
+                                </div>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Visualizations - Second on mobile, Right side on desktop */}
+            <div className="order-2">
+                {values.length < 2 ? (
+                    <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-xl text-muted-foreground text-sm">
+                        {values.length === 0
+                            ? 'Add at least 2 numbers above or click "Random" to generate an array'
+                            : "Add at least one more number to start"}
                     </div>
-                </CardContent>
-            </Card>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Panel A */}
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-base text-blue-500 dark:text-blue-400">{ALGORITHM_NAMES[algoA]}</CardTitle>
+                                    {isComplete && <span className="text-xs text-green-500 font-bold">✓ Done</span>}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <BarChart bars={barsA.length ? barsA : values.map((v) => ({ value: v, state: "default" }))} />
+                                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 rounded-full transition-all duration-150" style={{ width: `${progressA}%` }} />
+                                </div>
+                                {descA && <p className="text-xs text-center text-muted-foreground min-h-[16px]">{descA}</p>}
+                                <div className="grid grid-cols-2 gap-2 text-center">
+                                    <div className="bg-muted/40 rounded-md p-2">
+                                        <div className="text-xl font-bold tabular-nums">{statsA.comparisons}</div>
+                                        <div className="text-[10px] text-muted-foreground">Comparisons</div>
+                                    </div>
+                                    <div className="bg-muted/40 rounded-md p-2">
+                                        <div className="text-xl font-bold tabular-nums">{statsA.swaps}</div>
+                                        <div className="text-[10px] text-muted-foreground">Swaps</div>
+                                    </div>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
+                                    <div>Best: <span className="font-mono">{COMPLEXITY[algoA].best}</span></div>
+                                    <div>Space: <span className="font-mono">{COMPLEXITY[algoA].space}</span></div>
+                                    <div>Avg: <span className="font-mono">{COMPLEXITY[algoA].avg}</span></div>
+                                    <div>Worst: <span className="font-mono">{COMPLEXITY[algoA].worst}</span></div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-            {/* Visualizations */}
-            {values.length < 2 ? (
-                <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-xl text-muted-foreground text-sm">
-                    {values.length === 0
-                        ? 'Add at least 2 numbers above or click "Random" to generate an array'
-                        : "Add at least one more number to start"}
-                </div>
-            ) : (
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Panel A */}
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-base text-blue-500 dark:text-blue-400">{ALGORITHM_NAMES[algoA]}</CardTitle>
-                                {isComplete && <span className="text-xs text-green-500 font-bold">✓ Done</span>}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <BarChart bars={barsA.length ? barsA : values.map((v) => ({ value: v, state: "default" }))} />
-                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500 rounded-full transition-all duration-150" style={{ width: `${progressA}%` }} />
-                            </div>
-                            {descA && <p className="text-xs text-center text-muted-foreground min-h-[16px]">{descA}</p>}
-                            <div className="grid grid-cols-2 gap-2 text-center">
-                                <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-xl font-bold tabular-nums">{statsA.comparisons}</div>
-                                    <div className="text-[10px] text-muted-foreground">Comparisons</div>
+                        {/* Panel B */}
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-base text-purple-500 dark:text-purple-400">{ALGORITHM_NAMES[algoB]}</CardTitle>
+                                    {isComplete && <span className="text-xs text-green-500 font-bold">✓ Done</span>}
                                 </div>
-                                <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-xl font-bold tabular-nums">{statsA.swaps}</div>
-                                    <div className="text-[10px] text-muted-foreground">Swaps</div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <BarChart bars={barsB.length ? barsB : values.map((v) => ({ value: v, state: "default" }))} />
+                                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-purple-500 rounded-full transition-all duration-150" style={{ width: `${progressB}%` }} />
                                 </div>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
-                                <div>Best: <span className="font-mono">{COMPLEXITY[algoA].best}</span></div>
-                                <div>Space: <span className="font-mono">{COMPLEXITY[algoA].space}</span></div>
-                                <div>Avg: <span className="font-mono">{COMPLEXITY[algoA].avg}</span></div>
-                                <div>Worst: <span className="font-mono">{COMPLEXITY[algoA].worst}</span></div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Panel B */}
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-base text-purple-500 dark:text-purple-400">{ALGORITHM_NAMES[algoB]}</CardTitle>
-                                {isComplete && <span className="text-xs text-green-500 font-bold">✓ Done</span>}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <BarChart bars={barsB.length ? barsB : values.map((v) => ({ value: v, state: "default" }))} />
-                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-500 rounded-full transition-all duration-150" style={{ width: `${progressB}%` }} />
-                            </div>
-                            {descB && <p className="text-xs text-center text-muted-foreground min-h-[16px]">{descB}</p>}
-                            <div className="grid grid-cols-2 gap-2 text-center">
-                                <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-xl font-bold tabular-nums">{statsB.comparisons}</div>
-                                    <div className="text-[10px] text-muted-foreground">Comparisons</div>
+                                {descB && <p className="text-xs text-center text-muted-foreground min-h-[16px]">{descB}</p>}
+                                <div className="grid grid-cols-2 gap-2 text-center">
+                                    <div className="bg-muted/40 rounded-md p-2">
+                                        <div className="text-xl font-bold tabular-nums">{statsB.comparisons}</div>
+                                        <div className="text-[10px] text-muted-foreground">Comparisons</div>
+                                    </div>
+                                    <div className="bg-muted/40 rounded-md p-2">
+                                        <div className="text-xl font-bold tabular-nums">{statsB.swaps}</div>
+                                        <div className="text-[10px] text-muted-foreground">Swaps</div>
+                                    </div>
                                 </div>
-                                <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-xl font-bold tabular-nums">{statsB.swaps}</div>
-                                    <div className="text-[10px] text-muted-foreground">Swaps</div>
+                                <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
+                                    <div>Best: <span className="font-mono">{COMPLEXITY[algoB].best}</span></div>
+                                    <div>Space: <span className="font-mono">{COMPLEXITY[algoB].space}</span></div>
+                                    <div>Avg: <span className="font-mono">{COMPLEXITY[algoB].avg}</span></div>
+                                    <div>Worst: <span className="font-mono">{COMPLEXITY[algoB].worst}</span></div>
                                 </div>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
-                                <div>Best: <span className="font-mono">{COMPLEXITY[algoB].best}</span></div>
-                                <div>Space: <span className="font-mono">{COMPLEXITY[algoB].space}</span></div>
-                                <div>Avg: <span className="font-mono">{COMPLEXITY[algoB].avg}</span></div>
-                                <div>Worst: <span className="font-mono">{COMPLEXITY[algoB].worst}</span></div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-
-            {/* Algorithm Steps Panels — shown once frames are loaded */}
-            {stepsA.length > 0 && (
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Steps A */}
-                    <div className="rounded-lg border bg-card p-4 space-y-2">
-                        <p className="text-sm font-semibold">
-                            {ALGORITHM_NAMES[algoA]}
-                            <span className="ml-2 text-xs font-normal text-muted-foreground">— Algorithm Steps</span>
-                        </p>
-                        <ol className="space-y-1 max-h-48 overflow-y-auto pr-1 text-xs" aria-label="Steps A">
-                            {stepsA.map((step, i) => {
-                                const isActive = i === playerA.currentFrame
-                                const isPast = i < playerA.currentFrame
-                                return (
-                                    <li
-                                        key={i}
-                                        ref={isActive ? activeStepRefA : null}
-                                        className={`flex gap-2 items-start px-2 py-1 rounded transition-colors ${isActive
-                                            ? "bg-blue-500/15 text-foreground font-medium"
-                                            : isPast
-                                                ? "text-muted-foreground"
-                                                : "text-muted-foreground/50"
-                                            }`}
-                                    >
-                                        <span className={`shrink-0 font-mono tabular-nums ${isActive ? "text-blue-500" : isPast ? "text-muted-foreground" : "text-muted-foreground/40"
-                                            }`}>{i + 1}.</span>
-                                        <span>{step}</span>
-                                    </li>
-                                )
-                            })}
-                        </ol>
+                            </CardContent>
+                        </Card>
                     </div>
+                )}
+            </div>
 
-                    {/* Steps B */}
-                    <div className="rounded-lg border bg-card p-4 space-y-2">
-                        <p className="text-sm font-semibold">
-                            {ALGORITHM_NAMES[algoB]}
-                            <span className="ml-2 text-xs font-normal text-muted-foreground">— Algorithm Steps</span>
-                        </p>
-                        <ol className="space-y-1 max-h-48 overflow-y-auto pr-1 text-xs" aria-label="Steps B">
-                            {stepsB.map((step, i) => {
-                                const isActive = i === playerB.currentFrame
-                                const isPast = i < playerB.currentFrame
-                                return (
-                                    <li
-                                        key={i}
-                                        ref={isActive ? activeStepRefB : null}
-                                        className={`flex gap-2 items-start px-2 py-1 rounded transition-colors ${isActive
-                                            ? "bg-purple-500/15 text-foreground font-medium"
-                                            : isPast
-                                                ? "text-muted-foreground"
-                                                : "text-muted-foreground/50"
-                                            }`}
-                                    >
-                                        <span className={`shrink-0 font-mono tabular-nums ${isActive ? "text-purple-500" : isPast ? "text-muted-foreground" : "text-muted-foreground/40"
-                                            }`}>{i + 1}.</span>
-                                        <span>{step}</span>
-                                    </li>
-                                )
-                            })}
-                        </ol>
+            {/* Algorithm Steps Panels - Third on mobile */}
+            <div className="order-3">
+                {stepsA.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Steps A */}
+                        <div className="rounded-lg border bg-card p-4 space-y-2">
+                            <p className="text-sm font-semibold">
+                                {ALGORITHM_NAMES[algoA]}
+                                <span className="ml-2 text-xs font-normal text-muted-foreground">— Algorithm Steps</span>
+                            </p>
+                            <ol className="space-y-1 max-h-48 overflow-y-auto pr-1 text-xs" aria-label="Steps A">
+                                {stepsA.map((step, i) => {
+                                    const isActive = i === playerA.currentFrame
+                                    const isPast = i < playerA.currentFrame
+                                    return (
+                                        <li
+                                            key={i}
+                                            ref={isActive ? activeStepRefA : null}
+                                            className={`flex gap-2 items-start px-2 py-1 rounded transition-colors ${isActive
+                                                ? "bg-blue-500/15 text-foreground font-medium"
+                                                : isPast
+                                                    ? "text-muted-foreground"
+                                                    : "text-muted-foreground/50"
+                                                }`}
+                                        >
+                                            <span className={`shrink-0 font-mono tabular-nums ${isActive ? "text-blue-500" : isPast ? "text-muted-foreground" : "text-muted-foreground/40"
+                                                }`}>{i + 1}.</span>
+                                            <span>{step}</span>
+                                        </li>
+                                    )
+                                })}
+                            </ol>
+                        </div>
+
+                        {/* Steps B */}
+                        <div className="rounded-lg border bg-card p-4 space-y-2">
+                            <p className="text-sm font-semibold">
+                                {ALGORITHM_NAMES[algoB]}
+                                <span className="ml-2 text-xs font-normal text-muted-foreground">— Algorithm Steps</span>
+                            </p>
+                            <ol className="space-y-1 max-h-48 overflow-y-auto pr-1 text-xs" aria-label="Steps B">
+                                {stepsB.map((step, i) => {
+                                    const isActive = i === playerB.currentFrame
+                                    const isPast = i < playerB.currentFrame
+                                    return (
+                                        <li
+                                            key={i}
+                                            ref={isActive ? activeStepRefB : null}
+                                            className={`flex gap-2 items-start px-2 py-1 rounded transition-colors ${isActive
+                                                ? "bg-purple-500/15 text-foreground font-medium"
+                                                : isPast
+                                                    ? "text-muted-foreground"
+                                                    : "text-muted-foreground/50"
+                                                }`}
+                                        >
+                                            <span className={`shrink-0 font-mono tabular-nums ${isActive ? "text-purple-500" : isPast ? "text-muted-foreground" : "text-muted-foreground/40"
+                                                }`}>{i + 1}.</span>
+                                            <span>{step}</span>
+                                        </li>
+                                    )
+                                })}
+                            </ol>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Legend */}
-            <div className="flex flex-wrap gap-4 justify-center text-xs">
+            </div>
+
+            {/* Legend - Last */}
+            <div className="order-4 flex flex-wrap gap-4 justify-center text-xs">
                 {([["bg-primary/60", "Unsorted"], ["bg-blue-400", "Comparing"], ["bg-yellow-400", "Swapping"], ["bg-purple-500", "Pivot"], ["bg-green-400", "Sorted"]] as const).map(([color, label]) => (
                     <div key={label} className="flex items-center gap-1.5">
                         <div className={`w-3 h-3 rounded-sm ${color}`} />

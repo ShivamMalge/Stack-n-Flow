@@ -358,19 +358,19 @@ export default function QuickSortVisualizer() {
           <CardDescription>Visual representation of Quick Sort</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-end justify-center h-[300px] pt-8">
+          <div className="flex items-end justify-center h-[240px] md:h-[300px] pt-8 px-2 overflow-x-hidden">
             {array.length === 0 ? (
               <div className="text-muted-foreground">Add elements to create an array</div>
             ) : (
               array.map((item, index) => {
-                const height = Math.min(item.value * 2 + 20, 280)
+                const height = Math.min(item.value * 2 + 20, 260)
 
                 return (
-                  <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center mx-1">
+                  <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center flex-1 max-w-[40px] mx-0.5">
                     <div
                       style={{ height: `${height}px` }}
                       className={`
-                        w-10 rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
+                        w-full rounded-t-sm md:rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
                         ${item.isPivot ? "bg-purple-500 dark:bg-purple-600" : ""}
                         ${item.highlighted ? "bg-blue-400 dark:bg-blue-500" : ""}
                         ${item.isSorted ? "bg-green-400 dark:bg-green-500" : ""}
@@ -378,9 +378,9 @@ export default function QuickSortVisualizer() {
                         ${!item.isPivot && !item.highlighted && !item.isSorted && !item.isSwapping ? "bg-primary/70" : ""}
                       `}
                     >
-                      <span className="text-xs font-medium text-white">{item.value}</span>
+                      <span className="text-[10px] md:text-xs font-medium text-white">{item.value}</span>
                     </div>
-                    <div className="mt-2 text-xs">{index}</div>
+                    <div className="mt-2 text-[10px] md:text-xs">{index}</div>
                   </div>
                 )
               })

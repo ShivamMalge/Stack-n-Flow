@@ -6,6 +6,58 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, ArrowRight, Plus, Trash, Search } from "lucide-react"
+import CodePanel from "@/components/ui/code-panel"
+
+const INSERT_FRONT_CODE = [
+  "function insertFront(value):",
+  "  newNode = new Node(value)",
+  "  if head is null:",
+  "    head = tail = newNode",
+  "  else:",
+  "    newNode.next = head",
+  "    head.prev = newNode",
+  "    head = newNode"
+]
+
+const INSERT_REAR_CODE = [
+  "function insertRear(value):",
+  "  newNode = new Node(value)",
+  "  if tail is null:",
+  "    head = tail = newNode",
+  "  else:",
+  "    newNode.prev = tail",
+  "    tail.next = newNode",
+  "    tail = newNode"
+]
+
+const DELETE_FRONT_CODE = [
+  "function deleteFront():",
+  "  if head is null: return",
+  "  if head == tail:",
+  "    head = tail = null",
+  "  else:",
+  "    head = head.next",
+  "    head.prev = null"
+]
+
+const DELETE_REAR_CODE = [
+  "function deleteRear():",
+  "  if tail is null: return",
+  "  if head == tail:",
+  "    head = tail = null",
+  "  else:",
+  "    tail = tail.prev",
+  "    tail.next = null"
+]
+
+const SEARCH_CODE = [
+  "function search(value):",
+  "  temp = head",
+  "  while temp is not null:",
+  "    if temp.value == value: return true",
+  "    temp = temp.next",
+  "  return false"
+]
 
 type Node = {
   id: number
@@ -22,12 +74,16 @@ export default function DoublyLinkedListVisualizer() {
   const [animating, setAnimating] = useState(false)
   const [nextId, setNextId] = useState(1)
   const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
 
   const handleInsertFront = () => {
     if (!inputValue || animating) return
 
     const value = Number.parseInt(inputValue)
     setAnimating(true)
+    setActiveCode(INSERT_FRONT_CODE)
+    setActiveLine(0)
 
     // Create a new node with the "isNew" flag for animation
     const newNode = { id: nextId, value, isNew: true }
@@ -38,6 +94,7 @@ export default function DoublyLinkedListVisualizer() {
     setTimeout(() => {
       setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
       setAnimating(false)
+      setActiveLine(null)
     }, 1000)
 
     setInputValue("")
@@ -48,6 +105,8 @@ export default function DoublyLinkedListVisualizer() {
 
     const value = Number.parseInt(inputValue)
     setAnimating(true)
+    setActiveCode(INSERT_REAR_CODE)
+    setActiveLine(0)
 
     // Create a new node with the "isNew" flag for animation
     const newNode = { id: nextId, value, isNew: true }
@@ -58,6 +117,7 @@ export default function DoublyLinkedListVisualizer() {
     setTimeout(() => {
       setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
       setAnimating(false)
+      setActiveLine(null)
     }, 1000)
 
     setInputValue("")
@@ -67,6 +127,8 @@ export default function DoublyLinkedListVisualizer() {
     if (nodes.length === 0 || animating) return
 
     setAnimating(true)
+    setActiveCode(DELETE_FRONT_CODE)
+    setActiveLine(0)
 
     // Mark the first node for deletion animation
     setNodes((nodes) => nodes.map((node, index) => (index === 0 ? { ...node, isDeleting: true } : node)))
@@ -75,6 +137,7 @@ export default function DoublyLinkedListVisualizer() {
     setTimeout(() => {
       setNodes((nodes) => nodes.slice(1))
       setAnimating(false)
+      setActiveLine(null)
     }, 1000)
   }
 
@@ -82,6 +145,8 @@ export default function DoublyLinkedListVisualizer() {
     if (nodes.length === 0 || animating) return
 
     setAnimating(true)
+    setActiveCode(DELETE_REAR_CODE)
+    setActiveLine(0)
 
     // Mark the last node for deletion animation
     setNodes((nodes) => nodes.map((node, index) => (index === nodes.length - 1 ? { ...node, isDeleting: true } : node)))
@@ -90,6 +155,7 @@ export default function DoublyLinkedListVisualizer() {
     setTimeout(() => {
       setNodes((nodes) => nodes.slice(0, -1))
       setAnimating(false)
+      setActiveLine(null)
     }, 1000)
   }
 
@@ -99,6 +165,8 @@ export default function DoublyLinkedListVisualizer() {
     const value = Number.parseInt(inputValue)
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(SEARCH_CODE)
+    setActiveLine(0)
 
     // Reset all highlights
     setNodes((nodes) => nodes.map((node) => ({ ...node, highlighted: false })))
@@ -111,12 +179,14 @@ export default function DoublyLinkedListVisualizer() {
       if (currentIndex >= nodes.length) {
         clearInterval(searchInterval)
         setAnimating(false)
+        setActiveLine(null)
         if (!found) {
           setSearchResult("Element not found")
         }
         return
       }
 
+      setActiveLine(3)
       setNodes((nodes) =>
         nodes.map((node, index) => ({
           ...node,
@@ -132,6 +202,7 @@ export default function DoublyLinkedListVisualizer() {
         setTimeout(() => {
           setNodes((nodes) => nodes.map((node) => ({ ...node, highlighted: false })))
           setAnimating(false)
+          setActiveLine(null)
         }, 1000)
         return
       }
@@ -140,9 +211,10 @@ export default function DoublyLinkedListVisualizer() {
 
       // If we've reached the end without finding the value
       if (currentIndex >= nodes.length && !found) {
-        setTimeout(() => {
-          setSearchResult("Element not found")
-        }, 500)
+        clearInterval(searchInterval)
+        setAnimating(false)
+        setActiveLine(null)
+        setSearchResult("Element not found")
       }
     }, 500)
 
@@ -151,8 +223,8 @@ export default function DoublyLinkedListVisualizer() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Doubly Linked List Operations</CardTitle>
@@ -187,6 +259,7 @@ export default function DoublyLinkedListVisualizer() {
                     placeholder="Enter a value"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (operation === "insertFront" ? handleInsertFront() : operation === "insertRear" ? handleInsertRear() : handleSearch())}
                     disabled={animating}
                   />
 
@@ -244,18 +317,79 @@ export default function DoublyLinkedListVisualizer() {
 
             {searchResult && (
               <div
-                className={`mt-4 p-2 rounded text-center ${
-                  searchResult === "Element found"
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                }`}
+                className={`mt-4 p-2 rounded text-center ${searchResult === "Element found"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                  }`}
               >
                 {searchResult}
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
+      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the doubly linked list</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Improved responsive doubly linked list visualization */}
+            <div className="flex items-center justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[300px] md:h-[350px]">
+              {nodes.length === 0 ? (
+                <div className="text-muted-foreground text-sm">Empty doubly linked list</div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-center gap-y-10 gap-x-2 px-4 max-w-full">
+                  {nodes.map((node, index) => (
+                    <div key={node.id} className="flex items-center">
+                      <div
+                        className={`
+                          flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full border-2 shadow-sm
+                          transition-all duration-500 ease-in-out
+                          ${node.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
+                          ${node.isNew ? "scale-110 border-green-500" : ""}
+                          ${node.isDeleting ? "scale-75 opacity-50 border-red-500" : ""}
+                        `}
+                      >
+                        <div className="text-base md:text-lg font-bold">{node.value}</div>
+                        <div className="text-[10px] text-muted-foreground">id: {node.id}</div>
+                      </div>
+
+                      {index < nodes.length - 1 && (
+                        <div className="flex items-center px-1 text-muted-foreground">
+                          <ArrowLeft className="h-3 w-3" />
+                          <ArrowRight className="h-3 w-3" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={
+            activeCode === INSERT_FRONT_CODE ? "Insert Front Algorithm" :
+              activeCode === INSERT_REAR_CODE ? "Insert Rear Algorithm" :
+                activeCode === DELETE_FRONT_CODE ? "Delete Front Algorithm" :
+                  activeCode === DELETE_REAR_CODE ? "Delete Rear Algorithm" :
+                    activeCode === SEARCH_CODE ? "Search Algorithm" : "Doubly Linked List Algorithm"
+          }
+        />
+      </div>
+
+      {/* Learning Panel - Last on Mobile, Left on Desktop */}
+      <div className="order-4 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -286,47 +420,6 @@ export default function DoublyLinkedListVisualizer() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the doubly linked list</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center overflow-x-auto py-12 h-[300px]">
-            {nodes.length === 0 ? (
-              <div className="text-muted-foreground">Empty doubly linked list</div>
-            ) : (
-              <div className="flex items-center">
-                {nodes.map((node, index) => (
-                  <div key={node.id} className="flex items-center">
-                    <div
-                      className={`
-                        flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 
-                        transition-all duration-500 ease-in-out
-                        ${node.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
-                        ${node.isNew ? "scale-110 border-green-500" : ""}
-                        ${node.isDeleting ? "scale-75 opacity-50 border-red-500" : ""}
-                      `}
-                    >
-                      <div className="text-lg font-bold">{node.value}</div>
-                      <div className="text-xs text-muted-foreground">id: {node.id}</div>
-                    </div>
-
-                    {index < nodes.length - 1 && (
-                      <div className="flex flex-col items-center mx-1">
-                        <ArrowRight className="text-muted-foreground h-4 w-4" />
-                        <ArrowLeft className="text-muted-foreground h-4 w-4 mt-1" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

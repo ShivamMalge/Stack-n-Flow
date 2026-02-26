@@ -9,6 +9,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
+import CodePanel from "@/components/ui/code-panel"
+
+const SEARCH_CODE = [
+  "function search(node, key):",
+  "  int i = 0",
+  "  while i < node.keys.length and key > node.keys[i]: i++",
+  "  if i < node.keys.length and key == node.keys[i]: return node",
+  "  if node.isLeaf: return null",
+  "  return search(node.children[i], key)"
+]
+
+const INSERT_CODE = [
+  "function insert(key):",
+  "  if root is full:",
+  "    newRoot = Node(isLeaf=false)",
+  "    newRoot.children.push(root)",
+  "    splitChild(newRoot, 0, root)",
+  "    insertNonFull(newRoot, key)",
+  "  else: insertNonFull(root, key)",
+  "",
+  "function insertNonFull(node, key):",
+  "  if node.isLeaf:",
+  "    // Find position and insert key",
+  "    while i >= 0 and node.keys[i] > key: ...",
+  "    node.keys.insert(i + 1, key)",
+  "  else:",
+  "    // Recurse to correct child",
+  "    if child is full: splitChild(node, i, child)",
+  "    insertNonFull(child, key)"
+]
 
 // B-Tree node
 type BTreeNode = {
@@ -20,6 +50,7 @@ type BTreeNode = {
   isNew?: boolean
   isDeleting?: boolean
   isSplitting?: boolean
+  activeLine?: number | null
 }
 
 export default function BTreeVisualizer() {
@@ -33,6 +64,8 @@ export default function BTreeVisualizer() {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [treeOrder, setTreeOrder] = useState(3) // Default B-Tree order (minimum degree)
   const [operationInfo, setOperationInfo] = useState<string | null>(null)
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const isMobile = useMobile()
 
@@ -134,6 +167,8 @@ export default function BTreeVisualizer() {
 
     setAnimating(true)
     setOperationInfo(null)
+    setActiveCode(INSERT_CODE)
+    setActiveLine(0)
 
     // Check if value already exists in the tree
     if (root) {
@@ -172,6 +207,7 @@ export default function BTreeVisualizer() {
 
         setRoot((prevRoot) => (prevRoot ? removeAnimationFlags(prevRoot) : null))
         setAnimating(false)
+        setActiveLine(null)
         animationTimeoutRef.current = null
       }, 1500)
     } catch (error) {
@@ -305,6 +341,8 @@ export default function BTreeVisualizer() {
 
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(SEARCH_CODE)
+    setActiveLine(0)
 
     // Reset all highlights
     const resetHighlights = (node: BTreeNode | null): BTreeNode | null => {
@@ -321,7 +359,6 @@ export default function BTreeVisualizer() {
 
     // Animate search through the tree
     const searchPath: BTreeNode[] = []
-    let found = false
 
     const searchStep = (node: BTreeNode, key: number) => {
       if (!isMountedRef.current) return
@@ -340,49 +377,58 @@ export default function BTreeVisualizer() {
       }
 
       setRoot((prevRoot) => (prevRoot ? highlightNodes(JSON.parse(JSON.stringify(prevRoot)), searchPath) : null))
+      setActiveLine(1) // int i = 0
 
-      // Find the first key greater than or equal to k
-      let i = 0
-      while (i < node.keys.length && key > node.keys[i]) {
-        i++
-      }
-
-      // If the found key is equal to k, we found it
-      if (i < node.keys.length && key === node.keys[i]) {
-        found = true
-        setSearchResult(`Element found in node with keys: [${node.keys.join(", ")}]`)
-        animationTimeoutRef.current = setTimeout(() => {
-          if (!isMountedRef.current) return
-          setRoot((prevRoot) => (prevRoot ? resetHighlights(JSON.parse(JSON.stringify(prevRoot))) : null))
-          setAnimating(false)
-          animationTimeoutRef.current = null
-        }, 1500)
-        return
-      }
-
-      // If this is a leaf node, key is not present
-      if (node.isLeaf) {
-        setSearchResult("Element not found")
-        animationTimeoutRef.current = setTimeout(() => {
-          if (!isMountedRef.current) return
-          setRoot((prevRoot) => (prevRoot ? resetHighlights(JSON.parse(JSON.stringify(prevRoot))) : null))
-          setAnimating(false)
-          animationTimeoutRef.current = null
-        }, 1500)
-        return
-      }
-
-      // Recur to the appropriate child
       animationTimeoutRef.current = setTimeout(() => {
-        if (!isMountedRef.current) return
-        searchStep(node.children[i], key)
-      }, 1000)
+        setActiveLine(2) // while i < keys...
+
+        // Find the first key greater than or equal to k
+        let i = 0
+        while (i < node.keys.length && key > node.keys[i]) {
+          i++
+        }
+
+        animationTimeoutRef.current = setTimeout(() => {
+          setActiveLine(3) // if keys[i] == key
+
+          // If the found key is equal to k, we found it
+          if (i < node.keys.length && key === node.keys[i]) {
+            setSearchResult(`Element found in node with keys: [${node.keys.join(", ")}]`)
+            animationTimeoutRef.current = setTimeout(() => {
+              if (!isMountedRef.current) return
+              setRoot((prevRoot) => (prevRoot ? resetHighlights(JSON.parse(JSON.stringify(prevRoot))) : null))
+              setAnimating(false)
+              setActiveLine(null)
+              animationTimeoutRef.current = null
+            }, 1500)
+            return
+          }
+
+          // If this is a leaf node, key is not present
+          if (node.isLeaf) {
+            setActiveLine(4)
+            setSearchResult("Element not found")
+            animationTimeoutRef.current = setTimeout(() => {
+              if (!isMountedRef.current) return
+              setRoot((prevRoot) => (prevRoot ? resetHighlights(JSON.parse(JSON.stringify(prevRoot))) : null))
+              setAnimating(false)
+              setActiveLine(null)
+              animationTimeoutRef.current = null
+            }, 1500)
+            return
+          }
+
+          // Recur to the appropriate child
+          setActiveLine(5) // return search(children[i])
+          animationTimeoutRef.current = setTimeout(() => {
+            if (!isMountedRef.current) return
+            searchStep(node.children[i], key)
+          }, 1000)
+        }, 500)
+      }, 500)
     }
 
-    if (root) {
-      searchStep(root, value)
-    }
-
+    searchStep(root, value)
     setInputValue("")
   }
 
@@ -652,8 +698,8 @@ export default function BTreeVisualizer() {
   // Replace the Visualization Panel section with this improved version
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>B-Tree Operations</CardTitle>
@@ -719,7 +765,101 @@ export default function BTreeVisualizer() {
             )}
           </CardContent>
         </Card>
+      </div>
 
+      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the B-Tree</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-hidden">
+            {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
+
+            <div className="flex flex-wrap gap-2 mb-2 px-6">
+              <Button size="sm" variant="outline" onClick={handleZoomIn}>
+                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleZoomOut}>
+                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanLeft}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanRight}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleReset}>
+                Reset View
+              </Button>
+            </div>
+
+            <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                {root ? (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto">
+                    <svg
+                      ref={svgRef}
+                      width="100%"
+                      height="100%"
+                      viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
+                      style={{
+                        transform: `scale(${scale})`,
+                        transformOrigin: "center",
+                        transition: "transform 0.2s ease",
+                        touchAction: "none",
+                      }}
+                      className="max-w-none"
+                    >
+                      <g>{renderTree(root, 0, 40, viewBoxWidth, 1)}</g>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                    Empty B-Tree (Order: {treeOrder})
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center mt-4 gap-3 text-[10px] md:text-xs px-6 border-t pt-4">
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-card border border-primary rounded-sm mr-1.5"></div>
+                <span>Normal</span>
+              </div>
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-yellow-200 border border-yellow-500 rounded-sm mr-1.5"></div>
+                <span>Highlighted</span>
+              </div>
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-blue-200 border border-blue-500 rounded-sm mr-1.5"></div>
+                <span>Splitting</span>
+              </div>
+              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
+                <div className="w-2.5 h-2.5 bg-green-200 border border-green-500 rounded-sm mr-1.5"></div>
+                <span>New</span>
+              </div>
+            </div>
+
+            <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 mt-2 border-t">
+              Drag nodes to reposition. Degree (t) defines max keys (2t-1).
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "B-Tree Algorithm"}
+        />
+      </div>
+
+      {/* Learning Panel - Last on Mobile, Left on Desktop */}
+      <div className="order-4 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -755,86 +895,6 @@ export default function BTreeVisualizer() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the B-Tree</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 overflow-hidden">
-          {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
-
-          <div className="flex flex-wrap gap-2 mb-2 px-6">
-            <Button size="sm" variant="outline" onClick={handleZoomIn}>
-              <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleZoomOut}>
-              <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanLeft}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanRight}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleReset}>
-              Reset View
-            </Button>
-          </div>
-
-          <div className="relative w-full h-[450px] overflow-auto" style={{ overscrollBehavior: "contain" }}>
-            <div className="absolute inset-0 min-w-full min-h-full" style={{ minWidth: "800px", minHeight: "600px" }}>
-              {root ? (
-                <svg
-                  ref={svgRef}
-                  width="100%"
-                  height="100%"
-                  viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: "center",
-                    transition: "transform 0.2s ease",
-                    touchAction: "none",
-                  }}
-                  className="max-w-none"
-                >
-                  <g>{renderTree(root, 0, 40, viewBoxWidth, 1)}</g>
-                </svg>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Empty B-Tree (Order: {treeOrder})
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-center mt-4 space-x-2 text-xs px-6">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-card border border-primary rounded-sm mr-1"></div>
-              <span>Normal Node</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-200 border border-yellow-500 rounded-sm mr-1"></div>
-              <span>Highlighted</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-200 border border-blue-500 rounded-sm mr-1"></div>
-              <span>Splitting</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-200 border border-green-500 rounded-sm mr-1"></div>
-              <span>New</span>
-            </div>
-          </div>
-
-          <div className="px-6 py-3 text-xs text-center text-muted-foreground">
-            Drag nodes to reposition them. Use zoom and pan controls to navigate larger trees.
-            <br />
-            Scroll horizontally and vertically to view the entire tree structure.
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

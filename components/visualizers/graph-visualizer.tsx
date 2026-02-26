@@ -9,6 +9,31 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import CodePanel from "@/components/ui/code-panel"
+
+const BFS_CODE = [
+  "function BFS(graph, start):",
+  "  queue = [start], visited = {start}",
+  "  while queue is not empty:",
+  "    u = queue.shift()",
+  "    visit(u)",
+  "    for each neighbor v of u:",
+  "      if v not in visited:",
+  "        visited.add(v)",
+  "        queue.push(v)"
+]
+
+const DFS_CODE = [
+  "function DFS(graph, start):",
+  "  stack = [start], visited = {start}",
+  "  while stack is not empty:",
+  "    u = stack.pop()",
+  "    visit(u)",
+  "    for each neighbor v of u:",
+  "      if v not in visited:",
+  "        visited.add(v)",
+  "        stack.push(v)"
+]
 
 type GraphNode = {
   id: string
@@ -33,6 +58,7 @@ type GraphFrame = {
   edges: Edge[]
   traversalPath: string[]
   description: string
+  activeLine: number | null
 }
 
 export default function GraphVisualizer() {
@@ -47,12 +73,15 @@ export default function GraphVisualizer() {
   const [traversalType, setTraversalType] = useState("bfs")
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [steps, setSteps] = useState<string[]>([])
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
 
   const onFrameChange = useCallback((snap: GraphFrame) => {
     setNodes(snap.nodes)
     setEdges(snap.edges)
     setTraversalPath(snap.traversalPath)
+    setActiveLine(snap.activeLine)
   }, [])
 
   const player = useAnimationPlayer<GraphFrame>(onFrameChange)
@@ -122,26 +151,28 @@ export default function GraphVisualizer() {
     const cleanNodes = nodes.map((n) => ({ ...n, highlighted: false, visited: false }))
     const cleanEdges = edges.map((e) => ({ ...e, highlighted: false }))
 
-    const snap = (ns: GraphNode[], es: Edge[], path: string[], desc: string) =>
+    const snap = (ns: GraphNode[], es: Edge[], path: string[], desc: string, activeLine: number | null) =>
       frames.push({
         snapshot: {
           nodes: ns.map((n) => ({ ...n })),
           edges: es.map((e) => ({ ...e })),
           traversalPath: [...path],
           description: desc,
+          activeLine: activeLine,
         },
         description: desc,
       })
 
     if (traversalType === "bfs") {
       allSteps.push(`BFS starting from node ${selectedNode}`)
+      setActiveCode(BFS_CODE)
       const ns = cleanNodes.map((n) => ({ ...n }))
       const es = cleanEdges.map((e) => ({ ...e }))
       const visited: Set<string> = new Set([selectedNode])
       const queue = [selectedNode]
       const path: string[] = []
 
-      snap(ns, es, path, `BFS: initializing queue with start node ${selectedNode}`)
+      snap(ns, es, path, `BFS: initializing queue with start node ${selectedNode}`, 1)
 
       while (queue.length > 0) {
         const current = queue.shift()!
@@ -152,7 +183,7 @@ export default function GraphVisualizer() {
           n.highlighted = n.id === current
           n.visited = visited.has(n.id)
         })
-        snap(ns, es, path, `Visiting node ${current} (queue: [${queue.join(", ")}])`)
+        snap(ns, es, path, `Visiting node ${current} (queue: [${queue.join(", ")}])`, 3)
 
         for (const neighbor of (adjList[current] || [])) {
           if (!visited.has(neighbor)) {
@@ -166,25 +197,26 @@ export default function GraphVisualizer() {
               }
             })
             ns.forEach((n) => { if (n.id === neighbor) n.visited = true })
-            snap(ns, es, path, `Discovered ${neighbor} from ${current}, added to queue`)
+            snap(ns, es, path, `Discovered ${neighbor} from ${current}, added to queue`, 8)
           }
         }
       }
 
       ns.forEach((n) => { n.highlighted = false })
-      snap(ns, es, path, `BFS complete! Order: ${path.join(" → ")}`)
+      snap(ns, es, path, `BFS complete! Order: ${path.join(" → ")}`, null)
       allSteps.push(`BFS complete! Order: ${path.join(" → ")}`)
 
     } else {
       // DFS — iterative using a stack so we can pre-compute frames
       allSteps.push(`DFS starting from node ${selectedNode}`)
+      setActiveCode(DFS_CODE)
       const ns = cleanNodes.map((n) => ({ ...n }))
       const es = cleanEdges.map((e) => ({ ...e }))
       const visited: Set<string> = new Set()
       const stack = [selectedNode]
       const path: string[] = []
 
-      snap(ns, es, path, `DFS: initializing stack with start node ${selectedNode}`)
+      snap(ns, es, path, `DFS: initializing stack with start node ${selectedNode}`, 1)
 
       while (stack.length > 0) {
         const current = stack.pop()!
@@ -194,7 +226,7 @@ export default function GraphVisualizer() {
         allSteps.push(`Visiting node ${current}`)
 
         ns.forEach((n) => { n.highlighted = n.id === current; n.visited = visited.has(n.id) })
-        snap(ns, es, path, `Visiting node ${current} (stack: [${stack.join(", ")}])`)
+        snap(ns, es, path, `Visiting node ${current} (stack: [${stack.join(", ")}])`, 3)
 
         const neighbors = [...(adjList[current] || [])].reverse()
         for (const neighbor of neighbors) {
@@ -206,13 +238,13 @@ export default function GraphVisualizer() {
               }
             })
             allSteps.push(`Neighbor ${neighbor} pushed to stack`)
-            snap(ns, es, path, `Neighbor ${neighbor} pushed to stack`)
+            snap(ns, es, path, `Neighbor ${neighbor} pushed to stack`, 8)
           }
         }
       }
 
       ns.forEach((n) => { n.highlighted = false })
-      snap(ns, es, path, `DFS complete! Order: ${path.join(" → ")}`)
+      snap(ns, es, path, `DFS complete! Order: ${path.join(" → ")}`, null)
       allSteps.push(`DFS complete! Order: ${path.join(" → ")}`)
     }
 
@@ -246,7 +278,8 @@ export default function GraphVisualizer() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-6">
+      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Graph Operations</CardTitle>
@@ -337,7 +370,7 @@ export default function GraphVisualizer() {
                   onPause={player.pause}
                   onStepForward={player.stepForward}
                   onStepBackward={player.stepBackward}
-                  onReset={() => { player.reset(); setNodes((prev) => prev.map((n) => ({ ...n, highlighted: false, visited: false }))); setEdges((prev) => prev.map((e) => ({ ...e, highlighted: false }))); setTraversalPath([]) }}
+                  onReset={() => { player.reset(); setNodes((prev) => prev.map((n) => ({ ...n, highlighted: false, visited: false }))); setEdges((prev) => prev.map((e) => ({ ...e, highlighted: false }))); setTraversalPath([]); setActiveLine(null) }}
                   onSpeedChange={player.setSpeed}
                   onFrameChange={player.goToFrame}
                 />
@@ -375,71 +408,82 @@ export default function GraphVisualizer() {
         </Card>
       </div>
 
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the graph — drag nodes to reposition</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-4 overflow-auto h-[400px]">
-            <svg ref={svgRef} width="500" height="300" viewBox="0 0 500 300" className="max-w-full">
-              {edges.map((edge) => {
-                const src = nodes.find((n) => n.id === edge.source)
-                const tgt = nodes.find((n) => n.id === edge.target)
-                if (!src || !tgt) return null
-                return (
-                  <line key={edge.id}
-                    x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
-                    className={`stroke-current stroke-[2] transition-all duration-300
-                      ${edge.highlighted ? "stroke-yellow-500 stroke-[3]" : "stroke-muted-foreground"}
-                      ${edge.isNew ? "stroke-green-500 stroke-[3]" : ""}
-                    `}
-                  />
-                )
-              })}
-              {nodes.map((node) => (
-                <g key={node.id}
-                  transform={`translate(${node.x}, ${node.y})`}
-                  onMouseDown={(e) => handleNodeDrag(e, node.id)}
-                  onClick={() => handleNodeClick(node.id)}
-                  className="cursor-pointer"
-                >
-                  <circle r={20} className={`
-                    transition-all duration-300 ease-in-out
-                    ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : ""}
-                    ${node.visited && !node.highlighted ? "fill-green-100 stroke-green-500 dark:fill-green-900" : ""}
-                    ${!node.highlighted && !node.visited ? "fill-card stroke-primary" : ""}
-                    ${node.isNew ? "stroke-green-500 stroke-[3]" : "stroke-[2]"}
-                    ${node.id === selectedNode ? "stroke-blue-500 stroke-[3]" : ""}
-                  `} />
-                  <text textAnchor="middle" dominantBaseline="middle" className="text-sm font-medium fill-current select-none">
-                    {node.label}
-                  </text>
-                </g>
+      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the graph — drag nodes to reposition</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-center min-h-[300px] md:h-[400px] py-4 bg-muted/5 border-t overflow-auto">
+              <svg ref={svgRef} width="500" height="300" viewBox="0 0 500 300" className="max-w-none md:max-w-full">
+                {edges.map((edge) => {
+                  const src = nodes.find((n) => n.id === edge.source)
+                  const tgt = nodes.find((n) => n.id === edge.target)
+                  if (!src || !tgt) return null
+                  return (
+                    <line key={edge.id}
+                      x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
+                      className={`stroke-current stroke-[2] transition-all duration-300
+                        ${edge.highlighted ? "stroke-yellow-500 stroke-[3]" : "stroke-muted-foreground"}
+                        ${edge.isNew ? "stroke-green-500 stroke-[3]" : ""}
+                      `}
+                    />
+                  )
+                })}
+                {nodes.map((node) => (
+                  <g key={node.id}
+                    transform={`translate(${node.x}, ${node.y})`}
+                    onMouseDown={(e) => handleNodeDrag(e, node.id)}
+                    onClick={() => handleNodeClick(node.id)}
+                    className="cursor-pointer"
+                  >
+                    <circle r={20} className={`
+                      transition-all duration-300 ease-in-out
+                      ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : ""}
+                      ${node.visited && !node.highlighted ? "fill-green-100 stroke-green-500 dark:fill-green-900" : ""}
+                      ${!node.highlighted && !node.visited ? "fill-card stroke-primary" : ""}
+                      ${node.isNew ? "stroke-green-500 stroke-[3]" : "stroke-[2]"}
+                      ${node.id === selectedNode ? "stroke-blue-500 stroke-[3]" : ""}
+                    `} />
+                    <text textAnchor="middle" dominantBaseline="middle" className="text-sm font-medium fill-current select-none pointer-events-none">
+                      {node.label}
+                    </text>
+                  </g>
+                ))}
+              </svg>
+            </div>
+            {/* Current frame description */}
+            {player.currentDescription && (
+              <p className="text-center text-xs md:text-sm font-medium text-primary mt-2 px-4 py-2 bg-muted/30 border-t">{player.currentDescription}</p>
+            )}
+            {/* Legend */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 p-4 text-[10px] md:text-xs border-t">
+              {[
+                ["fill-card border border-primary", "Unvisited"],
+                ["bg-yellow-200 dark:bg-yellow-900 border border-yellow-500", "Current"],
+                ["bg-green-100 dark:bg-green-900 border border-green-500", "Visited"],
+                ["bg-card border-2 border-blue-500", "Start Node"],
+              ].map(([cls, label]) => (
+                <div key={label} className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-border bg-background">
+                  <div className={`w-2.5 h-2.5 rounded-full ${cls}`} />
+                  <span className="text-muted-foreground whitespace-nowrap">{label}</span>
+                </div>
               ))}
-            </svg>
-          </div>
-          {/* Current frame description */}
-          {player.currentDescription && (
-            <p className="text-center text-sm font-medium text-primary mt-2">{player.currentDescription}</p>
-          )}
-          {/* Legend */}
-          <div className="flex justify-center gap-4 mt-2 text-xs">
-            {[
-              ["fill-card border border-primary", "Unvisited"],
-              ["bg-yellow-200 dark:bg-yellow-900 border border-yellow-500", "Current"],
-              ["bg-green-100 dark:bg-green-900 border border-green-500", "Visited"],
-              ["bg-card border-2 border-blue-500", "Selected Start"],
-            ].map(([cls, label]) => (
-              <div key={label} className="flex items-center gap-1">
-                <div className={`w-3 h-3 rounded-full ${cls}`} />
-                <span className="text-muted-foreground">{label}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === BFS_CODE ? "BFS Algorithm" : activeCode === DFS_CODE ? "DFS Algorithm" : "Graph Algorithm"}
+        />
+      </div>
     </div>
   )
 }

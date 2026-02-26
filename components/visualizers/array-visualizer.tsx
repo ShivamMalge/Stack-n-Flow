@@ -6,6 +6,32 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash, Search } from "lucide-react"
+import CodePanel from "@/components/ui/code-panel"
+
+const INSERT_CODE = [
+  "function insert(value, index):",
+  "  if index < 0 or index > size: return",
+  "  for i from size down to index + 1:",
+  "    array[i] = array[i-1]",
+  "  array[index] = value",
+  "  size = size + 1"
+]
+
+const DELETE_CODE = [
+  "function delete(index):",
+  "  if index < 0 or index >= size: return",
+  "  for i from index to size - 2:",
+  "    array[i] = array[i+1]",
+  "  size = size - 1"
+]
+
+const SEARCH_CODE = [
+  "function search(value):",
+  "  for i from 0 to size - 1:",
+  "    if array[i] == value:",
+  "      return i",
+  "  return -1"
+]
 
 type ArrayItem = {
   id: number
@@ -23,6 +49,8 @@ export default function ArrayVisualizer() {
   const [animating, setAnimating] = useState(false)
   const [nextId, setNextId] = useState(1)
   const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
 
   const handleInsert = () => {
     if (!inputValue || !indexValue || animating) return
@@ -37,21 +65,36 @@ export default function ArrayVisualizer() {
 
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(INSERT_CODE)
+    setActiveLine(0)
 
-    // Create a new item with the "isNew" flag for animation
-    const newItem = { id: nextId, value, isNew: true }
-
-    // Insert at the specified index
-    const newArray = [...array]
-    newArray.splice(index, 0, newItem)
-    setArray(newArray)
-    setNextId(nextId + 1)
-
-    // After animation, remove the "isNew" flag
     setTimeout(() => {
-      setArray((array) => array.map((item) => (item.id === newItem.id ? { ...item, isNew: false } : item)))
-      setAnimating(false)
-    }, 1000)
+      setActiveLine(2)
+      setTimeout(() => {
+        setActiveLine(3)
+        setTimeout(() => {
+          setActiveLine(4)
+          // Create a new item with the "isNew" flag for animation
+          const newItem = { id: nextId, value, isNew: true }
+
+          // Insert at the specified index
+          const newArray = [...array]
+          newArray.splice(index, 0, newItem)
+          setArray(newArray)
+          setNextId(nextId + 1)
+
+          setTimeout(() => {
+            setActiveLine(5)
+            // After animation, remove the "isNew" flag
+            setTimeout(() => {
+              setArray((array) => array.map((item) => (item.id === newItem.id ? { ...item, isNew: false } : item)))
+              setAnimating(false)
+              setActiveLine(null)
+            }, 500)
+          }, 500)
+        }, 500)
+      }, 500)
+    }, 500)
 
     setInputValue("")
     setIndexValue("")
@@ -69,15 +112,27 @@ export default function ArrayVisualizer() {
 
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(DELETE_CODE)
+    setActiveLine(0)
 
-    // Mark the item for deletion animation
-    setArray((array) => array.map((item, i) => (i === index ? { ...item, isDeleting: true } : item)))
-
-    // After animation, remove the item
     setTimeout(() => {
-      setArray((array) => array.filter((_, i) => i !== index))
-      setAnimating(false)
-    }, 1000)
+      setActiveLine(2)
+      setTimeout(() => {
+        setActiveLine(3)
+        // Mark the item for deletion animation
+        setArray((array) => array.map((item, i) => (i === index ? { ...item, isDeleting: true } : item)))
+
+        setTimeout(() => {
+          setActiveLine(4)
+          // After animation, remove the item
+          setTimeout(() => {
+            setArray((array) => array.filter((_, i) => i !== index))
+            setAnimating(false)
+            setActiveLine(null)
+          }, 500)
+        }, 500)
+      }, 500)
+    }, 500)
 
     setIndexValue("")
   }
@@ -88,6 +143,8 @@ export default function ArrayVisualizer() {
     const value = Number.parseInt(inputValue)
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(SEARCH_CODE)
+    setActiveLine(0)
 
     // Reset all highlights
     setArray((array) => array.map((item) => ({ ...item, highlighted: false })))
@@ -97,11 +154,14 @@ export default function ArrayVisualizer() {
     let found = false
 
     const searchInterval = setInterval(() => {
+      setActiveLine(1)
       if (currentIndex >= array.length) {
         clearInterval(searchInterval)
         setAnimating(false)
         if (!found) {
           setSearchResult("Element not found")
+          setActiveLine(4)
+          setTimeout(() => setActiveLine(null), 1000)
         }
         return
       }
@@ -113,14 +173,17 @@ export default function ArrayVisualizer() {
         })),
       )
 
+      setActiveLine(2)
       // Check if current item has the value we're looking for
       if (array[currentIndex].value === value) {
         found = true
         setSearchResult(`Element found at index ${currentIndex}`)
+        setActiveLine(3)
         clearInterval(searchInterval)
         setTimeout(() => {
           setArray((array) => array.map((item) => ({ ...item, highlighted: false })))
           setAnimating(false)
+          setActiveLine(null)
         }, 1000)
         return
       }
@@ -140,8 +203,8 @@ export default function ArrayVisualizer() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Order 1 on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Array Operations</CardTitle>
@@ -171,6 +234,7 @@ export default function ArrayVisualizer() {
                       placeholder="Enter a value"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleInsert()}
                       disabled={animating}
                     />
                   </div>
@@ -181,6 +245,7 @@ export default function ArrayVisualizer() {
                       placeholder="Enter index"
                       value={indexValue}
                       onChange={(e) => setIndexValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleInsert()}
                       disabled={animating}
                     />
 
@@ -200,6 +265,7 @@ export default function ArrayVisualizer() {
                       placeholder="Enter index"
                       value={indexValue}
                       onChange={(e) => setIndexValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleDelete()}
                       disabled={animating}
                     />
 
@@ -218,6 +284,7 @@ export default function ArrayVisualizer() {
                     placeholder="Enter a value"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     disabled={animating}
                   />
 
@@ -231,20 +298,70 @@ export default function ArrayVisualizer() {
 
             {searchResult && (
               <div
-                className={`mt-4 p-2 rounded text-center ${
-                  searchResult.includes("found at index")
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                    : searchResult === "Invalid index"
-                      ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                }`}
+                className={`mt-4 p-2 rounded text-center ${searchResult.includes("found at index")
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                  : searchResult === "Invalid index"
+                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
+                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                  }`}
               >
                 {searchResult}
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
+      {/* Visualization Panel - Order 2 on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the array</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Improved responsive array visualization */}
+            <div className="flex items-center justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[300px] md:h-[350px]">
+              {array.length === 0 ? (
+                <div className="text-muted-foreground text-sm">Empty array</div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-center gap-y-12 gap-x-2 px-4 max-w-full">
+                  {array.map((item, index) => (
+                    <div key={item.id} className="flex flex-col items-center group">
+                      <div
+                        className={`
+                          flex items-center justify-center w-14 h-14 md:w-16 md:h-16 border-2 shadow-sm
+                          transition-all duration-500 ease-in-out
+                          ${item.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500 ring-2 ring-yellow-500/20" : "bg-card border-primary"}
+                          ${item.isNew ? "scale-105 border-green-500" : ""}
+                          ${item.isDeleting ? "scale-75 opacity-0 -translate-y-8" : ""}
+                        `}
+                      >
+                        <div className="text-base md:text-lg font-bold">{item.value}</div>
+                      </div>
+                      <div className="mt-2 text-[10px] font-mono text-muted-foreground group-hover:text-primary transition-colors">
+                        [{index}]
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Code Panel - Order 3 on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Linear Search" : "Algorithm Pseudocode"}
+        />
+      </div>
+
+      {/* Learning Panel - Order 4 on Mobile, Left on Desktop */}
+      <div className="order-4 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -275,42 +392,6 @@ export default function ArrayVisualizer() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the array</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center overflow-x-auto py-12 h-[300px]">
-            {array.length === 0 ? (
-              <div className="text-muted-foreground">Empty array</div>
-            ) : (
-              <div className="flex flex-col" style={{ minWidth: Math.max(300, array.length * 80) + "px" }}>
-                <div className="flex">
-                  {array.map((item, index) => (
-                    <div key={item.id} className="flex flex-col items-center mx-1">
-                      <div
-                        className={`
-                          flex items-center justify-center w-16 h-16 border-2 
-                          transition-all duration-500 ease-in-out
-                          ${item.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
-                          ${item.isNew ? "scale-110 border-green-500" : ""}
-                          ${item.isDeleting ? "scale-75 opacity-50 border-red-500" : ""}
-                        `}
-                      >
-                        <div className="text-lg font-bold">{item.value}</div>
-                      </div>
-                      <div className="mt-2 text-sm">{index}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

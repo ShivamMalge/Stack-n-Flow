@@ -277,89 +277,103 @@ export default function PathfindingVisualizer() {
     const stepDesc = player.currentSnapshot?.stepDescription ?? ""
 
     return (
-        <div className="space-y-4">
-            {/* Algorithm + Draw Controls */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>🗺️ Pathfinding Visualizer</CardTitle>
-                    <CardDescription>Draw walls, place start/end, then run Dijkstra or A*</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <div className="flex flex-wrap gap-2 items-center">
-                        {/* Algorithm */}
-                        <div className="flex gap-1">
-                            {(["dijkstra", "astar"] as Algorithm[]).map((a) => (
-                                <Button key={a} size="sm" variant={algorithm === a ? "default" : "outline"}
-                                    onClick={() => setAlgorithm(a)} disabled={player.isPlaying}>
-                                    {a === "dijkstra" ? "Dijkstra" : "A*"}
-                                </Button>
-                            ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Algorithm + Draw Controls - Top on Mobile, Left on Desktop */}
+            <div className="order-1 md:col-start-1">
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle>🗺️ Pathfinding Visualizer</CardTitle>
+                        <CardDescription>Draw walls, place start/end, then run Dijkstra or A*</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <div className="flex flex-wrap gap-2 items-center">
+                            {/* Algorithm */}
+                            <div className="flex gap-1">
+                                {(["dijkstra", "astar"] as Algorithm[]).map((a) => (
+                                    <Button key={a} size="sm" variant={algorithm === a ? "default" : "outline"}
+                                        onClick={() => setAlgorithm(a)} disabled={player.isPlaying}>
+                                        {a === "dijkstra" ? "Dijkstra" : "A*"}
+                                    </Button>
+                                ))}
+                            </div>
+
+                            {/* Draw modes */}
+                            <div className="flex gap-1 ml-2">
+                                {(["wall", "start", "end", "erase"] as DrawMode[]).map((m) => (
+                                    <Button key={m} size="sm"
+                                        variant={drawMode === m ? "secondary" : "outline"}
+                                        onClick={() => setDrawMode(m)}
+                                        className={m === "start" ? "text-green-500" : m === "end" ? "text-red-500" : ""}>
+                                        {m === "wall" ? "🧱 Wall" : m === "start" ? "🟢 Start" : m === "end" ? "🔴 End" : "✏️ Erase"}
+                                    </Button>
+                                ))}
+                            </div>
+
+                            <Button size="sm" onClick={handleGenerateMaze} disabled={player.isPlaying} variant="outline">🎲 Random Maze</Button>
+                            <Button size="sm" onClick={handleClearPath} disabled={player.isPlaying} variant="outline">Clear Path</Button>
+                            <Button size="sm" onClick={handleClear} disabled={player.isPlaying} variant="ghost">Reset</Button>
                         </div>
 
-                        {/* Draw modes */}
-                        <div className="flex gap-1 ml-2">
-                            {(["wall", "start", "end", "erase"] as DrawMode[]).map((m) => (
-                                <Button key={m} size="sm"
-                                    variant={drawMode === m ? "secondary" : "outline"}
-                                    onClick={() => setDrawMode(m)}
-                                    className={m === "start" ? "text-green-500" : m === "end" ? "text-red-500" : ""}>
-                                    {m === "wall" ? "🧱 Wall" : m === "start" ? "🟢 Start" : m === "end" ? "🔴 End" : "✏️ Erase"}
-                                </Button>
-                            ))}
-                        </div>
-
-                        <Button size="sm" onClick={handleGenerateMaze} disabled={player.isPlaying} variant="outline">🎲 Random Maze</Button>
-                        <Button size="sm" onClick={handleClearPath} disabled={player.isPlaying} variant="outline">Clear Path</Button>
-                        <Button size="sm" onClick={handleClear} disabled={player.isPlaying} variant="ghost">Reset</Button>
-                    </div>
-
-                    <div className="flex gap-2 items-center">
-                        <Button onClick={handleRun} disabled={!start || !end || player.isPlaying} className="flex-1">
-                            {algorithm === "dijkstra" ? "Run Dijkstra" : "Run A*"}
-                        </Button>
-                        {player.totalFrames > 0 && (
-                            <AnimationControls
-                                currentFrame={player.currentFrame} totalFrames={player.totalFrames}
-                                isPlaying={player.isPlaying} isPaused={player.isPaused} isComplete={player.isComplete}
-                                speed={player.speed}
-                                onPlay={player.play} onPause={player.pause}
-                                onStepForward={player.stepForward} onStepBackward={player.stepBackward}
-                                onReset={player.reset} onSpeedChange={player.setSpeed} onFrameChange={player.goToFrame}
-                            />
-                        )}
-                    </div>
-
-                    {stepDesc && <p className="text-xs text-center text-muted-foreground bg-muted/30 p-2 rounded-md">{stepDesc}</p>}
-                    {!start && <p className="text-xs text-muted-foreground text-center">Select "Start" mode and click a cell to place the start node</p>}
-                    {start && !end && <p className="text-xs text-muted-foreground text-center">Select "End" mode and click a cell to place the end node</p>}
-                </CardContent>
-            </Card>
-
-            {/* Grid */}
-            <Card>
-                <CardContent className="pt-4">
-                    <div
-                        className="inline-grid border border-border rounded overflow-hidden select-none cursor-crosshair"
-                        style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)`, display: "grid" }}
-                        onMouseLeave={handleMouseUp}
-                        onMouseUp={handleMouseUp}
-                    >
-                        {gToShow.map((row) =>
-                            row.map((cell) => (
-                                <div
-                                    key={`${cell.row}-${cell.col}`}
-                                    className={`w-5 h-5 border-[0.5px] border-border/30 transition-colors duration-75 ${cellClass(cell)}`}
-                                    onMouseDown={() => handleCellMouseDown(cell.row, cell.col)}
-                                    onMouseEnter={() => handleCellMouseEnter(cell.row, cell.col)}
+                        <div className="flex gap-2 items-center">
+                            <Button onClick={handleRun} disabled={!start || !end || player.isPlaying} className="flex-1">
+                                {algorithm === "dijkstra" ? "Run Dijkstra" : "Run A*"}
+                            </Button>
+                            {player.totalFrames > 0 && (
+                                <AnimationControls
+                                    currentFrame={player.currentFrame} totalFrames={player.totalFrames}
+                                    isPlaying={player.isPlaying} isPaused={player.isPaused} isComplete={player.isComplete}
+                                    speed={player.speed}
+                                    onPlay={player.play} onPause={player.pause}
+                                    onStepForward={player.stepForward} onStepBackward={player.stepBackward}
+                                    onReset={player.reset} onSpeedChange={player.setSpeed} onFrameChange={player.goToFrame}
                                 />
-                            ))
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
+                            )}
+                        </div>
 
-            {/* Legend + Steps side by side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {stepDesc && <p className="text-xs text-center text-muted-foreground bg-muted/30 p-2 rounded-md">{stepDesc}</p>}
+                        {!start && <p className="text-xs text-muted-foreground text-center">Select "Start" mode and click a cell to place the start node</p>}
+                        {start && !end && <p className="text-xs text-muted-foreground text-center">Select "End" mode and click a cell to place the end node</p>}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Grid - Second on Mobile, Right on Desktop */}
+            <div className="order-2 md:col-start-2 md:row-span-2">
+                <Card className="overflow-hidden h-full">
+                    <CardHeader>
+                        <CardTitle>Visualization</CardTitle>
+                        <CardDescription>Grid representation of the search space</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4 flex flex-col items-center">
+                        <div className="w-full overflow-auto max-h-[70vh] border rounded-md bg-muted/5 p-1 md:p-4">
+                            <div
+                                className="inline-grid select-none cursor-crosshair mx-auto"
+                                style={{
+                                    gridTemplateColumns: `repeat(${COLS}, minmax(16px, 1fr))`,
+                                    display: "grid",
+                                    width: "max-content"
+                                }}
+                                onMouseLeave={handleMouseUp}
+                                onMouseUp={handleMouseUp}
+                            >
+                                {gToShow.map((row) =>
+                                    row.map((cell) => (
+                                        <div
+                                            key={`${cell.row}-${cell.col}`}
+                                            className={`w-4 h-4 md:w-6 md:h-6 border-[0.5px] border-border/30 transition-colors duration-75 ${cellClass(cell)}`}
+                                            onMouseDown={() => handleCellMouseDown(cell.row, cell.col)}
+                                            onMouseEnter={() => handleCellMouseEnter(cell.row, cell.col)}
+                                        />
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Legend + Steps - Third on Mobile, Left on Desktop */}
+            <div className="order-3 md:col-start-1 grid grid-cols-1 gap-4">
                 <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm">Legend</CardTitle></CardHeader>
                     <CardContent>

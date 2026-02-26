@@ -12,6 +12,62 @@ import { useMobile } from "@/hooks/use-mobile"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { computeTreeLayout } from "@/lib/tree-layout"
+import CodePanel from "@/components/ui/code-panel"
+
+const INSERT_CODE = [
+  "function insert(value):",
+  "  if root is null:",
+  "    root = new Node(value)",
+  "    return",
+  "  // Randomly go left or right",
+  "  if random() < 0.5:",
+  "    insertNode(node.left, value)",
+  "  else: insertNode(node.right, value)"
+]
+
+const SEARCH_CODE = [
+  "function search(value):",
+  "  queue = [root]",
+  "  while queue is not empty:",
+  "    current = queue.shift()",
+  "    if current.value == value: return true",
+  "    if current.left: queue.push(current.left)",
+  "    if current.right: queue.push(current.right)",
+  "  return false"
+]
+
+const TRAVERSAL_CODE = {
+  inorder: [
+    "function inorder(node):",
+    "  if node is null: return",
+    "  inorder(node.left)",
+    "  visit(node.value)",
+    "  inorder(node.right)"
+  ],
+  preorder: [
+    "function preorder(node):",
+    "  if node is null: return",
+    "  visit(node.value)",
+    "  preorder(node.left)",
+    "  preorder(node.right)"
+  ],
+  postorder: [
+    "function postorder(node):",
+    "  if node is null: return",
+    "  postorder(node.left)",
+    "  postorder(node.right)",
+    "  visit(node.value)"
+  ],
+  levelorder: [
+    "function levelOrder(root):",
+    "  queue = [root]",
+    "  while queue is not empty:",
+    "    node = queue.shift()",
+    "    visit(node.value)",
+    "    if node.left: queue.push(node.left)",
+    "    if node.right: queue.push(node.right)"
+  ]
+}
 
 type TreeNode = {
   id: number
@@ -23,7 +79,7 @@ type TreeNode = {
   isDeleting?: boolean
 }
 
-type BinaryTreeFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null }
+type BinaryTreeFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null; activeLine: number | null }
 
 export default function BinaryTreeVisualizer() {
   const [root, setRoot] = useState<TreeNode | null>(null)
@@ -37,6 +93,8 @@ export default function BinaryTreeVisualizer() {
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [steps, setSteps] = useState<string[]>([])
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const isMobile = useMobile()
 
@@ -44,6 +102,7 @@ export default function BinaryTreeVisualizer() {
     setRoot(snap.root)
     setTraversalPath(snap.traversalPath)
     setSearchResult(snap.searchResult)
+    setActiveLine(snap.activeLine)
   }, [])
   const player = useAnimationPlayer<BinaryTreeFrame>(onFrameChange)
 
@@ -82,6 +141,8 @@ export default function BinaryTreeVisualizer() {
     }
 
     setAnimating(true)
+    setActiveCode(INSERT_CODE)
+    setActiveLine(0)
 
     // Create a deep copy of the tree and insert the new node
     const newRoot = root ? JSON.parse(JSON.stringify(root)) : null
@@ -104,6 +165,7 @@ export default function BinaryTreeVisualizer() {
 
       setRoot(removeNewFlag(updatedRoot))
       setAnimating(false)
+      setActiveLine(null)
     }, 1000)
 
     setInputValue("")
@@ -127,7 +189,8 @@ export default function BinaryTreeVisualizer() {
     const visited: number[] = []
     let found = false
 
-    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: [], searchResult: null }, description: `BFS search for ${value}` })
+    setActiveCode(SEARCH_CODE)
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: [], searchResult: null, activeLine: 1 }, description: `BFS search for ${value}` })
 
     while (queue.length > 0) {
       const cur = queue.shift()!
@@ -136,17 +199,23 @@ export default function BinaryTreeVisualizer() {
       if (cur.value === value) {
         found = true
         allSteps.push(`✓ Found ${value} at node id=${cur.id}`)
-        frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: visited, searchResult: "Element found!" }, description: `Found ${value}!` })
+        frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: visited, searchResult: "Element found!", activeLine: 4 }, description: `Found ${value}!` })
         break
       }
       allSteps.push(`Checking node ${cur.value}`)
-      frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: [...visited], searchResult: null }, description: `Checking node ${cur.value}` })
-      if (cur.left) queue.push(cur.left)
-      if (cur.right) queue.push(cur.right)
+      frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: [...visited], searchResult: null, activeLine: 3 }, description: `Checking node ${cur.value}` })
+      if (cur.left) {
+        frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: [...visited], searchResult: null, activeLine: 5 }, description: `Queue left child` })
+        queue.push(cur.left)
+      }
+      if (cur.right) {
+        frames.push({ snapshot: { root: setHForIds(JSON.parse(JSON.stringify(rootCopy)), visitedSet), traversalPath: [...visited], searchResult: null, activeLine: 6 }, description: `Queue right child` })
+        queue.push(cur.right)
+      }
     }
     if (!found) {
       allSteps.push(`✗ ${value} not in tree`)
-      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: [], searchResult: "Element not found" }, description: `${value} not found` })
+      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: [], searchResult: "Element not found", activeLine: 7 }, description: `${value} not found` })
     }
     setSteps(allSteps)
     player.loadFrames(frames)
@@ -179,12 +248,15 @@ export default function BinaryTreeVisualizer() {
     const allSteps: string[] = [`${traversalType} traversal`]
     const rootCopy = JSON.parse(JSON.stringify(root)) as TreeNode
 
-    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null }, description: `Starting ${traversalType} traversal` })
+    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null, activeLine: 0 }, description: `Starting ${traversalType} traversal` })
+    setActiveCode(TRAVERSAL_CODE[traversalType as keyof typeof TRAVERSAL_CODE])
+
     for (let i = 0; i < path.length; i++) {
       allSteps.push(`Visit node ${path[i]}`)
-      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
+      const activeLine = traversalType === "inorder" ? 3 : traversalType === "preorder" ? 2 : traversalType === "postorder" ? 4 : 4
+      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null, activeLine }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
     }
-    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null }, description: `Done: ${path.join(" → ")}` })
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null, activeLine: null }, description: `Done: ${path.join(" → ")}` })
     setSteps(allSteps)
     player.loadFrames(frames)
     setTimeout(() => player.play(), 50)
@@ -397,8 +469,8 @@ export default function BinaryTreeVisualizer() {
   // Replace the Visualization Panel section with this improved version
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Binary Tree Operations</CardTitle>
@@ -470,7 +542,7 @@ export default function BinaryTreeVisualizer() {
                     speed={player.speed}
                     onPlay={player.play} onPause={player.pause}
                     onStepForward={player.stepForward} onStepBackward={player.stepBackward}
-                    onReset={() => { player.reset(); setRoot((r) => { const rst = (n: TreeNode | null): TreeNode | null => n ? { ...n, highlighted: false, left: rst(n.left), right: rst(n.right) } : null; return rst(r) }); setTraversalPath([]); setSearchResult(null) }}
+                    onReset={() => { player.reset(); setRoot((r) => { const rst = (n: TreeNode | null): TreeNode | null => n ? { ...n, highlighted: false, left: rst(n.left), right: rst(n.right) } : null; return rst(r) }); setTraversalPath([]); setSearchResult(null); setActiveLine(null) }}
                     onSpeedChange={player.setSpeed} onFrameChange={player.goToFrame}
                   />
                 </div>
@@ -499,7 +571,80 @@ export default function BinaryTreeVisualizer() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the binary tree</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-hidden">
+            {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
+
+            <div className="flex flex-wrap gap-2 mb-2 px-6">
+              <Button size="sm" variant="outline" onClick={handleZoomIn}>
+                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleZoomOut}>
+                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanLeft}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanRight}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleReset}>
+                Reset View
+              </Button>
+            </div>
+
+            <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                {root ? (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto">
+                    <svg
+                      ref={svgRef}
+                      width={svgW}
+                      height={svgH}
+                      viewBox={`0 0 ${svgW} ${svgH}`}
+                      style={{
+                        transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+                        transformOrigin: "center",
+                        transition: "transform 0.2s ease",
+                        touchAction: "none",
+                      }}
+                      className="max-w-none"
+                    >
+                      <g>{renderTree(root)}</g>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Empty tree</div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground border-t bg-muted/5">
+              Drag nodes to reposition. Use zoom/pan controls to navigate.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "Traversal Algorithm"}
+        />
+      </div>
+
+      {/* Learning Panel - Last on Mobile, Left on Desktop */}
+      <div className="order-4 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -526,65 +671,6 @@ export default function BinaryTreeVisualizer() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the binary tree</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 overflow-hidden">
-          {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
-
-          <div className="flex flex-wrap gap-2 mb-2 px-6">
-            <Button size="sm" variant="outline" onClick={handleZoomIn}>
-              <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleZoomOut}>
-              <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanLeft}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanRight}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleReset}>
-              Reset View
-            </Button>
-          </div>
-
-          <div className="relative w-full h-[450px] overflow-auto" style={{ overscrollBehavior: "contain" }}>
-            <div className="absolute inset-0 min-w-full min-h-full" style={{ minWidth: "800px", minHeight: "600px" }}>
-              {root ? (
-                <svg
-                  ref={svgRef}
-                  width="100%"
-                  height="100%"
-                  viewBox={`${pan.x} ${pan.y} ${svgW} ${svgH}`}
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: "center",
-                    transition: "transform 0.2s ease",
-                    touchAction: "none",
-                  }}
-                  className="max-w-none"
-                >
-                  <g>{renderTree(root)}</g>
-                </svg>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">Empty tree</div>
-              )}
-            </div>
-          </div>
-
-          <div className="px-6 py-3 text-xs text-center text-muted-foreground">
-            Drag nodes to reposition them. Use zoom and pan controls to navigate larger trees.
-            <br />
-            Scroll horizontally and vertically to view the entire tree structure.
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

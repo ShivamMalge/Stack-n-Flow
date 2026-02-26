@@ -353,21 +353,21 @@ export default function DivideConquerVisualizer() {
               <>
                 <div className="w-full">
                   <h3 className="text-sm font-medium mb-2">Array:</h3>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center flex-wrap gap-1 px-2">
                     {array.map((item, index) => (
-                      <div key={item.id} className="flex flex-col items-center mx-1">
+                      <div key={item.id} className="flex flex-col items-center">
                         <div
                           className={`
-                            flex items-center justify-center w-10 h-10 border-2 
-                            transition-all duration-300 ease-in-out
+                            flex items-center justify-center w-8 h-8 md:w-10 md:h-10 border-2 
+                            transition-all duration-300 ease-in-out rounded-md
                             ${item.highlighted ? "bg-blue-100 dark:bg-blue-900 border-blue-500" : "bg-card border-primary"}
                             ${item.merging ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : ""}
                             ${item.merged ? "bg-green-100 dark:bg-green-900 border-green-500" : ""}
                           `}
                         >
-                          <span className="text-sm font-bold">{item.value}</span>
+                          <span className="text-xs md:text-sm font-bold">{item.value}</span>
                         </div>
-                        <div className="mt-1 text-xs">{index}</div>
+                        <div className="mt-1 text-[10px] md:text-xs text-muted-foreground">{index}</div>
                       </div>
                     ))}
                   </div>
@@ -379,20 +379,20 @@ export default function DivideConquerVisualizer() {
                 </div>
 
                 {currentPhase === "divide" && dividePhase.length > 0 && (
-                  <div className="w-full mt-2">
+                  <div className="w-full mt-2 bg-muted/20 p-2 rounded-lg">
                     <div className="flex items-center justify-center mb-1">
-                      <ArrowDown className="h-5 w-5 text-blue-500" />
-                      <h3 className="text-sm font-medium ml-1">Divide Phase</h3>
+                      <ArrowDown className="h-4 w-4 text-blue-500" />
+                      <h3 className="text-xs font-medium ml-1">Divide Phase</h3>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3 overflow-x-auto pb-2 -mx-2 px-2">
                       {dividePhase.map((level, levelIndex) => (
-                        <div key={levelIndex} className="flex justify-center">
+                        <div key={levelIndex} className="flex justify-center min-w-max mx-auto gap-2">
                           {level.arrays.map((subArray, arrayIndex) => (
-                            <div key={arrayIndex} className="mx-2 border border-dashed border-blue-300 p-1 rounded">
-                              <div className="flex">
+                            <div key={arrayIndex} className="border border-dashed border-blue-300 p-1 rounded bg-background/50">
+                              <div className="flex gap-0.5">
                                 {subArray.map((value, valueIndex) => (
-                                  <div key={valueIndex} className="flex items-center justify-center w-8 h-8 border border-blue-500 mx-0.5 bg-blue-50 dark:bg-blue-900">
-                                    <span className="text-xs font-medium">{value}</span>
+                                  <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-blue-500 bg-blue-50 dark:bg-blue-900 rounded-sm">
+                                    <span className="text-[10px] md:text-xs font-medium">{value}</span>
                                   </div>
                                 ))}
                               </div>
@@ -405,20 +405,20 @@ export default function DivideConquerVisualizer() {
                 )}
 
                 {currentPhase === "merge" && mergePhase.length > 0 && (
-                  <div className="w-full mt-2">
+                  <div className="w-full mt-2 bg-muted/20 p-2 rounded-lg">
                     <div className="flex items-center justify-center mb-1">
-                      <ArrowUp className="h-5 w-5 text-green-500" />
-                      <h3 className="text-sm font-medium ml-1">Merge Phase</h3>
+                      <ArrowUp className="h-4 w-4 text-green-500" />
+                      <h3 className="text-xs font-medium ml-1">Merge Phase</h3>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3 overflow-x-auto pb-2 -mx-2 px-2">
                       {mergePhase.map((level, levelIndex) => (
-                        <div key={levelIndex} className="flex justify-center">
+                        <div key={levelIndex} className="flex justify-center min-w-max mx-auto gap-2">
                           {level.arrays.map((subArray, arrayIndex) => (
-                            <div key={arrayIndex} className="mx-2 border border-dashed border-green-300 p-1 rounded">
-                              <div className="flex">
+                            <div key={arrayIndex} className="border border-dashed border-green-300 p-1 rounded bg-background/50">
+                              <div className="flex gap-0.5">
                                 {subArray.map((value, valueIndex) => (
-                                  <div key={valueIndex} className="flex items-center justify-center w-8 h-8 border border-green-500 mx-0.5 bg-green-50 dark:bg-green-900">
-                                    <span className="text-xs font-medium">{value}</span>
+                                  <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-green-500 bg-green-50 dark:bg-green-900 rounded-sm">
+                                    <span className="text-[10px] md:text-xs font-medium">{value}</span>
                                   </div>
                                 ))}
                               </div>

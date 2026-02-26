@@ -569,27 +569,34 @@ export default function TreeVisualizer() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-center overflow-auto h-[400px] w-full">
-            {root ? (
-              <div className="w-full h-full">
-                <svg
-                  ref={svgRef}
-                  width="100%"
-                  height="100%"
-                  viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
-                  style={{ transform: `scale(${scale})`, transformOrigin: "center", transition: "transform 0.2s ease" }}
-                  className="max-w-full"
-                >
-                  <g>{renderTree(root, 0, 0, 1)}</g>
-                </svg>
-              </div>
-            ) : (
-              <div className="text-muted-foreground">Empty tree</div>
-            )}
+          <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              {root ? (
+                <div className="w-full h-full flex items-center justify-center overflow-auto">
+                  <svg
+                    ref={svgRef}
+                    width="100%"
+                    height="100%"
+                    viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
+                    style={{
+                      transform: `scale(${scale})`,
+                      transformOrigin: "center",
+                      transition: "transform 0.2s ease",
+                      touchAction: "none",
+                    }}
+                    className="max-w-none"
+                  >
+                    <g>{renderTree(root, 0, 0, 1)}</g>
+                  </svg>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Empty tree</div>
+              )}
+            </div>
           </div>
 
-          <div className="text-xs text-center text-muted-foreground mt-2">
-            Drag nodes to reposition them. Use zoom and pan controls to navigate larger trees.
+          <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
+            Drag nodes to reposition. Use zoom/pan controls to navigate larger trees.
           </div>
         </CardContent>
       </Card>

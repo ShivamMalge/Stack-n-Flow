@@ -6,7 +6,41 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Search, Trash2 } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+
+const INSERT_CODE = [
+    "function insert(key, value):",
+    "  let index = hashFn(key)",
+    "  let bucket = table[index]",
+    "  for entry in bucket:",
+    "    if entry.key == key:",
+    "      entry.value = value",
+    "      return",
+    "  bucket.append({key, value})",
+    "  return"
+]
+
+const SEARCH_CODE = [
+    "function search(key):",
+    "  let index = hashFn(key)",
+    "  let bucket = table[index]",
+    "  for entry in bucket:",
+    "    if entry.key == key:",
+    "      return entry.value",
+    "  return null"
+]
+
+const DELETE_CODE = [
+    "function delete(key):",
+    "  let index = hashFn(key)",
+    "  let bucket = table[index]",
+    "  for i from 0 to bucket.length - 1:",
+    "    if bucket[i].key == key:",
+    "      bucket.splice(i, 1)",
+    "      return true",
+    "  return false"
+]
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -20,6 +54,7 @@ type HashFrame = {
     hashIndex: number
     stepDescription: string
     operation: "insert" | "search" | "delete" | "none"
+    activeLine: number | null
 }
 
 function hashFn(key: string): number {
@@ -41,30 +76,31 @@ function generateInsert(buckets: BucketEntry[][], key: string, value: string): A
     const b = cloneBuckets(buckets)
     const hi = hashFn(key)
 
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi} (sum of char codes mod ${TABLE_SIZE})`, operation: "insert" }, description: `hash = ${hi}` })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}`, operation: "insert", activeLine: 1 }, description: `hash = ${hi}` })
 
     // Check if key already exists (update)
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Checking if key already exists...`, operation: "insert", activeLine: 3 }, description: `check` })
     const existing = b[hi].findIndex((e) => e.key === key && e.state !== "deleted")
     if (existing !== -1) {
         b[hi][existing].state = "active"
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" already exists at bucket ${hi}. Updating value to "${value}".`, operation: "insert" }, description: "Update" })
+        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" already exists at bucket ${hi}. Updating value to "${value}".`, operation: "insert", activeLine: 5 }, description: "Update" })
         b[hi][existing].value = value; b[hi][existing].state = "found"
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Updated! Bucket ${hi}: "${key}" → "${value}"`, operation: "insert" }, description: "Done" })
+        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Updated! Bucket ${hi}: "${key}" → "${value}"`, operation: "insert", activeLine: 6 }, description: "Done" })
         return frames
     }
 
     // Check for collision
     if (b[hi].length > 0) {
         b[hi].forEach((e) => { e.state = "collision" })
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Collision at bucket ${hi}! ${b[hi].length} entry(s) already there. Using chaining — append to linked list.`, operation: "insert" }, description: "Collision!" })
+        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Collision at bucket ${hi}! Appending to chain.`, operation: "insert", activeLine: 7 }, description: "Collision!" })
         b[hi].forEach((e) => { e.state = "default" })
     }
 
     b[hi].push({ key, value, state: "active" })
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Chained insertion: added "${key}"→"${value}" at bucket ${hi}`, operation: "insert" }, description: "Inserted" })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Chained insertion: added "${key}"→"${value}" at bucket ${hi}`, operation: "insert", activeLine: 7 }, description: "Inserted" })
 
     b[hi][b[hi].length - 1].state = "default"
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Insert done. Bucket ${hi} now has ${b[hi].length} item(s).`, operation: "insert" }, description: "Done" })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Insert done.`, operation: "insert", activeLine: 8 }, description: "Done" })
     return frames
 }
 
@@ -73,25 +109,26 @@ function generateSearch(buckets: BucketEntry[][], key: string): AnimationFrame<H
     const b = cloneBuckets(buckets)
     const hi = hashFn(key)
 
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}. Looking in bucket ${hi}...`, operation: "search" }, description: `hash = ${hi}` })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}. Looking in bucket ${hi}...`, operation: "search", activeLine: 1 }, description: `hash = ${hi}` })
 
     if (b[hi].length === 0) {
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Bucket ${hi} is empty. Key "${key}" not found.`, operation: "search" }, description: "Not found" })
+        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Bucket ${hi} is empty. Key "${key}" not found.`, operation: "search", activeLine: 7 }, description: "Not found" })
         return frames
     }
 
     for (let i = 0; i < b[hi].length; i++) {
         b[hi][i].state = "active"
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Checking: "${b[hi][i].key}" === "${key}"?`, operation: "search" }, description: `Check ${b[hi][i].key}` })
+        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Checking entry ${i} in bucket ${hi}...`, operation: "search", activeLine: 3 }, description: `check` })
+        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `"${b[hi][i].key}" === "${key}"?`, operation: "search", activeLine: 4 }, description: `match?` })
         if (b[hi][i].key === key) {
             b[hi][i].state = "found"
-            frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Found! "${key}" → "${b[hi][i].value}"`, operation: "search" }, description: `Found: ${b[hi][i].value}` })
+            frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Found! "${key}" → "${b[hi][i].value}"`, operation: "search", activeLine: 5 }, description: `Found` })
             return frames
         }
         b[hi][i].state = "default"
     }
 
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" not in bucket ${hi}. Not found.`, operation: "search" }, description: "Not found" })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" not in bucket ${hi}. Not found.`, operation: "search", activeLine: 7 }, description: "Not found" })
     return frames
 }
 
@@ -100,20 +137,20 @@ function generateDelete(buckets: BucketEntry[][], key: string): AnimationFrame<H
     const b = cloneBuckets(buckets)
     const hi = hashFn(key)
 
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}. Looking for key to delete...`, operation: "delete" }, description: `hash = ${hi}` })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}. Looking for key to delete...`, operation: "delete", activeLine: 1 }, description: `hash = ${hi}` })
 
     const idx = b[hi].findIndex((e) => e.key === key)
     if (idx === -1) {
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" not found in bucket ${hi}. Nothing to delete.`, operation: "delete" }, description: "Not found" })
+        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" not found in bucket ${hi}. Nothing to delete.`, operation: "delete", activeLine: 8 }, description: "Not found" })
         return frames
     }
 
     b[hi][idx].state = "active"
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Found "${key}" in bucket ${hi}. Removing...`, operation: "delete" }, description: "Removing" })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Found "${key}" in bucket ${hi}. Removing...`, operation: "delete", activeLine: 4 }, description: "Found" })
     b[hi][idx].state = "deleted"
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Deleted "${key}" from bucket ${hi}.`, operation: "delete" }, description: "Deleted" })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Deleted "${key}" from bucket ${hi}.`, operation: "delete", activeLine: 5 }, description: "Deleted" })
     b[hi].splice(idx, 1)
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Done. Bucket ${hi} now has ${b[hi].length} item(s).`, operation: "delete" }, description: "Done" })
+    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Done.`, operation: "delete", activeLine: 6 }, description: "Done" })
     return frames
 }
 
@@ -198,137 +235,156 @@ export default function HashTableVisualizer() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Controls */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Hash Table (Chaining)</CardTitle>
-                    <CardDescription>Hash function: sum of char codes mod {TABLE_SIZE}. Collisions handled via linked-list chaining.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Operation tabs */}
-                    <div className="flex gap-1">
-                        {(["insert", "search", "delete"] as const).map((op) => (
-                            <Button key={op} size="sm" variant={operation === op ? "default" : "outline"}
-                                onClick={() => setOperation(op)} disabled={player.isPlaying} className="flex-1 capitalize">
-                                {op}
-                            </Button>
-                        ))}
-                    </div>
-
-                    {operation === "insert" && (
-                        <div className="space-y-2">
-                            <Input placeholder="Key" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
-                            <Input placeholder="Value (optional, defaults to key)" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
-                            <Button onClick={handleInsert} disabled={player.isPlaying || !keyInput} className="w-full">
-                                <Plus className="mr-2 h-4 w-4" /> Insert
-                            </Button>
+            {/* Operations Panel - Order 1 on Mobile, Col 1 on Desktop */}
+            <div className="order-1 md:col-start-1">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Hash Table (Chaining)</CardTitle>
+                        <CardDescription>Hash function: sum of char codes mod {TABLE_SIZE}. Collisions handled via linked-list chaining.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {/* Operation tabs */}
+                        <div className="flex gap-1">
+                            {(["insert", "search", "delete"] as const).map((op) => (
+                                <Button key={op} size="sm" variant={operation === op ? "default" : "outline"}
+                                    onClick={() => setOperation(op)} disabled={player.isPlaying} className="flex-1 capitalize">
+                                    {op}
+                                </Button>
+                            ))}
                         </div>
-                    )}
 
-                    {(operation === "search" || operation === "delete") && (
-                        <div className="space-y-2">
-                            <Input placeholder="Key to search/delete" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && (operation === "search" ? handleSearch() : handleDelete())}
-                                disabled={player.isPlaying} />
-                            <Button onClick={operation === "search" ? handleSearch : handleDelete}
-                                disabled={player.isPlaying || !searchKey} className="w-full"
-                                variant={operation === "delete" ? "destructive" : "default"}>
-                                {operation === "search" ? <><Search className="mr-2 h-4 w-4" /> Search</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete</>}
-                            </Button>
-                        </div>
-                    )}
-
-                    <div className="flex gap-2">
-                        <Button onClick={loadSample} disabled={player.isPlaying} variant="outline" className="flex-1">Load Sample</Button>
-                        <Button onClick={handleClear} disabled={player.isPlaying} variant="ghost">Clear</Button>
-                    </div>
-
-                    {player.totalFrames > 0 && (
-                        <AnimationControls
-                            currentFrame={player.currentFrame} totalFrames={player.totalFrames}
-                            isPlaying={player.isPlaying} isPaused={player.isPaused} isComplete={player.isComplete}
-                            speed={player.speed}
-                            onPlay={player.play} onPause={player.pause}
-                            onStepForward={player.stepForward} onStepBackward={player.stepBackward}
-                            onReset={player.reset} onSpeedChange={player.setSpeed} onFrameChange={player.goToFrame}
-                        />
-                    )}
-
-                    {stepDesc && <p className="text-sm text-center bg-muted/30 p-2 rounded-md text-muted-foreground">{stepDesc}</p>}
-
-                    {/* Steps */}
-                    <div>
-                        <h3 className="text-sm font-medium mb-1">Algorithm Steps:</h3>
-                        <div className="bg-muted/30 rounded-md p-2 h-28 overflow-y-auto">
-                            {steps.length > 0 ? (
-                                <ol className="pl-4 list-decimal space-y-0.5">
-                                    {steps.map((s, i) => (
-                                        <li key={i} className={`text-xs ${i <= player.currentFrame ? "text-foreground" : "text-muted-foreground"}`}>{s}</li>
-                                    ))}
-                                </ol>
-                            ) : <p className="text-xs text-muted-foreground">Perform an operation to see steps</p>}
-                        </div>
-                    </div>
-
-                    {/* Complexity */}
-                    <div className="text-[10px] text-muted-foreground border-t pt-2 grid grid-cols-2 gap-x-4">
-                        <div>Insert: <span className="font-mono">O(1) avg</span></div>
-                        <div>Search: <span className="font-mono">O(1) avg</span></div>
-                        <div>Delete: <span className="font-mono">O(1) avg</span></div>
-                        <div>Space: <span className="font-mono">O(n)</span></div>
-                        <div className="col-span-2 mt-1">Worst case (all collisions): <span className="font-mono">O(n)</span></div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Hash Table visualization */}
-            <Card>
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Bucket Array (size {TABLE_SIZE})</CardTitle>
-                    <CardDescription>Each row = one bucket. Chained entries shown inline.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-1">
-                        {currentBuckets.map((bucket, i) => (
-                            <div key={i}
-                                className={`flex items-center gap-2 p-1.5 rounded-md transition-all duration-300 ${i === hl ? "ring-2 ring-blue-500 bg-blue-500/10" : ""}`}>
-                                {/* Index */}
-                                <div className="w-8 text-right">
-                                    <span className="text-[10px] font-mono font-bold text-muted-foreground">[{i}]</span>
-                                </div>
-                                {/* Bucket cell */}
-                                <div className="w-8 h-7 border border-border bg-muted/20 rounded flex items-center justify-center">
-                                    <span className="text-[10px] text-muted-foreground">{bucket.length === 0 ? "∅" : "→"}</span>
-                                </div>
-                                {/* Entries */}
-                                <div className="flex gap-1 flex-wrap">
-                                    {bucket.map((entry, j) => (
-                                        <div key={j}
-                                            className={`flex items-center gap-1 border rounded px-2 py-0.5 text-xs transition-all duration-200 ${ENTRY_BG[entry.state]}`}>
-                                            <span className="font-medium">{entry.key}</span>
-                                            <span className="text-muted-foreground">→</span>
-                                            <span>{entry.value}</span>
-                                            {j < bucket.length - 1 && <span className="ml-1 text-muted-foreground">→</span>}
-                                        </div>
-                                    ))}
-                                </div>
+                        {operation === "insert" && (
+                            <div className="space-y-2">
+                                <Input placeholder="Key" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
+                                <Input placeholder="Value (optional, defaults to key)" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
+                                <Button onClick={handleInsert} disabled={player.isPlaying || !keyInput} className="w-full">
+                                    <Plus className="mr-2 h-4 w-4" /> Insert
+                                </Button>
                             </div>
-                        ))}
-                    </div>
+                        )}
 
-                    {/* Legend */}
-                    <div className="flex flex-wrap gap-2 mt-3 text-[10px]">
-                        {([["bg-yellow-500/30 border-yellow-500", "Active"], ["bg-green-500/30 border-green-500", "Found"], ["bg-orange-500/30 border-orange-500", "Collision"], ["bg-red-500/30 border-red-500", "Deleted"]] as const).map(([cls, lbl]) => (
-                            <div key={lbl} className="flex items-center gap-1.5">
-                                <div className={`w-3 h-3 rounded-sm border ${cls}`} />
-                                <span className="text-muted-foreground">{lbl}</span>
+                        {(operation === "search" || operation === "delete") && (
+                            <div className="space-y-2">
+                                <Input placeholder="Key to search/delete" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && (operation === "search" ? handleSearch() : handleDelete())}
+                                    disabled={player.isPlaying} />
+                                <Button onClick={operation === "search" ? handleSearch : handleDelete}
+                                    disabled={player.isPlaying || !searchKey} className="w-full"
+                                    variant={operation === "delete" ? "destructive" : "default"}>
+                                    {operation === "search" ? <><Search className="mr-2 h-4 w-4" /> Search</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete</>}
+                                </Button>
                             </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                        )}
+
+                        <div className="flex gap-2">
+                            <Button onClick={loadSample} disabled={player.isPlaying} variant="outline" className="flex-1">Load Sample</Button>
+                            <Button onClick={handleClear} disabled={player.isPlaying} variant="ghost">Clear</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Visualization Panel - Order 2 on Mobile, Col 2 on Desktop */}
+            <div className="order-2 md:col-start-2 md:row-span-2">
+                <Card className="h-full">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Bucket Array (size {TABLE_SIZE})</CardTitle>
+                        <CardDescription>Each row = one bucket. Chained entries shown inline.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-1.5 max-h-[400px] md:max-h-none overflow-y-auto px-1 pt-1">
+                            {currentBuckets.map((bucket, i) => (
+                                <div key={i}
+                                    className={`flex items-start md:items-center gap-2 p-1.5 rounded-md border transition-all duration-300 ${i === hl ? "ring-2 ring-blue-500 bg-blue-500/10 border-blue-500" : "border-transparent bg-muted/5"}`}>
+                                    {/* Index */}
+                                    <div className="w-8 shrink-0 text-right pt-1 md:pt-0">
+                                        <span className="text-[10px] font-mono font-bold text-muted-foreground">[{i}]</span>
+                                    </div>
+                                    {/* Bucket cell */}
+                                    <div className="w-8 h-8 shrink-0 border border-border bg-card shadow-sm rounded flex items-center justify-center">
+                                        <span className="text-xs text-muted-foreground">{bucket.length === 0 ? "∅" : "→"}</span>
+                                    </div>
+                                    {/* Entries */}
+                                    <div className="flex gap-1.5 flex-wrap min-w-0">
+                                        {bucket.map((entry, j) => (
+                                            <div key={j}
+                                                className={`flex items-center gap-1.5 border rounded-md shadow-sm px-2.5 py-1 text-[10px] md:text-xs transition-all duration-200 whitespace-nowrap ${ENTRY_BG[entry.state]}`}>
+                                                <span className="font-semibold">{entry.key}</span>
+                                                <span className="text-muted-foreground opacity-50">|</span>
+                                                <span className="truncate max-w-[80px] md:max-w-[120px]">{entry.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex flex-wrap gap-2 mt-3 text-[10px]">
+                            {([["bg-yellow-500/30 border-yellow-500", "Active"], ["bg-green-500/30 border-green-500", "Found"], ["bg-orange-500/30 border-orange-500", "Collision"], ["bg-red-500/30 border-red-500", "Deleted"]] as const).map(([cls, lbl]) => (
+                                <div key={lbl} className="flex items-center gap-1.5">
+                                    <div className={`w-3 h-3 rounded-sm border ${cls}`} />
+                                    <span className="text-muted-foreground">{lbl}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Code & Steps - Order 3 on Mobile, Col 1 on Desktop */}
+            <div className="order-3 md:col-start-1 space-y-4">
+                <Card>
+                    <CardContent className="pt-6 space-y-4">
+                        {player.totalFrames > 0 && (
+                            <AnimationControls
+                                currentFrame={player.currentFrame} totalFrames={player.totalFrames}
+                                isPlaying={player.isPlaying} isPaused={player.isPaused} isComplete={player.isComplete}
+                                speed={player.speed}
+                                onPlay={player.play} onPause={player.pause}
+                                onStepForward={player.stepForward} onStepBackward={player.stepBackward}
+                                onReset={player.reset} onSpeedChange={player.setSpeed} onFrameChange={player.goToFrame}
+                            />
+                        )}
+
+                        {stepDesc && <p className="text-sm text-center bg-muted/30 p-2 rounded-md text-muted-foreground">{stepDesc}</p>}
+
+                        {/* Live Code Panel */}
+                        <div className="h-[230px]">
+                            <CodePanel
+                                code={player.currentSnapshot?.operation === "insert" ? INSERT_CODE : player.currentSnapshot?.operation === "delete" ? DELETE_CODE : SEARCH_CODE}
+                                activeLine={player.currentSnapshot?.activeLine ?? null}
+                                title={player.currentSnapshot?.operation === "insert" ? "Insertion Algorithm" : player.currentSnapshot?.operation === "delete" ? "Deletion Algorithm" : "Search Algorithm"}
+                            />
+                        </div>
+
+                        {/* Steps */}
+                        <div>
+                            <h3 className="text-sm font-medium mb-1">Algorithm Steps:</h3>
+                            <div className="bg-muted/30 rounded-md p-2 h-24 overflow-y-auto">
+                                {steps.length > 0 ? (
+                                    <ol className="pl-4 list-decimal space-y-0.5">
+                                        {steps.map((s, i) => (
+                                            <li key={i} className={`text-xs ${i <= player.currentFrame ? "text-foreground" : "text-muted-foreground"}`}>{s}</li>
+                                        ))}
+                                    </ol>
+                                ) : <p className="text-xs text-muted-foreground">Perform an operation to see steps</p>}
+                            </div>
+                        </div>
+
+                        {/* Complexity */}
+                        <div className="text-[10px] text-muted-foreground border-t pt-2 grid grid-cols-2 gap-x-4">
+                            <div>Insert: <span className="font-mono">O(1) avg</span></div>
+                            <div>Search: <span className="font-mono">O(1) avg</span></div>
+                            <div>Delete: <span className="font-mono">O(1) avg</span></div>
+                            <div>Space: <span className="font-mono">O(n)</span></div>
+                            <div className="col-span-2 mt-1">Worst case (all collisions): <span className="font-mono">O(n)</span></div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     )
 }

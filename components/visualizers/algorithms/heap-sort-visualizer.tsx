@@ -7,6 +7,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import CodePanel from "@/components/ui/code-panel"
+
+const HEAP_SORT_CODE = [
+    "function heapSort(arr):",
+    "  buildMaxHeap(arr)",
+    "  for i from n-1 down to 1:",
+    "    swap(arr[0], arr[i])",
+    "    heapifyDown(arr, 0, i)"
+]
+
+const HEAPIFY_CODE = [
+    "function heapifyDown(arr, i, size):",
+    "  largest = i, l = 2i+1, r = 2i+2",
+    "  if (l < size && arr[l] > arr[largest]) largest = l",
+    "  if (r < size && arr[r] > arr[largest]) largest = r",
+    "  if (largest != i):",
+    "    swap(arr[i], arr[largest])",
+    "    heapifyDown(arr, largest, size)"
+]
 
 type BarState = "default" | "heap" | "comparing" | "swapping" | "sorted" | "root"
 
@@ -14,6 +33,8 @@ type HSSFrame = {
     bars: { value: number; state: BarState }[]
     phase: "build" | "extract"
     heapSize: number
+    activeLine: number | null
+    code: string[]
 }
 
 function frame(
@@ -21,8 +42,10 @@ function frame(
     phase: "build" | "extract",
     heapSize: number,
     desc: string,
+    activeLine: number | null,
+    code: string[]
 ): AnimationFrame<HSSFrame> {
-    return { snapshot: { bars: bars.map((b) => ({ ...b })), phase, heapSize }, description: desc }
+    return { snapshot: { bars: bars.map((b) => ({ ...b })), phase, heapSize, activeLine, code }, description: desc }
 }
 
 function generateHeapSort(values: number[]): AnimationFrame<HSSFrame>[] {
@@ -33,9 +56,9 @@ function generateHeapSort(values: number[]): AnimationFrame<HSSFrame>[] {
     const neutral = (hs: number) => arr.forEach((b, i) => { b.state = i < hs ? "heap" : "sorted" })
 
     // Phase 1: Build max-heap
-    frames.push(frame(arr, "build", n, "Phase 1: Build Max-Heap from array"))
+    frames.push(frame(arr, "build", n, "Phase 1: Build Max-Heap from array", 1, HEAP_SORT_CODE))
 
-    const heapifyDown = (i: number, hs: number) => {
+    const heapifyDown = (i: number, hs: number, phase: "build" | "extract") => {
         const l = 2 * i + 1; const r = 2 * i + 2
         let largest = i
         if (l < hs && arr[l].value > arr[largest].value) largest = l
@@ -45,11 +68,11 @@ function generateHeapSort(values: number[]): AnimationFrame<HSSFrame>[] {
         arr[i].state = "comparing"
         if (l < hs) arr[l].state = "comparing"
         if (r < hs) arr[r].state = "comparing"
-        frames.push(frame(arr, "build", hs, `Heapify at index ${i}: compare ${arr[i].value} with children`))
+        frames.push(frame(arr, phase, hs, `Heapify at index ${i}: compare ${arr[i].value} with children`, 1, HEAPIFY_CODE))
 
         if (largest !== i) {
             arr[i].state = "swapping"; arr[largest].state = "swapping"
-            frames.push(frame(arr, "build", hs, `Swap ${arr[i].value} ↔ ${arr[largest].value}`));
+            frames.push(frame(arr, phase, hs, `Swap ${arr[i].value} ↔ ${arr[largest].value}`, 5, HEAPIFY_CODE));
             [arr[i].value, arr[largest].value] = [arr[largest].value, arr[i].value]
             heapifyDown(largest, hs)
         }
@@ -57,26 +80,26 @@ function generateHeapSort(values: number[]): AnimationFrame<HSSFrame>[] {
 
     for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
         neutral(n)
-        frames.push(frame(arr, "build", n, `Heapify subtree rooted at index ${i} (value ${arr[i].value})`))
-        heapifyDown(i, n)
+        frames.push(frame(arr, "build", n, `Heapify subtree rooted at index ${i} (value ${arr[i].value})`, 1, HEAPIFY_CODE))
+        heapifyDown(i, n, "build")
     }
     neutral(n)
-    frames.push(frame(arr, "build", n, `Max-Heap built! Root (max) = ${arr[0].value}`))
+    frames.push(frame(arr, "build", n, `Max-Heap built! Root (max) = ${arr[0].value}`, null, HEAP_SORT_CODE))
 
     // Phase 2: Extract max one by one
-    frames.push(frame(arr, "extract", n, "Phase 2: Extract max element to end of array"))
+    frames.push(frame(arr, "extract", n, "Phase 2: Extract max element to end of array", 2, HEAP_SORT_CODE))
     for (let hs = n; hs > 1; hs--) {
         arr[0].state = "root"; arr[hs - 1].state = "swapping"
-        frames.push(frame(arr, "extract", hs, `Swap root ${arr[0].value} ↔ last ${arr[hs - 1].value}`));
+        frames.push(frame(arr, "extract", hs, `Swap root ${arr[0].value} ↔ last ${arr[hs - 1].value}`, 3, HEAP_SORT_CODE));
         [arr[0].value, arr[hs - 1].value] = [arr[hs - 1].value, arr[0].value]
         arr[hs - 1].state = "sorted"
         neutral(hs - 1); arr[hs - 1].state = "sorted"
-        frames.push(frame(arr, "extract", hs - 1, `${arr[hs - 1].value} is sorted. Heapify remaining ${hs - 1} elements`))
-        heapifyDown(0, hs - 1)
+        frames.push(frame(arr, "extract", hs - 1, `${arr[hs - 1].value} is sorted. Heapify remaining ${hs - 1} elements`, 4, HEAP_SORT_CODE))
+        heapifyDown(0, hs - 1, "extract")
         neutral(hs - 1); arr[hs - 1].state = "sorted"
     }
     arr[0].state = "sorted"
-    frames.push(frame(arr, "extract", 0, "Heap Sort complete! Array is fully sorted."))
+    frames.push(frame(arr, "extract", 0, "Heap Sort complete! Array is fully sorted.", null, HEAP_SORT_CODE))
     return frames
 }
 
@@ -96,11 +119,15 @@ export default function HeapSortVisualizer() {
     const [inputVal, setInputVal] = useState("")
     const [values, setValues] = useState<number[]>([])
     const [steps, setSteps] = useState<string[]>([])
+    const [activeCode, setActiveCode] = useState<string[]>([])
+    const [activeLine, setActiveLine] = useState<number | null>(null)
 
     const onFrameChange = useCallback((snap: HSSFrame) => {
         setBars(snap.bars)
         setPhase(snap.phase)
         setHeapSize(snap.heapSize)
+        setActiveLine(snap.activeLine)
+        setActiveCode(snap.code)
     }, [])
     const player = useAnimationPlayer<HSSFrame>(onFrameChange)
 
@@ -223,13 +250,17 @@ export default function HeapSortVisualizer() {
                     <CardDescription>Bar chart — colors show heap position vs sorted</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-end justify-center gap-[2px] h-[220px] w-full px-2">
+                    <div className="flex items-end justify-center gap-[2px] h-[160px] md:h-[220px] w-full px-1">
                         {displayBars.map((bar, idx) => {
-                            const h = Math.max(4, Math.round((bar.value / maxVal) * 200))
-                            const w = Math.max(6, Math.min(36, Math.floor(340 / displayBars.length)))
+                            const h = Math.max(4, Math.round((bar.value / maxVal) * (displayBars.length > 15 ? 140 : 200)))
                             return (
                                 <div key={idx} title={String(bar.value)}
-                                    style={{ height: `${h}px`, width: `${w}px`, minWidth: `${w}px` }}
+                                    style={{
+                                        height: `${h}px`,
+                                        flex: "1 1 0%",
+                                        maxWidth: displayBars.length > 20 ? "12px" : "24px",
+                                        minWidth: "2px"
+                                    }}
                                     className={`rounded-t transition-all duration-150 ${BAR_COLORS[bar.state]}`} />
                             )
                         })}
@@ -246,6 +277,15 @@ export default function HeapSortVisualizer() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Live Code Panel */}
+            <div className="h-[280px]">
+                <CodePanel
+                    code={activeCode}
+                    activeLine={activeLine}
+                    title={activeCode === HEAPIFY_CODE ? "Heapify Algorithm" : "Heap Sort Algorithm"}
+                />
+            </div>
         </div>
     )
 }

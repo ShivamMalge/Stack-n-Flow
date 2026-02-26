@@ -299,23 +299,23 @@ export default function DPVisualizer() {
                             {displayKsDp.length === 0 ? (
                                 <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Solve to see DP table</div>
                             ) : (
-                                <div className="overflow-auto max-h-64">
-                                    <table className="text-xs border-collapse">
+                                <div className="overflow-x-auto pb-4">
+                                    <table className="text-[10px] md:text-xs border-collapse min-w-full">
                                         <thead>
                                             <tr>
-                                                <th className="border border-border px-2 py-1 bg-muted/30">i\c</th>
+                                                <th className="border border-border px-1 md:px-2 py-1 bg-muted/30">i\c</th>
                                                 {Array.from({ length: displayKsDp[0].length }, (_, c) => (
-                                                    <th key={c} className="border border-border px-2 py-1 bg-muted/20 font-mono">{c}</th>
+                                                    <th key={c} className="border border-border px-1 md:px-2 py-1 bg-muted/20 font-mono">{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {displayKsDp.map((row, i) => (
                                                 <tr key={i}>
-                                                    <td className="border border-border px-2 py-1 bg-muted/20 font-mono font-bold">{i}</td>
+                                                    <td className="border border-border px-1 md:px-2 py-1 bg-muted/20 font-mono font-bold">{i}</td>
                                                     {row.map((val, c) => (
-                                                        <td key={c} className={`border border-border px-2 py-1 text-center transition-all duration-200 font-mono
-                              ${i === displayKsRow && c === displayKsCol ? "bg-blue-500/30 text-blue-600 dark:text-blue-300 font-bold" :
+                                                        <td key={c} className={`border border-border px-1 md:px-2 py-1 text-center transition-all duration-200 font-mono
+                               ${i === displayKsRow && c === displayKsCol ? "bg-blue-500/30 text-blue-600 dark:text-blue-300 font-bold" :
                                                                 i < displayKsRow || (i === displayKsRow && c < displayKsCol) ? "bg-muted/20" : "opacity-40"}`}>
                                                             {val}
                                                         </td>

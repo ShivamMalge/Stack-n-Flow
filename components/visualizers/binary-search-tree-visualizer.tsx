@@ -10,8 +10,44 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, Trash } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { computeTreeLayout } from "@/lib/tree-layout"
+
+const SEARCH_CODE = [
+  "function search(node, value):",
+  "  if node == null: return null",
+  "  if node.value == value: return node",
+  "  if value < node.value:",
+  "    return search(node.left, value)",
+  "  return search(node.right, value)"
+]
+
+const INSERT_CODE = [
+  "function insert(node, value):",
+  "  if node == null:",
+  "    return new Node(value)",
+  "  if value < node.value:",
+  "    node.left = insert(node.left, value)",
+  "  else:",
+  "    node.right = insert(node.right, value)",
+  "  return node"
+]
+
+const DELETE_CODE = [
+  "function delete(node, value):",
+  "  if node == null: return null",
+  "  if value < node.value:",
+  "    node.left = delete(node.left, value)",
+  "  else if value > node.value:",
+  "    node.right = delete(node.right, value)",
+  "  else:",
+  "    if node.left == null: return node.right",
+  "    if node.right == null: return node.left",
+  "    node.value = findMin(node.right).value",
+  "    node.right = delete(node.right, node.value)",
+  "  return node"
+]
 
 type TreeNode = {
   id: number
@@ -23,7 +59,7 @@ type TreeNode = {
   isDeleting?: boolean
 }
 
-type TreeFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null }
+type TreeFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null; activeLine: number | null }
 
 export default function BinarySearchTreeVisualizer() {
   const [root, setRoot] = useState<TreeNode | null>(null)
@@ -37,6 +73,8 @@ export default function BinarySearchTreeVisualizer() {
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [steps, setSteps] = useState<string[]>([])
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const isMobile = useMobile()
 
@@ -44,6 +82,7 @@ export default function BinarySearchTreeVisualizer() {
     setRoot(snap.root)
     setTraversalPath(snap.traversalPath)
     setSearchResult(snap.searchResult)
+    setActiveLine(snap.activeLine)
   }, [])
   const player = useAnimationPlayer<TreeFrame>(onFrameChange)
 
@@ -80,29 +119,41 @@ export default function BinarySearchTreeVisualizer() {
     }
 
     setAnimating(true)
+    setActiveCode(INSERT_CODE)
+    setActiveLine(0)
 
-    // Create a deep copy of the tree and insert the new node
-    const newRoot = root ? JSON.parse(JSON.stringify(root)) : null
-    const updatedRoot = insertNode(newRoot, value, nextId)
-    setRoot(updatedRoot)
-    setNextId(nextId + 1)
-
-    // After animation, remove the "isNew" flag
     setTimeout(() => {
-      const removeNewFlag = (node: TreeNode | null): TreeNode | null => {
-        if (node === null) return null
+      setActiveLine(1)
+      // Create a deep copy of the tree and insert the new node
+      const newRoot = root ? JSON.parse(JSON.stringify(root)) : null
+      const updatedRoot = insertNode(newRoot, value, nextId)
 
-        return {
-          ...node,
-          isNew: false,
-          left: removeNewFlag(node.left),
-          right: removeNewFlag(node.right),
-        }
-      }
+      setTimeout(() => {
+        if (!root) setActiveLine(2)
+        else setActiveLine(value < root.value ? 4 : 6)
 
-      setRoot(removeNewFlag(updatedRoot))
-      setAnimating(false)
-    }, 1000)
+        setRoot(updatedRoot)
+        setNextId(nextId + 1)
+
+        // After animation, remove the "isNew" flag
+        setTimeout(() => {
+          const removeNewFlag = (node: TreeNode | null): TreeNode | null => {
+            if (node === null) return null
+
+            return {
+              ...node,
+              isNew: false,
+              left: removeNewFlag(node.left),
+              right: removeNewFlag(node.right),
+            }
+          }
+
+          setRoot(removeNewFlag(updatedRoot))
+          setAnimating(false)
+          setActiveLine(null)
+        }, 1000)
+      }, 500)
+    }, 500)
 
     setInputValue("")
   }
@@ -159,6 +210,8 @@ export default function BinarySearchTreeVisualizer() {
     const value = Number.parseInt(inputValue)
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(DELETE_CODE)
+    setActiveLine(0)
 
     // First, find the node to highlight it before deletion
     let nodeFound = false
@@ -186,20 +239,25 @@ export default function BinarySearchTreeVisualizer() {
     if (!nodeFound) {
       setSearchResult("Node not found")
       setAnimating(false)
+      setActiveLine(1)
+      setTimeout(() => setActiveLine(null), 1000)
       setInputValue("")
       return
     }
 
     setRoot(highlightedRoot)
+    setActiveLine(value < root.value ? 2 : 4)
 
     // After highlighting, delete the node
     setTimeout(() => {
+      setActiveLine(6)
       const updatedRoot = deleteNode(JSON.parse(JSON.stringify(root)), value)
       setRoot(updatedRoot)
       setSearchResult("Node deleted")
 
       setTimeout(() => {
         setAnimating(false)
+        setActiveLine(null)
       }, 1000)
     }, 1500)
 
@@ -221,26 +279,28 @@ export default function BinarySearchTreeVisualizer() {
     const searchPath: number[] = []
     let cur: TreeNode | null = JSON.parse(JSON.stringify(root))
     let found = false
+    setActiveCode(SEARCH_CODE)
 
-    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: null }, description: `Searching for ${value}` })
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: null, activeLine: 0 }, description: `Searching for ${value}` })
 
     while (cur) {
       searchPath.push(cur.value)
+      frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: null, activeLine: 2 }, description: `Checking ${cur.value}` })
       if (cur.value === value) {
         found = true
         allSteps.push(`✓ Found ${value}!`)
-        frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: "Element found!" }, description: `Found ${value} at node ${cur.value}` })
+        frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: "Element found!", activeLine: 2 }, description: `Found ${value} at node ${cur.value}` })
         break
       }
       const direction = value < cur.value ? "left" : "right"
       allSteps.push(`${cur.value}: go ${direction} (${value} ${value < cur.value ? "<" : ">"} ${cur.value})`)
-      frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: null }, description: `Visiting ${cur.value} → go ${direction}` })
+      frames.push({ snapshot: { root: setH(JSON.parse(JSON.stringify(root)), [...searchPath]), traversalPath: [...searchPath], searchResult: null, activeLine: value < cur.value ? 4 : 5 }, description: `Visiting ${cur.value} → go ${direction}` })
       cur = value < cur.value ? cur.left : cur.right
     }
 
     if (!found) {
       allSteps.push(`✗ ${value} not found in tree`)
-      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: "Element not found" }, description: `${value} not found` })
+      frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(root))), traversalPath: [], searchResult: "Element not found", activeLine: 1 }, description: `${value} not found` })
     }
 
     setSteps(allSteps)
@@ -269,12 +329,12 @@ export default function BinarySearchTreeVisualizer() {
     const allSteps: string[] = [`${traversalType} traversal of BST`]
     const rootCopy = JSON.parse(JSON.stringify(root)) as TreeNode
 
-    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null }, description: `Starting ${traversalType} traversal` })
+    frames.push({ snapshot: { root: resetH(rootCopy), traversalPath: [], searchResult: null, activeLine: 0 }, description: `Starting ${traversalType} traversal` })
     for (let i = 0; i < path.length; i++) {
       allSteps.push(`Visit node ${path[i]}`)
-      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
+      frames.push({ snapshot: { root: highlightOne(JSON.parse(JSON.stringify(rootCopy)), path[i]), traversalPath: path.slice(0, i + 1), searchResult: null, activeLine: null }, description: `Visiting ${path[i]} (${i + 1}/${path.length})` })
     }
-    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null }, description: `Traversal complete: ${path.join(" → ")}` })
+    frames.push({ snapshot: { root: resetH(JSON.parse(JSON.stringify(rootCopy))), traversalPath: path, searchResult: null, activeLine: null }, description: `Traversal complete: ${path.join(" → ")}` })
 
     setSteps(allSteps)
     player.loadFrames(frames)
@@ -604,6 +664,15 @@ export default function BinarySearchTreeVisualizer() {
           </CardContent>
         </Card>
 
+        {/* Live Code Panel */}
+        <div className="h-[280px]">
+          <CodePanel
+            code={activeCode}
+            activeLine={activeLine}
+            title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "BST Algorithm"}
+          />
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -657,34 +726,34 @@ export default function BinarySearchTreeVisualizer() {
             </Button>
           </div>
 
-          <div className="relative w-full h-[450px] overflow-auto" style={{ overscrollBehavior: "contain" }}>
-            <div className="absolute inset-0 min-w-full min-h-full" style={{ minWidth: "800px", minHeight: "600px" }}>
+          <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
+            <div className="absolute inset-0 flex items-center justify-center p-4">
               {root ? (
-                <svg
-                  ref={svgRef}
-                  width="100%"
-                  height="100%"
-                  viewBox={`${pan.x} ${pan.y} ${svgW} ${svgH}`}
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: "center",
-                    transition: "transform 0.2s ease",
-                    touchAction: "none",
-                  }}
-                  className="max-w-none"
-                >
-                  <g>{renderTree(root)}</g>
-                </svg>
+                <div className="w-full h-full flex items-center justify-center overflow-auto">
+                  <svg
+                    ref={svgRef}
+                    width={svgW}
+                    height={svgH}
+                    viewBox={`0 0 ${svgW} ${svgH}`}
+                    style={{
+                      transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+                      transformOrigin: "center",
+                      transition: "transform 0.2s ease",
+                      touchAction: "none",
+                    }}
+                    className="max-w-none"
+                  >
+                    <g>{renderTree(root)}</g>
+                  </svg>
+                </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">Empty tree</div>
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Empty tree</div>
               )}
             </div>
           </div>
 
-          <div className="px-6 py-3 text-xs text-center text-muted-foreground">
-            Drag nodes to reposition them. Use zoom and pan controls to navigate larger trees.
-            <br />
-            Scroll horizontally and vertically to view the entire tree structure.
+          <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
+            Drag nodes to reposition. Use zoom/pan controls to navigate.
           </div>
         </CardContent>
       </Card>

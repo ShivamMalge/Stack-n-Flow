@@ -5,6 +5,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, Plus, Trash, Search } from "lucide-react"
+import CodePanel from "@/components/ui/code-panel"
+
+const ENQUEUE_CODE = [
+  "function enqueue(value):",
+  "  if queue.isFull(): throw Overflow",
+  "  queue[rear] = value",
+  "  rear = (rear + 1) % size",
+  "  return"
+]
+
+const DEQUEUE_CODE = [
+  "function dequeue():",
+  "  if queue.isEmpty(): throw Underflow",
+  "  let value = queue[front]",
+  "  front = (front + 1) % size",
+  "  return value"
+]
+
+const PEEK_CODE = [
+  "function peek():",
+  "  if queue.isEmpty(): return null",
+  "  return queue[front]"
+]
 
 type QueueItem = {
   id: number
@@ -22,23 +45,34 @@ export default function QueueVisualizer() {
   const [nextId, setNextId] = useState(4)
   // Update the search (peek) function to show search results
   const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [activeCode, setActiveCode] = useState<string[]>([])
+  const [activeLine, setActiveLine] = useState<number | null>(null)
 
   const handleEnqueue = () => {
     if (!inputValue || animating) return
 
     const value = Number.parseInt(inputValue)
     setAnimating(true)
+    setActiveCode(ENQUEUE_CODE)
+    setActiveLine(0)
 
-    // Create a new item with the "isNew" flag for animation
-    const newItem = { id: nextId, value, isNew: true }
-    setQueue([...queue, newItem])
-    setNextId(nextId + 1)
-
-    // After animation, remove the "isNew" flag
     setTimeout(() => {
-      setQueue((queue) => queue.map((item) => (item.id === newItem.id ? { ...item, isNew: false } : item)))
-      setAnimating(false)
-    }, 1000)
+      setActiveLine(2)
+      // Create a new item with the "isNew" flag for animation
+      const newItem = { id: nextId, value, isNew: true }
+      setQueue([...queue, newItem])
+      setNextId(nextId + 1)
+
+      setTimeout(() => {
+        setActiveLine(3)
+        // After animation, remove the "isNew" flag
+        setTimeout(() => {
+          setQueue((queue) => queue.map((item) => (item.id === newItem.id ? { ...item, isNew: false } : item)))
+          setAnimating(false)
+          setActiveLine(null)
+        }, 500)
+      }, 500)
+    }, 500)
 
     setInputValue("")
   }
@@ -47,15 +81,24 @@ export default function QueueVisualizer() {
     if (queue.length === 0 || animating) return
 
     setAnimating(true)
+    setActiveCode(DEQUEUE_CODE)
+    setActiveLine(0)
 
-    // Mark the first item for dequeuing animation
-    setQueue((queue) => queue.map((item, index) => (index === 0 ? { ...item, isDequeuing: true } : item)))
-
-    // After animation, remove the item
     setTimeout(() => {
-      setQueue((queue) => queue.slice(1))
-      setAnimating(false)
-    }, 1000)
+      setActiveLine(2)
+      // Mark the first item for dequeuing animation
+      setQueue((queue) => queue.map((item, index) => (index === 0 ? { ...item, isDequeuing: true } : item)))
+
+      setTimeout(() => {
+        setActiveLine(3)
+        // After animation, remove the item
+        setTimeout(() => {
+          setQueue((queue) => queue.slice(1))
+          setAnimating(false)
+          setActiveLine(null)
+        }, 500)
+      }, 500)
+    }, 500)
   }
 
   const handlePeek = () => {
@@ -63,29 +106,35 @@ export default function QueueVisualizer() {
 
     setAnimating(true)
     setSearchResult(null)
+    setActiveCode(PEEK_CODE)
+    setActiveLine(0)
 
-    // Highlight the first item
-    setQueue((queue) =>
-      queue.map((item, index) => ({
-        ...item,
-        highlighted: index === 0,
-      })),
-    )
-
-    // Show the result
-    setSearchResult("Front element: " + queue[0]?.value)
-
-    // After animation, remove the highlight
     setTimeout(() => {
-      setQueue((queue) => queue.map((item) => ({ ...item, highlighted: false })))
-      setAnimating(false)
-    }, 1500)
+      setActiveLine(2)
+      // Highlight the first item
+      setQueue((queue) =>
+        queue.map((item, index) => ({
+          ...item,
+          highlighted: index === 0,
+        })),
+      )
+
+      // Show the result
+      setSearchResult("Front element: " + queue[0]?.value)
+
+      // After animation, remove the highlight
+      setTimeout(() => {
+        setQueue((queue) => queue.map((item) => ({ ...item, highlighted: false })))
+        setAnimating(false)
+        setActiveLine(null)
+      }, 1000)
+    }, 500)
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+      <div className="order-1 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Queue Operations</CardTitle>
@@ -99,6 +148,7 @@ export default function QueueVisualizer() {
                   placeholder="Enter a value"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleEnqueue()}
                   disabled={animating}
                 />
 
@@ -122,7 +172,77 @@ export default function QueueVisualizer() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-span-3">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the queue</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Improved responsive queue visualization */}
+            <div className="flex items-center justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[250px] md:h-[300px]">
+              {queue.length === 0 ? (
+                <div className="text-muted-foreground text-sm">Empty queue</div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-center gap-y-10 gap-x-2 px-4 max-w-full">
+                  <div className="flex flex-col items-center mr-2">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Front</span>
+                    <ArrowRight className="h-4 w-4 text-primary" />
+                  </div>
+
+                  {queue.map((item, index) => (
+                    <div key={item.id} className="flex items-center">
+                      <div
+                        className={`
+                          flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-md border-2 shadow-sm
+                          transition-all duration-500 ease-in-out
+                          ${item.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
+                          ${item.isNew ? "scale-105 border-green-500" : ""}
+                          ${item.isDequeuing ? "-translate-y-full opacity-0" : ""}
+                        `}
+                      >
+                        <div className="text-base md:text-lg font-bold">{item.value}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono">id: {item.id}</div>
+                      </div>
+
+                      {index < queue.length - 1 && (
+                        <div className="px-1 text-muted-foreground/30">
+                          <ArrowRight className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <div className="flex flex-col items-center ml-2">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Rear</span>
+                    <ArrowRight className="h-4 w-4 text-primary rotate-180" />
+                  </div>
+                </div>
+              )}
+            </div>
+            {searchResult && (
+              <div className="mt-4 p-2 rounded text-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                {searchResult}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      <div className="order-3 md:col-start-1 h-[250px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === ENQUEUE_CODE ? "Enqueue Algorithm" : activeCode === DEQUEUE_CODE ? "Dequeue Algorithm" : "Peek Algorithm"}
+        />
+      </div>
+
+      {/* Learning Panel - Last on Mobile, Left on Desktop */}
+      <div className="order-4 md:col-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -147,58 +267,6 @@ export default function QueueVisualizer() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the queue</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Add horizontal scrolling to the queue visualization */}
-          <div className="flex items-center justify-center overflow-x-auto py-12 h-[300px]">
-            {queue.length === 0 ? (
-              <div className="text-muted-foreground">Empty queue</div>
-            ) : (
-              <div className="flex items-center" style={{ minWidth: Math.max(300, queue.length * 80) + "px" }}>
-                <div className="flex flex-col items-center mr-4">
-                  <span className="text-xs text-muted-foreground">Front</span>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-
-                {queue.map((item, index) => (
-                  <div key={item.id} className="flex items-center">
-                    <div
-                      className={`
-                        flex flex-col items-center justify-center w-16 h-16 rounded-md border-2
-                        transition-all duration-500 ease-in-out
-                        ${item.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
-                        ${item.isNew ? "scale-110 border-green-500" : ""}
-                        ${item.isDequeuing ? "scale-75 opacity-50 border-red-500 -translate-y-12" : ""}
-                      `}
-                    >
-                      <div className="text-lg font-bold">{item.value}</div>
-                      <div className="text-xs text-muted-foreground">id: {item.id}</div>
-                    </div>
-
-                    {index < queue.length - 1 && <ArrowRight className="mx-2 text-muted-foreground" />}
-                  </div>
-                ))}
-
-                <div className="flex flex-col items-center ml-4">
-                  <span className="text-xs text-muted-foreground">Rear</span>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground rotate-180" />
-                </div>
-              </div>
-            )}
-          </div>
-          {searchResult && (
-            <div className="mt-4 p-2 rounded text-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-              {searchResult}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

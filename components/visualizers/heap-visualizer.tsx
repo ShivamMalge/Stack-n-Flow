@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash2, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -17,7 +18,37 @@ type HeapFrame = {
     heap: number[]
     states: NodeState[]
     stepDescription: string
+    activeLine: number | null
 }
+
+const INSERT_CODE = [
+    "function insert(value):",
+    "  heap.push(value)",
+    "  let i = heap.length - 1",
+    "  while i > 0:",
+    "    let p = Math.floor((i-1)/2)",
+    "    if heap[i] satisfies property vs heap[p]:",
+    "      swap(heap[i], heap[p])",
+    "      i = p",
+    "    else: break",
+    "  return"
+]
+
+const DELETE_CODE = [
+    "function deleteRoot():",
+    "  if heap.empty: return",
+    "  heap[0] = heap.pop()",
+    "  let i = 0",
+    "  while true:",
+    "    let target = i",
+    "    let l = 2i + 1, r = 2i + 2",
+    "    if l < size and h[l] better than h[target]: target = l",
+    "    if r < size and h[r] better than h[target]: target = r",
+    "    if target != i:",
+    "      swap(heap[i], heap[target])",
+    "      i = target",
+    "    else: break"
+]
 
 // ── Heap helpers ────────────────────────────────────────────────────────────
 
@@ -30,28 +61,38 @@ function generateInsert(heap: number[], value: number, isMin: boolean): Animatio
     const frames: AnimationFrame<HeapFrame>[] = []
     const neutral = () => h.map(() => "default" as NodeState)
 
+    // Start
+    frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Starting insertion of ${value}`, activeLine: 0 }, description: "Start" })
+
     h.push(value)
     const insertedIdx = h.length - 1
     const st = neutral(); st[insertedIdx] = "inserted"
-    frames.push({ snapshot: { heap: [...h], states: [...st], stepDescription: `Insert ${value} at index ${insertedIdx}` }, description: `Insert ${value}` })
+    frames.push({ snapshot: { heap: [...h], states: [...st], stepDescription: `Insert ${value} at index ${insertedIdx} (last position)`, activeLine: 1 }, description: `Insert ${value}` })
+    frames.push({ snapshot: { heap: [...h], states: [...st], stepDescription: `i = ${insertedIdx}`, activeLine: 2 }, description: "Init i" })
 
     let i = insertedIdx
     while (i > 0) {
+        frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Check if i > 0 (i = ${i})`, activeLine: 3 }, description: "Check loop" })
         const p = parentIdx(i)
         const s = neutral(); s[i] = "comparing"; s[p] = "comparing"
+        frames.push({ snapshot: { heap: [...h], states: [...s], stepDescription: `p = floor((${i}-1)/2) = ${p}`, activeLine: 4 }, description: "Calc parent" })
+
         const cmp = isMin ? h[i] < h[p] : h[i] > h[p]
-        frames.push({ snapshot: { heap: [...h], states: [...s], stepDescription: `Compare ${h[i]} with parent ${h[p]}` }, description: `Compare ${h[i]} vs parent ${h[p]}` })
+        frames.push({ snapshot: { heap: [...h], states: [...s], stepDescription: `Does ${h[i]} violate ${isMin ? "Min" : "Max"}-Heap property vs ${h[p]}?`, activeLine: 5 }, description: "Compare" })
+
         if (cmp) {
             const sw = neutral(); sw[i] = "swapping"; sw[p] = "swapping"
-            frames.push({ snapshot: { heap: [...h], states: [...sw], stepDescription: `Swap ${h[i]} ↔ ${h[p]}` }, description: `Swap ${h[i]} ↔ ${h[p]}` });
+            frames.push({ snapshot: { heap: [...h], states: [...sw], stepDescription: `Yes! Swap ${h[i]} ↔ ${h[p]}`, activeLine: 6 }, description: "Swap" });
             [h[i], h[p]] = [h[p], h[i]]
             i = p
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `i = p = ${p}`, activeLine: 7 }, description: "Update i" })
         } else {
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `No. Position is correct.`, activeLine: 8 }, description: "Break" })
             break
         }
     }
-    const done = neutral(); if (i >= 0) done[i] = "heapified"
-    frames.push({ snapshot: { heap: [...h], states: [...done], stepDescription: `${value} is in correct position. Heap property satisfied.` }, description: "Done" })
+    const done = neutral(); if (i >= 0 && i < h.length) done[i] = "heapified"
+    frames.push({ snapshot: { heap: [...h], states: [...done], stepDescription: `Insertion of ${value} complete.`, activeLine: 9 }, description: "Done" })
     return frames
 }
 
@@ -61,41 +102,58 @@ function generateDeleteRoot(heap: number[], isMin: boolean): AnimationFrame<Heap
     const frames: AnimationFrame<HeapFrame>[] = []
     const neutral = () => h.map(() => "default" as NodeState)
 
+    frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Starting deleteRoot`, activeLine: 0 }, description: "Start" })
+
     const s0 = neutral(); s0[0] = "deleted"
-    frames.push({ snapshot: { heap: [...h], states: [...s0], stepDescription: `Remove root (${h[0]}) — the ${isMin ? "minimum" : "maximum"}` }, description: `Remove root ${h[0]}` })
+    frames.push({ snapshot: { heap: [...h], states: [...s0], stepDescription: `Remove root (${h[0]})`, activeLine: 1 }, description: `Remove root` })
 
     h[0] = h[h.length - 1]
     h.pop()
     if (h.length === 0) {
-        frames.push({ snapshot: { heap: [], states: [], stepDescription: "Heap is now empty" }, description: "Empty" })
+        frames.push({ snapshot: { heap: [], states: [], stepDescription: "Heap is now empty", activeLine: 2 }, description: "Empty" })
         return frames
     }
     const s1 = neutral(); s1[0] = "inserted"
-    frames.push({ snapshot: { heap: [...h], states: [...s1], stepDescription: `Move last element (${h[0]}) to root` }, description: `Last → root` })
+    frames.push({ snapshot: { heap: [...h], states: [...s1], stepDescription: `Move last element to root`, activeLine: 2 }, description: `Last → root` })
+    frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `i = 0`, activeLine: 3 }, description: "Init i" })
 
     let i = 0
     while (true) {
-        const l = leftIdx(i); const r = rightIdx(i)
+        frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Heapify down from i = ${i}`, activeLine: 4 }, description: "Loop" })
         let target = i
-        if (l < h.length && (isMin ? h[l] < h[target] : h[l] > h[target])) target = l
-        if (r < h.length && (isMin ? h[r] < h[target] : h[r] > h[target])) target = r
+        frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `target = ${i}`, activeLine: 5 }, description: "Init target" })
 
-        const sc = neutral(); sc[i] = "comparing"
-        if (l < h.length) sc[l] = "comparing"
-        if (r < h.length) sc[r] = "comparing"
-        frames.push({ snapshot: { heap: [...h], states: [...sc], stepDescription: `Heapify down: compare ${h[i]} with children` }, description: "Heapify down" })
+        const l = leftIdx(i); const r = rightIdx(i)
+        frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `l = ${l}, r = ${r}`, activeLine: 6 }, description: "Calc children" })
 
+        if (l < h.length && (isMin ? h[l] < h[target] : h[l] > h[target])) {
+            target = l
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Left child ${h[l]} is ${isMin ? "smaller" : "larger"}. target = ${l}`, activeLine: 7 }, description: "Target left" })
+        } else {
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Left child doesn't exist or is fine.`, activeLine: 7 }, description: "Skip left" })
+        }
+
+        if (r < h.length && (isMin ? h[r] < h[target] : h[r] > h[target])) {
+            target = r
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Right child ${h[r]} is ${isMin ? "better" : "worse"}. target = ${r}`, activeLine: 8 }, description: "Target right" })
+        } else {
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Right child doesn't exist or is fine.`, activeLine: 8 }, description: "Skip right" })
+        }
+
+        frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `Is target (${target}) != i (${i})?`, activeLine: 9 }, description: "Check swap" })
         if (target !== i) {
             const sw = neutral(); sw[i] = "swapping"; sw[target] = "swapping"
-            frames.push({ snapshot: { heap: [...h], states: [...sw], stepDescription: `Swap ${h[i]} ↔ ${h[target]}` }, description: `Swap ${h[i]} ↔ ${h[target]}` });
+            frames.push({ snapshot: { heap: [...h], states: [...sw], stepDescription: `Yes! Swap ${h[i]} ↔ ${h[target]}`, activeLine: 10 }, description: "Swap" });
             [h[i], h[target]] = [h[target], h[i]]
             i = target
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `i = ${target}`, activeLine: 11 }, description: "Update i" })
         } else {
+            frames.push({ snapshot: { heap: [...h], states: neutral(), stepDescription: `No. Property satisfied.`, activeLine: 12 }, description: "Break" })
             break
         }
     }
     const done = neutral()
-    frames.push({ snapshot: { heap: [...h], states: [...done], stepDescription: "Heap property restored!" }, description: "Done" })
+    frames.push({ snapshot: { heap: [...h], states: [...done], stepDescription: "Root deletion and heapify complete.", activeLine: null }, description: "Done" })
     return frames
 }
 
@@ -299,10 +357,10 @@ export default function HeapVisualizer() {
     const isMin = heapType === "min"
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr] gap-6">
 
             {/* ── LEFT: Controls + Array + Info ── */}
-            <div className="space-y-4">
+            <div className="order-1 md:col-start-1 space-y-4">
 
                 {/* Operations Card */}
                 <Card>
@@ -419,50 +477,60 @@ export default function HeapVisualizer() {
                 </Card>
             </div>
 
-            {/* ── RIGHT: Tree Visualization with Zoom/Pan ── */}
-            <Card className="h-full flex flex-col">
-                <CardHeader className="pb-2">
-                    <CardTitle>Tree View</CardTitle>
-                    <CardDescription>Visual representation of the heap as a complete binary tree</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
-                    {/* Zoom / Pan controls */}
-                    <div className="flex flex-wrap gap-2 px-4 pb-2">
-                        <Button size="sm" variant="outline" onClick={() => setScale((s) => Math.min(s * 1.2, 4))}>
-                            <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setScale((s) => Math.max(s / 1.2, 0.2))}>
-                            <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, x: p.x - 40 }))}>
-                            <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, x: p.x + 40 }))}>
-                            <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setScale(1); setPan({ x: 0, y: 0 }) }}>
-                            Reset View
-                        </Button>
-                    </div>
-
-                    {/* SVG canvas */}
-                    <div className="relative flex-1 overflow-auto" style={{ minHeight: "480px", overscrollBehavior: "contain" }}>
-                        <div className="absolute inset-0" style={{ minWidth: "600px", minHeight: "480px" }}>
-                            {displayHeap.length === 0 ? (
-                                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                                    Insert values to build the heap
-                                </div>
-                            ) : (
-                                <HeapTreeSVG heap={displayHeap} states={displayStates} scale={scale} pan={pan} />
-                            )}
+            {/* ── RIGHT: Tree Visualization + Code Panel ── */}
+            <div className="order-2 md:col-start-2 md:row-span-3 flex flex-col gap-6 h-full">
+                {/* Tree Visualization Card */}
+                <Card className="flex-1 flex flex-col min-h-[400px]">
+                    <CardHeader className="pb-2">
+                        <CardTitle>Tree View</CardTitle>
+                        <CardDescription>Visual representation as a complete binary tree</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+                        {/* Zoom / Pan controls */}
+                        <div className="flex flex-wrap gap-2 px-4 pb-2">
+                            <Button size="sm" variant="outline" onClick={() => setScale((s) => Math.min(s * 1.2, 4))}>
+                                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setScale((s) => Math.max(s / 1.2, 0.2))}>
+                                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, x: p.x - 40 }))}>
+                                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, x: p.x + 40 }))}>
+                                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => { setScale(1); setPan({ x: 0, y: 0 }) }}>
+                                Reset View
+                            </Button>
                         </div>
-                    </div>
 
-                    <div className="px-4 py-2 text-xs text-center text-muted-foreground border-t">
-                        Use zoom and pan controls to navigate. Each node shows its value and array index.
-                    </div>
-                </CardContent>
-            </Card>
+                        {/* SVG canvas */}
+                        <div className="relative flex-1 overflow-auto border-t min-h-[300px]" style={{ overscrollBehavior: "contain" }}>
+                            <div className="absolute inset-0 flex items-center justify-center p-4">
+                                {displayHeap.length === 0 ? (
+                                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm text-center">
+                                        Insert values to build the heap
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center overflow-auto">
+                                        <HeapTreeSVG heap={displayHeap} states={displayStates} scale={scale} pan={pan} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Code Panel Card */}
+                <div className="h-[280px]">
+                    <CodePanel
+                        code={snap?.activeLine !== undefined ? (steps[0]?.includes("Insert") ? INSERT_CODE : DELETE_CODE) : []}
+                        activeLine={snap?.activeLine ?? null}
+                        title={snap ? (steps[0]?.includes("Insert") ? "Insertion Pseudocode" : "Deletion Pseudocode") : "Algorithm Pseudocode"}
+                    />
+                </div>
+            </div>
         </div>
     )
 }
