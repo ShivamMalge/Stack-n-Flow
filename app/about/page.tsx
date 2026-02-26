@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
-import { Github, Linkedin, Instagram, Code2 } from "lucide-react"
+import { Github, Linkedin, Instagram } from "lucide-react"
+import { SiLeetcode } from "react-icons/si"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 
@@ -90,7 +91,7 @@ export default function AboutPage() {
                   rel="noopener noreferrer"
                   className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <Code2 className="h-5 w-5 mr-2" />
+                  <SiLeetcode className="h-5 w-5 mr-2" />
                   <span>LeetCode</span>
                 </a>
                 <a

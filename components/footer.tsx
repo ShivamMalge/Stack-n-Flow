@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { GitMerge, Github, Instagram, Linkedin, Code2 } from "lucide-react"
+import { GitMerge, Github, Instagram, Linkedin } from "lucide-react"
+import { SiLeetcode } from "react-icons/si"
 
 export default function Footer() {
   return (
@@ -69,7 +70,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Code2 className="h-5 w-5 mr-2" />
+                <SiLeetcode className="h-5 w-5 mr-2" />
                 <span>LeetCode</span>
               </Link>
               <Link
