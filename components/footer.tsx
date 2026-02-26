@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Image src="/logo.png" alt="Stack'n'Flow Logo" width={28} height={28} className="rounded-md" />
+              <Image src="/logo.jpg" alt="Stack'n'Flow Logo" width={28} height={28} className="rounded-md" />
               <span className="text-lg font-bold">Stack&apos;n&apos;Flow</span>
             </div>
             <p className="text-sm text-muted-foreground">

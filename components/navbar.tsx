@@ -35,7 +35,7 @@ export default function Navbar() {
       <div className="container flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Stack'n'Flow Logo" width={32} height={32} className="rounded-md" />
+            <Image src="/logo.jpg" alt="Stack'n'Flow Logo" width={32} height={32} className="rounded-md" />
             <span className="text-xl font-bold">Stack&apos;n&apos;Flow</span>
           </Link>
         </div>
