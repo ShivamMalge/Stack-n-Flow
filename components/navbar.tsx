@@ -53,32 +53,26 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       <div
-        className={`fixed inset-0 z-40 md:hidden bg-background/80 backdrop-blur-md transition-all duration-300 ease-in-out ${isMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        className={`absolute top-16 left-0 right-0 z-40 md:hidden bg-background border-b shadow-lg transition-all duration-300 ease-in-out origin-top ${isMenuOpen ? "scale-y-100 opacity-100 pointer-events-auto" : "scale-y-0 opacity-0 pointer-events-none"
           }`}
         onClick={() => setIsMenuOpen(false)}
       >
-        <div
-          className={`container flex flex-col items-center justify-center min-h-screen pt-16 pb-8 px-6 transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-y-0" : "-translate-y-4"
-            }`}
-        >
-          <nav className="flex flex-col items-center gap-8 w-full max-w-xs">
-            {navItems.map((item, index) => (
-              <Link
-                key={item.path}
-                href={item.path}
-                className={`w-full text-center py-4 text-2xl font-semibold transition-all hover:text-primary border-b border-border/50 ${pathname === item.path ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                style={{ transitionDelay: `${index * 50}ms` }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setIsMenuOpen(false)
-                }}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <nav className="flex flex-col p-4 w-full gap-2">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`w-full py-3 px-4 text-base font-medium rounded-md transition-colors hover:bg-muted ${pathname === item.path ? "text-foreground bg-muted" : "text-muted-foreground"
+                }`}
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsMenuOpen(false)
+              }}
+            >
+              {item.name}
+            </Link>
+          ))}
+        </nav>
       </div>
     </header>
   )
