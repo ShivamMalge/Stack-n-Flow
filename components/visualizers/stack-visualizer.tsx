@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,7 +37,7 @@ type StackItem = {
   isPopping?: boolean
 }
 
-export default function StackVisualizer() {
+export default function StackVisualizer({ mini = false }: { mini?: boolean } = {}) {
   // Initialize with empty stack
   const [stack, setStack] = useState<StackItem[]>([])
   const [inputValue, setInputValue] = useState("")
@@ -47,6 +47,17 @@ export default function StackVisualizer() {
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (mini && stack.length === 0) {
+      setStack([
+        { id: 101, value: 40 },
+        { id: 102, value: 30 },
+        { id: 103, value: 20 },
+        { id: 104, value: 10 }
+      ]);
+    }
+  }, [mini, stack.length]);
 
   const handlePush = () => {
     if (!inputValue || animating) return
@@ -176,12 +187,14 @@ export default function StackVisualizer() {
 
       {/* Visualization Panel - Second on Mobile, Right on Desktop */}
       <div className="order-2 md:col-start-2 md:row-span-3">
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Visualization</CardTitle>
-            <CardDescription>Visual representation of the stack</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Card className="h-full border-0 md:border md:shadow-sm">
+          {!mini && (
+            <CardHeader>
+              <CardTitle>Visualization</CardTitle>
+              <CardDescription>Visual representation of the stack</CardDescription>
+            </CardHeader>
+          )}
+          <CardContent className={mini ? "p-0" : ""}>
             {/* Improved responsive stack visualization */}
             <div className="flex items-center justify-center overflow-auto py-8 bg-muted/5 border-t min-h-[250px] md:h-[300px]">
               {stack.length === 0 ? (
@@ -223,40 +236,44 @@ export default function StackVisualizer() {
       </div>
 
       {/* Live Code Panel - Third on Mobile, Left on Desktop */}
-      <div className="order-3 md:col-start-1 h-[250px]">
-        <CodePanel
-          code={activeCode}
-          activeLine={activeLine}
-          title={activeCode === PUSH_CODE ? "Push Algorithm" : activeCode === POP_CODE ? "Pop Algorithm" : "Peek Algorithm"}
-        />
-      </div>
+      {!mini && (
+        <div className="order-3 md:col-start-1 h-[250px]">
+          <CodePanel
+            code={activeCode}
+            activeLine={activeLine}
+            title={activeCode === PUSH_CODE ? "Push Algorithm" : activeCode === POP_CODE ? "Pop Algorithm" : "Peek Algorithm"}
+          />
+        </div>
+      )}
 
       {/* Learning Panel - Last on Mobile, Left on Desktop */}
-      <div className="order-4 md:col-start-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Learning</CardTitle>
-            <CardDescription>Understanding Stacks</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <p className="mb-2">
-              A <strong>Stack</strong> is a linear data structure that follows the Last In First Out (LIFO) principle.
-              The last element added is the first one to be removed.
-            </p>
-            <p className="mb-2">
-              <strong>Key Operations:</strong>
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Push: Add an element to the top - O(1)</li>
-              <li>Pop: Remove the top element - O(1)</li>
-              <li>Peek: View the top element without removing it - O(1)</li>
-            </ul>
-            <p className="mt-2">
-              Stacks are used in function calls, expression evaluation, and undo mechanisms in applications.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {!mini && (
+        <div className="order-4 md:col-start-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Learning</CardTitle>
+              <CardDescription>Understanding Stacks</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p className="mb-2">
+                A <strong>Stack</strong> is a linear data structure that follows the Last In First Out (LIFO) principle.
+                The last element added is the first one to be removed.
+              </p>
+              <p className="mb-2">
+                <strong>Key Operations:</strong>
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Push: Add an element to the top - O(1)</li>
+                <li>Pop: Remove the top element - O(1)</li>
+                <li>Peek: View the top element without removing it - O(1)</li>
+              </ul>
+              <p className="mt-2">
+                Stacks are used in function calls, expression evaluation, and undo mechanisms in applications.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,7 +23,7 @@ type BinarySearchFrame = {
   searchResult?: string | null
 }
 
-export default function BinarySearchVisualizer() {
+export default function BinarySearchVisualizer({ mini = false }: { mini?: boolean } = {}) {
   const [array, setArray] = useState<ArrayItem[]>([])
   const [inputValue, setInputValue] = useState("")
   const [searchValue, setSearchValue] = useState("")
@@ -39,6 +39,15 @@ export default function BinarySearchVisualizer() {
   }, [])
 
   const player = useAnimationPlayer<BinarySearchFrame>(onFrameChange)
+
+  useEffect(() => {
+    if (mini && array.length === 0) {
+      setArray([
+        { value: 1 }, { value: 3 }, { value: 5 }, { value: 7 }, { value: 9 }, { value: 11 }, { value: 13 }, { value: 15 }
+      ]);
+      setIsSorted(true);
+    }
+  }, [mini, array.length]);
 
   const handleAddElement = () => {
     if (!inputValue || player.isPlaying) return
@@ -246,160 +255,164 @@ export default function BinarySearchVisualizer() {
   const visibleStepIndex = player.currentFrame >= 0 ? player.currentFrame : -1
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
       {/* Operations Panel - Order 1 on Mobile, Left on Desktop */}
-      <div className="order-1 md:col-start-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Binary Search Algorithm</CardTitle>
-            <CardDescription>Create a sorted array and search for a value</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex space-x-2">
-                <Input
-                  type="number"
-                  placeholder="Enter a value to add"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
-                  disabled={player.isPlaying}
-                />
-                <Button onClick={handleAddElement} disabled={player.isPlaying}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
-                </Button>
-              </div>
-
-              <div className="flex space-x-2">
-                <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
-                  <Shuffle className="mr-2 h-4 w-4" />
-                  Random Sorted
-                </Button>
-                <Button
-                  onClick={handleSortArray}
-                  disabled={player.isPlaying || array.length <= 1 || isSorted}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Sort
-                </Button>
-                <Button
-                  onClick={handleClearArray}
-                  disabled={player.isPlaying || array.length === 0}
-                  variant="outline"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-              </div>
-
-              {!isSorted && array.length > 1 && (
-                <div className="p-2 rounded text-center bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
-                  Array must be sorted for binary search. Click &quot;Sort&quot;.
-                </div>
-              )}
-
-              <div className="pt-4 border-t">
-                <h3 className="text-sm font-medium mb-2">Search in Array</h3>
+      {!mini && (
+        <div className="order-1 md:col-start-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Binary Search Algorithm</CardTitle>
+              <CardDescription>Create a sorted array and search for a value</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                 <div className="flex space-x-2">
                   <Input
                     type="number"
-                    placeholder="Enter a value to search"
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    disabled={player.isPlaying || !isSorted || array.length === 0}
+                    placeholder="Enter a value to add"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
+                    disabled={player.isPlaying}
                   />
-                  <Button
-                    onClick={handleSearch}
-                    disabled={player.isPlaying || !isSorted || array.length === 0}
-                    variant="secondary"
-                  >
-                    <Search className="mr-2 h-4 w-4" />
-                    Search
+                  <Button onClick={handleAddElement} disabled={player.isPlaying}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add
                   </Button>
                 </div>
-              </div>
 
-              {searchResult && (
-                <div
-                  className={`p-2 rounded text-center ${searchResult.includes("Found")
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                    }`}
-                >
-                  {searchResult}
+                <div className="flex space-x-2">
+                  <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
+                    <Shuffle className="mr-2 h-4 w-4" />
+                    Random Sorted
+                  </Button>
+                  <Button
+                    onClick={handleSortArray}
+                    disabled={player.isPlaying || array.length <= 1 || isSorted}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Sort
+                  </Button>
+                  <Button
+                    onClick={handleClearArray}
+                    disabled={player.isPlaying || array.length === 0}
+                    variant="outline"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
                 </div>
-              )}
 
-              {/* Animation Controls */}
-              {player.totalFrames > 0 && (
-                <AnimationControls
-                  currentFrame={player.currentFrame}
-                  totalFrames={player.totalFrames}
-                  isPlaying={player.isPlaying}
-                  isPaused={player.isPaused}
-                  isComplete={player.isComplete}
-                  speed={player.speed}
-                  onPlay={player.play}
-                  onPause={player.pause}
-                  onStepForward={player.stepForward}
-                  onStepBackward={player.stepBackward}
-                  onReset={() => {
-                    player.reset()
-                    setSearchResult(null)
-                    setArray(array.map((item) => ({
-                      ...item,
-                      highlighted: false,
-                      isTarget: false,
-                      isMid: false,
-                      isLow: false,
-                      isHigh: false,
-                    })))
-                  }}
-                  onSpeedChange={player.setSpeed}
-                  onFrameChange={player.goToFrame}
-                />
-              )}
+                {!isSorted && array.length > 1 && (
+                  <div className="p-2 rounded text-center bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
+                    Array must be sorted for binary search. Click &quot;Sort&quot;.
+                  </div>
+                )}
 
-              <div>
-                <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
-                <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
-                  {steps.length > 0 ? (
-                    <ol className="space-y-1 pl-5 list-decimal">
-                      {steps.map((step, index) => (
-                        <li
-                          key={index}
-                          className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
-                        >
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      1. Add elements to create an array
-                      <br />
-                      2. Make sure the array is sorted
-                      <br />
-                      3. Enter a value and click Search
-                    </p>
-                  )}
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-medium mb-2">Search in Array</h3>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="number"
+                      placeholder="Enter a value to search"
+                      value={searchValue}
+                      onChange={(e) => setSearchValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      disabled={player.isPlaying || !isSorted || array.length === 0}
+                    />
+                    <Button
+                      onClick={handleSearch}
+                      disabled={player.isPlaying || !isSorted || array.length === 0}
+                      variant="secondary"
+                    >
+                      <Search className="mr-2 h-4 w-4" />
+                      Search
+                    </Button>
+                  </div>
+                </div>
+
+                {searchResult && (
+                  <div
+                    className={`p-2 rounded text-center ${searchResult.includes("Found")
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                      }`}
+                  >
+                    {searchResult}
+                  </div>
+                )}
+
+                {/* Animation Controls */}
+                {player.totalFrames > 0 && (
+                  <AnimationControls
+                    currentFrame={player.currentFrame}
+                    totalFrames={player.totalFrames}
+                    isPlaying={player.isPlaying}
+                    isPaused={player.isPaused}
+                    isComplete={player.isComplete}
+                    speed={player.speed}
+                    onPlay={player.play}
+                    onPause={player.pause}
+                    onStepForward={player.stepForward}
+                    onStepBackward={player.stepBackward}
+                    onReset={() => {
+                      player.reset()
+                      setSearchResult(null)
+                      setArray(array.map((item) => ({
+                        ...item,
+                        highlighted: false,
+                        isTarget: false,
+                        isMid: false,
+                        isLow: false,
+                        isHigh: false,
+                      })))
+                    }}
+                    onSpeedChange={player.setSpeed}
+                    onFrameChange={player.goToFrame}
+                  />
+                )}
+
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
+                  <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
+                    {steps.length > 0 ? (
+                      <ol className="space-y-1 pl-5 list-decimal">
+                        {steps.map((step, index) => (
+                          <li
+                            key={index}
+                            className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
+                          >
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        1. Add elements to create an array
+                        <br />
+                        2. Make sure the array is sorted
+                        <br />
+                        3. Enter a value and click Search
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Visualization Panel - Order 2 on Mobile, Right on Desktop */}
-      <Card className="order-2 md:col-start-2 md:row-span-2 h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of binary search</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className={mini ? "w-full border-0 md:border md:shadow-sm" : "order-2 md:col-start-2 md:row-span-2 h-full"}>
+        {!mini && (
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of binary search</CardDescription>
+          </CardHeader>
+        )}
+        <CardContent className={mini ? "p-0 pt-4" : ""}>
           <div className="flex items-center justify-center overflow-x-auto py-8 md:py-12 min-h-[200px] md:h-[300px]">
             {array.length === 0 ? (
               <div className="text-muted-foreground text-sm">Add elements to create an array</div>
@@ -454,36 +467,38 @@ export default function BinarySearchVisualizer() {
       </Card>
 
       {/* Learning Panel - Order 3 on Mobile, Left on Desktop */}
-      <div className="order-3 md:col-start-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Learning</CardTitle>
-            <CardDescription>Understanding Binary Search</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <p className="mb-2">
-              <strong>Binary Search</strong> is a search algorithm that finds the position of a target value within a
-              sorted array.
-            </p>
-            <p className="mb-2">
-              <strong>Time Complexity:</strong> O(log n)
-            </p>
-            <p className="mb-2">
-              <strong>Key Steps:</strong>
-            </p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>Compare the target value with the middle element of the array</li>
-              <li>If they match, return the middle index</li>
-              <li>If the target is less than the middle element, search the left half</li>
-              <li>If the target is greater than the middle element, search the right half</li>
-              <li>Repeat until the value is found or the search space is empty</li>
-            </ol>
-            <p className="mt-2">
-              <strong>Requirements:</strong> The array must be sorted for binary search to work correctly.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {!mini && (
+        <div className="order-3 md:col-start-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Learning</CardTitle>
+              <CardDescription>Understanding Binary Search</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p className="mb-2">
+                <strong>Binary Search</strong> is a search algorithm that finds the position of a target value within a
+                sorted array.
+              </p>
+              <p className="mb-2">
+                <strong>Time Complexity:</strong> O(log n)
+              </p>
+              <p className="mb-2">
+                <strong>Key Steps:</strong>
+              </p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Compare the target value with the middle element of the array</li>
+                <li>If they match, return the middle index</li>
+                <li>If the target is less than the middle element, search the left half</li>
+                <li>If the target is greater than the middle element, search the right half</li>
+                <li>Repeat until the value is found or the search space is empty</li>
+              </ol>
+              <p className="mt-2">
+                <strong>Requirements:</strong> The array must be sorted for binary search to work correctly.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
