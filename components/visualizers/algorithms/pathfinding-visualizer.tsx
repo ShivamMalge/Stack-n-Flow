@@ -383,11 +383,14 @@ export default function PathfindingVisualizer() {
                     <CardContent>
                         <div className="h-40 overflow-y-auto">
                             {steps.length > 0 ? (
-                                <ol className="pl-4 list-decimal space-y-0.5">
+                                <div className="space-y-0.5">
                                     {steps.map((s, i) => (
-                                        <li key={i} className={`text-xs ${i <= player.currentFrame ? "text-foreground" : "text-muted-foreground"}`}>{s}</li>
+                                        <div key={i} className={`text-xs flex gap-1.5 ${i <= player.currentFrame ? "text-foreground" : "text-muted-foreground"}`}>
+                                            <span className="shrink-0 font-mono">{i + 1}.</span>
+                                            <span>{s}</span>
+                                        </div>
                                     ))}
-                                </ol>
+                                </div>
                             ) : (
                                 <p className="text-xs text-muted-foreground">Run an algorithm to see steps</p>
                             )}
