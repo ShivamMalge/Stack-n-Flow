@@ -2,22 +2,26 @@
 
 import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Shuffle, Play, Pause, RotateCcw, SkipForward, SkipBack } from "lucide-react"
+import { Shuffle, Play, Pause, RotateCcw, SkipForward, SkipBack, Plus, X } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
+// ── Types ──────────────────────────────────────────────────────────────────
+
+type BarState = "default" | "comparing" | "swapping" | "sorted" | "pivot"
+
 type BarItem = {
     value: number
-    state: "default" | "comparing" | "swapping" | "sorted" | "pivot"
+    state: BarState
 }
 
 type SortFrame = {
     bars: BarItem[]
     comparisons: number
     swaps: number
-    description: string
 }
 
 type AlgorithmKey = "bubble" | "selection" | "insertion" | "quick" | "merge"
@@ -30,271 +34,292 @@ const ALGORITHM_NAMES: Record<AlgorithmKey, string> = {
     merge: "Merge Sort",
 }
 
-const ALGORITHM_COMPLEXITY: Record<AlgorithmKey, { best: string; average: string; worst: string; space: string }> = {
-    bubble: { best: "O(n)", average: "O(n²)", worst: "O(n²)", space: "O(1)" },
-    selection: { best: "O(n²)", average: "O(n²)", worst: "O(n²)", space: "O(1)" },
-    insertion: { best: "O(n)", average: "O(n²)", worst: "O(n²)", space: "O(1)" },
-    quick: { best: "O(n log n)", average: "O(n log n)", worst: "O(n²)", space: "O(log n)" },
-    merge: { best: "O(n log n)", average: "O(n log n)", worst: "O(n log n)", space: "O(n)" },
+const COMPLEXITY: Record<AlgorithmKey, { best: string; avg: string; worst: string; space: string }> = {
+    bubble: { best: "O(n)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
+    selection: { best: "O(n²)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
+    insertion: { best: "O(n)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
+    quick: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n²)", space: "O(log n)" },
+    merge: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n log n)", space: "O(n)" },
 }
 
 // ── Frame generators ────────────────────────────────────────────────────────
 
-function generateBubbleSortFrames(values: number[]): AnimationFrame<SortFrame>[] {
-    const bars: BarItem[] = values.map((v) => ({ value: v, state: "default" }))
+function frame(bars: BarItem[], comparisons: number, swaps: number, desc: string): AnimationFrame<SortFrame> {
+    return {
+        snapshot: { bars: bars.map((b) => ({ ...b })), comparisons, swaps },
+        description: desc,
+    }
+}
+
+function clone(bars: BarItem[]): BarItem[] {
+    return bars.map((b) => ({ ...b }))
+}
+
+function generateBubbleSort(values: number[]): AnimationFrame<SortFrame>[] {
+    const arr: BarItem[] = values.map((v) => ({ value: v, state: "default" }))
     const frames: AnimationFrame<SortFrame>[] = []
-    let comparisons = 0, swaps = 0
-    const arr = [...bars]
+    let cmp = 0, swp = 0
 
-    const snap = (desc: string) =>
-        frames.push({ snapshot: { bars: arr.map((b) => ({ ...b })), comparisons, swaps, description: desc }, description: desc })
+    frames.push(frame(arr, cmp, swp, "Starting Bubble Sort"))
 
-    snap("Starting Bubble Sort")
     for (let i = 0; i < arr.length - 1; i++) {
         for (let j = 0; j < arr.length - i - 1; j++) {
-            comparisons++
-            arr.forEach((b, idx) => { b.state = idx === j || idx === j + 1 ? "comparing" : idx >= arr.length - i ? "sorted" : "default" })
-            snap(`Comparing ${arr[j].value} and ${arr[j + 1].value}`)
+            cmp++
+            clone(arr).forEach((_, idx) => {
+                arr[idx].state = idx === j || idx === j + 1 ? "comparing" : idx >= arr.length - i ? "sorted" : "default"
+            })
+            frames.push(frame(arr, cmp, swp, `Comparing arr[${j}]=${arr[j].value} and arr[${j + 1}]=${arr[j + 1].value}`))
 
             if (arr[j].value > arr[j + 1].value) {
-                swaps++
+                swp++
                 arr[j].state = "swapping"; arr[j + 1].state = "swapping"
-                snap(`Swapping ${arr[j].value} and ${arr[j + 1].value}`);
-                [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]]
-                snap(`Swapped → ${arr[j].value} before ${arr[j + 1].value}`)
+                frames.push(frame(arr, cmp, swp, `Swapping ${arr[j].value} ↔ ${arr[j + 1].value}`));
+                [arr[j].value, arr[j + 1].value] = [arr[j + 1].value, arr[j].value]
+                arr[j].state = "default"; arr[j + 1].state = "default"
+                frames.push(frame(arr, cmp, swp, `Swapped → [${j}]=${arr[j].value}, [${j + 1}]=${arr[j + 1].value}`))
             }
         }
         arr[arr.length - 1 - i].state = "sorted"
     }
     arr[0].state = "sorted"
-    snap("Bubble Sort complete!")
+    frames.push(frame(arr, cmp, swp, `Bubble Sort complete! ${swp} swaps, ${cmp} comparisons`))
     return frames
 }
 
-function generateSelectionSortFrames(values: number[]): AnimationFrame<SortFrame>[] {
+function generateSelectionSort(values: number[]): AnimationFrame<SortFrame>[] {
     const arr: BarItem[] = values.map((v) => ({ value: v, state: "default" }))
     const frames: AnimationFrame<SortFrame>[] = []
-    let comparisons = 0, swaps = 0
+    let cmp = 0, swp = 0
 
-    const snap = (desc: string) =>
-        frames.push({ snapshot: { bars: arr.map((b) => ({ ...b })), comparisons, swaps, description: desc }, description: desc })
+    frames.push(frame(arr, cmp, swp, "Starting Selection Sort"))
 
-    snap("Starting Selection Sort")
     for (let i = 0; i < arr.length - 1; i++) {
         let minIdx = i
         arr.forEach((b, idx) => { b.state = idx < i ? "sorted" : idx === i ? "pivot" : "default" })
-        snap(`Finding minimum in unsorted region starting at index ${i}`)
+        frames.push(frame(arr, cmp, swp, `Pass ${i + 1}: finding minimum from index ${i}`))
 
         for (let j = i + 1; j < arr.length; j++) {
-            comparisons++
+            cmp++
             arr[j].state = "comparing"
-            snap(`Comparing ${arr[j].value} with current min ${arr[minIdx].value}`)
+            frames.push(frame(arr, cmp, swp, `Comparing ${arr[j].value} with current min ${arr[minIdx].value}`))
             if (arr[j].value < arr[minIdx].value) {
                 if (minIdx !== i) arr[minIdx].state = "default"
                 minIdx = j
                 arr[minIdx].state = "pivot"
-                snap(`New minimum found: ${arr[minIdx].value}`)
+                frames.push(frame(arr, cmp, swp, `New min: ${arr[minIdx].value} at index ${minIdx}`))
             } else {
                 arr[j].state = "default"
             }
         }
 
         if (minIdx !== i) {
-            swaps++
+            swp++
             arr[i].state = "swapping"; arr[minIdx].state = "swapping"
-            snap(`Swapping min ${arr[minIdx].value} to position ${i}`);
-            [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]]
+            frames.push(frame(arr, cmp, swp, `Swapping ${arr[i].value} ↔ ${arr[minIdx].value}`));
+            [arr[i].value, arr[minIdx].value] = [arr[minIdx].value, arr[i].value]
         }
         arr[i].state = "sorted"
-        snap(`Position ${i} sorted: ${arr[i].value}`)
+        arr.forEach((b, idx) => { if (idx !== i && b.state !== "sorted") b.state = "default" })
+        frames.push(frame(arr, cmp, swp, `Position ${i} sorted: ${arr[i].value}`))
     }
     arr[arr.length - 1].state = "sorted"
-    snap("Selection Sort complete!")
+    frames.push(frame(arr, cmp, swp, `Selection Sort complete! ${swp} swaps, ${cmp} comparisons`))
     return frames
 }
 
-function generateInsertionSortFrames(values: number[]): AnimationFrame<SortFrame>[] {
+function generateInsertionSort(values: number[]): AnimationFrame<SortFrame>[] {
     const arr: BarItem[] = values.map((v) => ({ value: v, state: "default" }))
     const frames: AnimationFrame<SortFrame>[] = []
-    let comparisons = 0, swaps = 0
+    let cmp = 0, swp = 0
 
-    const snap = (desc: string) =>
-        frames.push({ snapshot: { bars: arr.map((b) => ({ ...b })), comparisons, swaps, description: desc }, description: desc })
-
-    snap("Starting Insertion Sort")
     arr[0].state = "sorted"
+    frames.push(frame(arr, cmp, swp, "Starting Insertion Sort"))
+
     for (let i = 1; i < arr.length; i++) {
-        const key = arr[i].value
+        const keyVal = arr[i].value
         arr[i].state = "comparing"
-        snap(`Inserting ${key} into sorted portion`)
+        frames.push(frame(arr, cmp, swp, `Inserting ${keyVal} into sorted portion`))
         let j = i - 1
-        while (j >= 0 && arr[j].value > key) {
-            comparisons++; swaps++
-            arr[j + 1] = { ...arr[j], state: "swapping" }
+
+        while (j >= 0 && arr[j].value > keyVal) {
+            cmp++; swp++
+            arr[j + 1].value = arr[j].value
+            arr[j + 1].state = "swapping"
             arr[j].state = "swapping"
-            snap(`Shifting ${arr[j].value} right`);
-            [arr[j], arr[j + 1]] = [arr[j + 1], { ...arr[j], state: "sorted" }]
+            frames.push(frame(arr, cmp, swp, `Shifting ${arr[j].value} right`))
+            arr[j + 1].state = "sorted"
+            arr[j].state = "default"
             j--
         }
-        arr[j + 1] = { value: key, state: "sorted" }
-        snap(`Placed ${key} at position ${j + 1}`)
+        arr[j + 1].value = keyVal
+        arr[j + 1].state = "sorted"
+        frames.push(frame(arr, cmp, swp, `Placed ${keyVal} at index ${j + 1}`))
     }
     arr.forEach((b) => { b.state = "sorted" })
-    snap("Insertion Sort complete!")
+    frames.push(frame(arr, cmp, swp, `Insertion Sort complete! ${swp} swaps, ${cmp} comparisons`))
     return frames
 }
 
-function generateQuickSortFrames(values: number[]): AnimationFrame<SortFrame>[] {
+function generateQuickSort(values: number[]): AnimationFrame<SortFrame>[] {
     const arr: BarItem[] = values.map((v) => ({ value: v, state: "default" }))
     const frames: AnimationFrame<SortFrame>[] = []
-    let comparisons = 0, swaps = 0
+    let cmp = 0, swp = 0
 
-    const snap = (desc: string) =>
-        frames.push({ snapshot: { bars: arr.map((b) => ({ ...b })), comparisons, swaps, description: desc }, description: desc })
+    frames.push(frame(arr, cmp, swp, "Starting Quick Sort"))
 
-    snap("Starting Quick Sort")
-
-    const partition = (low: number, high: number): number => {
-        const pivot = arr[high].value
+    function partition(low: number, high: number): number {
+        const pivotVal = arr[high].value
         arr[high].state = "pivot"
-        snap(`Pivot: ${pivot} at index ${high}`)
+        frames.push(frame(arr, cmp, swp, `Pivot: ${pivotVal} at index ${high}`))
         let i = low - 1
+
         for (let j = low; j < high; j++) {
-            comparisons++
+            cmp++
             arr[j].state = "comparing"
-            snap(`Comparing ${arr[j].value} with pivot ${pivot}`)
-            if (arr[j].value <= pivot) {
+            frames.push(frame(arr, cmp, swp, `${arr[j].value} vs pivot ${pivotVal}`))
+            if (arr[j].value <= pivotVal) {
                 i++
                 if (i !== j) {
-                    swaps++; arr[i].state = "swapping"; arr[j].state = "swapping"
-                    snap(`Swapping ${arr[i].value} and ${arr[j].value}`);
-                    [arr[i], arr[j]] = [arr[j], arr[i]]
+                    swp++
+                    arr[i].state = "swapping"; arr[j].state = "swapping"
+                    frames.push(frame(arr, cmp, swp, `Swapping ${arr[i].value} ↔ ${arr[j].value}`));
+                    [arr[i].value, arr[j].value] = [arr[j].value, arr[i].value]
                     arr[i].state = "default"; arr[j].state = "default"
                 } else { arr[j].state = "default" }
             } else { arr[j].state = "default" }
         }
-        swaps++
-        arr[high].state = "default"; arr[i + 1].state = "swapping"
-        snap(`Placing pivot ${pivot} at index ${i + 1}`);
-        [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]]
-        arr[i + 1].state = "sorted"
-        snap(`Pivot ${pivot} is at its sorted position`)
+
+        swp++
+        arr[high].state = "swapping"; arr[i + 1].state = "swapping"
+        frames.push(frame(arr, cmp, swp, `Placing pivot ${pivotVal} at index ${i + 1}`));
+        [arr[i + 1].value, arr[high].value] = [arr[high].value, arr[i + 1].value]
+        arr[i + 1].state = "sorted"; arr[high].state = "default"
+        frames.push(frame(arr, cmp, swp, `Pivot ${pivotVal} is sorted at index ${i + 1}`))
         return i + 1
     }
 
-    const quickSort = (low: number, high: number) => {
+    function qs(low: number, high: number) {
         if (low < high) {
             const pi = partition(low, high)
-            quickSort(low, pi - 1)
-            quickSort(pi + 1, high)
-        } else if (low === high) { arr[low].state = "sorted" }
+            qs(low, pi - 1)
+            qs(pi + 1, high)
+        } else if (low === high && low >= 0) {
+            arr[low].state = "sorted"
+            frames.push(frame(arr, cmp, swp, `Single element ${arr[low].value} is sorted`))
+        }
     }
 
-    quickSort(0, arr.length - 1)
+    qs(0, arr.length - 1)
     arr.forEach((b) => { b.state = "sorted" })
-    snap("Quick Sort complete!")
+    frames.push(frame(arr, cmp, swp, `Quick Sort complete! ${swp} swaps, ${cmp} comparisons`))
     return frames
 }
 
-function generateMergeSortFrames(values: number[]): AnimationFrame<SortFrame>[] {
+function generateMergeSort(values: number[]): AnimationFrame<SortFrame>[] {
     const arr: BarItem[] = values.map((v) => ({ value: v, state: "default" }))
     const frames: AnimationFrame<SortFrame>[] = []
-    let comparisons = 0, swaps = 0
+    let cmp = 0, swp = 0
 
-    const snap = (desc: string) =>
-        frames.push({ snapshot: { bars: arr.map((b) => ({ ...b })), comparisons, swaps, description: desc }, description: desc })
+    frames.push(frame(arr, cmp, swp, "Starting Merge Sort"))
 
-    snap("Starting Merge Sort")
-
-    const merge = (start: number, mid: number, end: number) => {
-        const left = arr.slice(start, mid + 1).map((b) => ({ ...b }))
-        const right = arr.slice(mid + 1, end + 1).map((b) => ({ ...b }))
-        let i = 0, j = 0, k = start
+    function merge(start: number, mid: number, end: number) {
+        const left = arr.slice(start, mid + 1).map((b) => b.value)
+        const right = arr.slice(mid + 1, end + 1).map((b) => b.value)
 
         arr.slice(start, end + 1).forEach((b) => { b.state = "comparing" })
-        snap(`Merging [${left.map((b) => b.value).join(",")}] and [${right.map((b) => b.value).join(",")}]`)
+        frames.push(frame(arr, cmp, swp, `Merging [${left.join(",")}] and [${right.join(",")}]`))
 
+        let i = 0, j = 0, k = start
         while (i < left.length && j < right.length) {
-            comparisons++
-            if (left[i].value <= right[j].value) {
-                arr[k++] = { value: left[i++].value, state: "swapping" }
-            } else { arr[k++] = { value: right[j++].value, state: "swapping" }; swaps++ }
-            snap(`Merged so far: [${arr.slice(start, k).map((b) => b.value).join(",")}]`)
+            cmp++
+            if (left[i] <= right[j]) {
+                arr[k].value = left[i++]; arr[k].state = "swapping"
+            } else {
+                arr[k].value = right[j++]; arr[k].state = "swapping"; swp++
+            }
+            k++
+            frames.push(frame(arr, cmp, swp, `Merged so far: [${arr.slice(start, k).map((b) => b.value).join(",")}]`))
         }
-        while (i < left.length) { arr[k++] = { value: left[i++].value, state: "swapping" }; snap("Copying remaining left") }
-        while (j < right.length) { arr[k++] = { value: right[j++].value, state: "swapping" }; snap("Copying remaining right") }
+        while (i < left.length) { arr[k].value = left[i++]; arr[k].state = "swapping"; k++ }
+        while (j < right.length) { arr[k].value = right[j++]; arr[k].state = "swapping"; k++ }
+
         arr.slice(start, end + 1).forEach((b) => { b.state = "sorted" })
-        snap(`Merged: [${arr.slice(start, end + 1).map((b) => b.value).join(",")}]`)
+        frames.push(frame(arr, cmp, swp, `Merged: [${arr.slice(start, end + 1).map((b) => b.value).join(",")}]`))
     }
 
-    const mergeSort = (start: number, end: number) => {
+    function ms(start: number, end: number) {
         if (start < end) {
             const mid = Math.floor((start + end) / 2)
-            mergeSort(start, mid)
-            mergeSort(mid + 1, end)
+            ms(start, mid)
+            ms(mid + 1, end)
             merge(start, mid, end)
         }
     }
 
-    mergeSort(0, arr.length - 1)
+    ms(0, arr.length - 1)
     arr.forEach((b) => { b.state = "sorted" })
-    snap("Merge Sort complete!")
+    frames.push(frame(arr, cmp, swp, `Merge Sort complete! ${swp} swaps, ${cmp} comparisons`))
     return frames
 }
 
-const GENERATORS: Record<AlgorithmKey, (values: number[]) => AnimationFrame<SortFrame>[]> = {
-    bubble: generateBubbleSortFrames,
-    selection: generateSelectionSortFrames,
-    insertion: generateInsertionSortFrames,
-    quick: generateQuickSortFrames,
-    merge: generateMergeSortFrames,
+const GENERATORS: Record<AlgorithmKey, (v: number[]) => AnimationFrame<SortFrame>[]> = {
+    bubble: generateBubbleSort,
+    selection: generateSelectionSort,
+    insertion: generateInsertionSort,
+    quick: generateQuickSort,
+    merge: generateMergeSort,
 }
 
-// ── Bar Chart component ─────────────────────────────────────────────────────
+// ── Bar Chart ───────────────────────────────────────────────────────────────
 
-function BarChart({ bars, label }: { bars: BarItem[]; label: string }) {
+const BAR_COLORS: Record<BarState, string> = {
+    default: "bg-primary/60",
+    comparing: "bg-blue-400 dark:bg-blue-500",
+    swapping: "bg-yellow-400 dark:bg-yellow-500",
+    sorted: "bg-green-400 dark:bg-green-500",
+    pivot: "bg-purple-500 dark:bg-purple-400",
+}
+
+function BarChart({ bars }: { bars: BarItem[] }) {
     const maxVal = Math.max(...bars.map((b) => b.value), 1)
+    const barW = Math.max(6, Math.min(32, Math.floor(340 / bars.length)))
     return (
-        <div className="flex flex-col h-full">
-            <p className="text-center text-xs font-semibold text-muted-foreground mb-1">{label}</p>
-            <div className="flex items-end justify-center gap-0.5 h-[180px] flex-1">
-                {bars.map((bar, idx) => {
-                    const h = Math.max(4, Math.round((bar.value / maxVal) * 160))
-                    const colors: Record<BarItem["state"], string> = {
-                        default: "bg-primary/60",
-                        comparing: "bg-blue-400 dark:bg-blue-500",
-                        swapping: "bg-yellow-400 dark:bg-yellow-500",
-                        sorted: "bg-green-400 dark:bg-green-500",
-                        pivot: "bg-purple-500 dark:bg-purple-400",
-                    }
-                    return (
-                        <div
-                            key={idx}
-                            style={{ height: `${h}px`, minWidth: `${Math.max(8, Math.floor(200 / bars.length))}px` }}
-                            className={`rounded-t transition-all duration-150 ${colors[bar.state]}`}
-                        />
-                    )
-                })}
-            </div>
+        <div className="flex items-end justify-center gap-[2px] h-[180px] w-full px-2">
+            {bars.map((bar, idx) => {
+                const h = Math.max(4, Math.round((bar.value / maxVal) * 168))
+                return (
+                    <div
+                        key={idx}
+                        title={String(bar.value)}
+                        style={{ height: `${h}px`, width: `${barW}px`, minWidth: `${barW}px` }}
+                        className={`rounded-t transition-all duration-100 ${BAR_COLORS[bar.state]}`}
+                    />
+                )
+            })}
         </div>
     )
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// ── Speed presets ───────────────────────────────────────────────────────────
 
-const SPEED_LABELS = ["0.5×", "1×", "1.5×", "2×", "3×"]
-const SPEED_VALUES = [1600, 800, 533, 400, 267]
+const SPEED_LABELS = ["0.5×", "1×", "2×", "3×", "5×"]
+const SPEED_MS = [1600, 800, 400, 267, 160]
+
+// ── Main Component ──────────────────────────────────────────────────────────
 
 export default function SortingComparison() {
     const [algoA, setAlgoA] = useState<AlgorithmKey>("bubble")
     const [algoB, setAlgoB] = useState<AlgorithmKey>("merge")
-    const [values, setValues] = useState<number[]>([])
-    const [speedIdx, setSpeedIdx] = useState(1) // default 1×
+    const [values, setValues] = useState<number[]>([])                // source array
+    const [inputVal, setInputVal] = useState("")
+    const [speedIdx, setSpeedIdx] = useState(1)
 
     const [barsA, setBarsA] = useState<BarItem[]>([])
     const [statsA, setStatsA] = useState({ comparisons: 0, swaps: 0 })
     const [barsB, setBarsB] = useState<BarItem[]>([])
     const [statsB, setStatsB] = useState({ comparisons: 0, swaps: 0 })
+    const [descA, setDescA] = useState("")
+    const [descB, setDescB] = useState("")
 
     const onFrameA = useCallback((snap: SortFrame) => {
         setBarsA(snap.bars)
@@ -308,209 +333,293 @@ export default function SortingComparison() {
     const playerA = useAnimationPlayer<SortFrame>(onFrameA)
     const playerB = useAnimationPlayer<SortFrame>(onFrameB)
 
-    const generateRandom = () => {
-        if (playerA.isPlaying || playerB.isPlaying) return
-        const count = 16
-        const newVals = Array.from({ length: count }, () => Math.floor(Math.random() * 90) + 10)
-        setValues(newVals)
-        setBarsA(newVals.map((v) => ({ value: v, state: "default" })))
-        setBarsB(newVals.map((v) => ({ value: v, state: "default" })))
+    // Update descriptions from players
+    const dA = playerA.currentDescription
+    const dB = playerB.currentDescription
+    if (dA !== descA) setDescA(dA)
+    if (dB !== descB) setDescB(dB)
+
+    const isPlaying = playerA.isPlaying || playerB.isPlaying
+    const hasStarted = playerA.totalFrames > 0
+    const isComplete = playerA.isComplete && playerB.isComplete
+
+    // ── Array management ──────────────────────────────────────────────────────
+
+    const syncBars = (vals: number[]) => {
+        setBarsA(vals.map((v) => ({ value: v, state: "default" })))
+        setBarsB(vals.map((v) => ({ value: v, state: "default" })))
         setStatsA({ comparisons: 0, swaps: 0 })
         setStatsB({ comparisons: 0, swaps: 0 })
+        setDescA(""); setDescB("")
         playerA.clear(); playerB.clear()
     }
 
+    const handleAddValue = () => {
+        const n = Number.parseInt(inputVal)
+        if (!inputVal || isNaN(n) || n <= 0 || n > 999) return
+        if (values.length >= 20) { alert("Maximum 20 elements allowed"); return }
+        const newVals = [...values, n]
+        setValues(newVals)
+        syncBars(newVals)
+        setInputVal("")
+    }
+
+    const handleRemoveValue = (idx: number) => {
+        const newVals = values.filter((_, i) => i !== idx)
+        setValues(newVals)
+        syncBars(newVals)
+    }
+
+    const handleRandom = () => {
+        if (isPlaying) return
+        const count = 12
+        const newVals = Array.from({ length: count }, () => Math.floor(Math.random() * 90) + 10)
+        setValues(newVals)
+        syncBars(newVals)
+    }
+
+    const handleClearInput = () => {
+        if (isPlaying) return
+        setValues([])
+        syncBars([])
+    }
+
+    // ── Playback ──────────────────────────────────────────────────────────────
+
     const handleStart = () => {
         if (!values.length) return
-        const speed = SPEED_VALUES[speedIdx]
+        const speed = SPEED_MS[speedIdx]
+
         const framesA = GENERATORS[algoA](values)
         const framesB = GENERATORS[algoB](values)
-        playerA.setSpeed(speed); playerB.setSpeed(speed)
-        playerA.loadFrames(framesA); playerB.loadFrames(framesB)
-        playerA.play(); playerB.play()
+
+        playerA.setSpeed(speed)
+        playerB.setSpeed(speed)
+        playerA.loadFrames(framesA)
+        playerB.loadFrames(framesB)
+
+        // Small delay to ensure state is settled before playing
+        setTimeout(() => {
+            playerA.play()
+            playerB.play()
+        }, 50)
     }
 
     const handlePause = () => { playerA.pause(); playerB.pause() }
     const handleResume = () => { playerA.play(); playerB.play() }
-    const handleReset = () => {
-        playerA.reset(); playerB.reset()
-        setBarsA(values.map((v) => ({ value: v, state: "default" })))
-        setBarsB(values.map((v) => ({ value: v, state: "default" })))
-        setStatsA({ comparisons: 0, swaps: 0 })
-        setStatsB({ comparisons: 0, swaps: 0 })
-    }
     const handleStepForward = () => { playerA.stepForward(); playerB.stepForward() }
     const handleStepBackward = () => { playerA.stepBackward(); playerB.stepBackward() }
+    const handleReset = () => {
+        playerA.reset(); playerB.reset()
+        syncBars(values)
+    }
 
     const handleSpeedChange = (idx: number) => {
         setSpeedIdx(idx)
-        const speed = SPEED_VALUES[idx]
-        playerA.setSpeed(speed); playerB.setSpeed(speed)
+        playerA.setSpeed(SPEED_MS[idx])
+        playerB.setSpeed(SPEED_MS[idx])
     }
 
-    const isPlaying = playerA.isPlaying || playerB.isPlaying
-    const isComplete = playerA.isComplete && playerB.isComplete
-    const hasFrames = playerA.totalFrames > 0
     const progressA = playerA.totalFrames > 0 ? Math.round(((playerA.currentFrame + 1) / playerA.totalFrames) * 100) : 0
     const progressB = playerB.totalFrames > 0 ? Math.round(((playerB.currentFrame + 1) / playerB.totalFrames) * 100) : 0
 
     return (
-        <div className="space-y-6">
-            {/* Controls Header */}
+        <div className="space-y-4">
+            {/* Top Controls */}
             <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Side-by-Side Sorting Comparison</CardTitle>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">⚡ Side-by-Side Sorting Comparison</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Algorithm selectors */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Algorithm A</p>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Algorithm A</p>
                             <Select value={algoA} onValueChange={(v) => setAlgoA(v as AlgorithmKey)} disabled={isPlaying}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    {Object.entries(ALGORITHM_NAMES).map(([key, name]) => (
-                                        <SelectItem key={key} value={key}>{name}</SelectItem>
+                                    {Object.entries(ALGORITHM_NAMES).map(([k, n]) => (
+                                        <SelectItem key={k} value={k}>{n}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Algorithm B</p>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Algorithm B</p>
                             <Select value={algoB} onValueChange={(v) => setAlgoB(v as AlgorithmKey)} disabled={isPlaying}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    {Object.entries(ALGORITHM_NAMES).map(([key, name]) => (
-                                        <SelectItem key={key} value={key}>{name}</SelectItem>
+                                    {Object.entries(ALGORITHM_NAMES).map(([k, n]) => (
+                                        <SelectItem key={k} value={k}>{n}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" onClick={generateRandom} disabled={isPlaying}>
-                            <Shuffle className="mr-2 h-4 w-4" />
-                            Generate Random Array
-                        </Button>
-                        <Button onClick={handleStart} disabled={isPlaying || !values.length}>
-                            <Play className="mr-2 h-4 w-4" />
-                            Start Comparison
-                        </Button>
-                        {isPlaying && (
+                    {/* Custom array input */}
+                    <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Array Input</p>
+                        <div className="flex gap-2">
+                            <Input
+                                type="number"
+                                placeholder="Add value (1–999)"
+                                value={inputVal}
+                                onChange={(e) => setInputVal(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAddValue()}
+                                disabled={isPlaying}
+                                className="flex-1"
+                                min={1} max={999}
+                            />
+                            <Button onClick={handleAddValue} disabled={isPlaying || !inputVal} size="icon">
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" onClick={handleRandom} disabled={isPlaying}>
+                                <Shuffle className="mr-2 h-4 w-4" />
+                                Random
+                            </Button>
+                            <Button variant="ghost" onClick={handleClearInput} disabled={isPlaying || !values.length}>
+                                Clear
+                            </Button>
+                        </div>
+
+                        {/* Current values display */}
+                        {values.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-md min-h-[36px]">
+                                {values.map((v, i) => (
+                                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-card border rounded text-sm">
+                                        {v}
+                                        <button
+                                            onClick={() => handleRemoveValue(i)}
+                                            disabled={isPlaying}
+                                            className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                                <span className="text-xs text-muted-foreground self-center ml-1">
+                                    {values.length}/20 elements
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Playback controls */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {!isPlaying ? (
+                            <Button onClick={handleStart} disabled={!values.length || values.length < 2}>
+                                <Play className="mr-2 h-4 w-4" />
+                                {hasStarted && !isComplete ? "Restart" : "Start Comparison"}
+                            </Button>
+                        ) : (
                             <Button variant="outline" onClick={handlePause}>
                                 <Pause className="mr-2 h-4 w-4" />
                                 Pause
                             </Button>
                         )}
-                        {!isPlaying && hasFrames && !isComplete && (
+                        {!isPlaying && hasStarted && !isComplete && (
                             <Button variant="outline" onClick={handleResume}>
                                 <Play className="mr-2 h-4 w-4" />
                                 Resume
                             </Button>
                         )}
-                        <Button variant="outline" onClick={handleStepBackward} disabled={isPlaying || !hasFrames}>
-                            <SkipBack className="mr-2 h-4 w-4" />
-                            Step Back
+                        <Button variant="outline" size="icon" onClick={handleStepBackward} disabled={isPlaying || !hasStarted} title="Step Back">
+                            <SkipBack className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" onClick={handleStepForward} disabled={isPlaying || !hasFrames}>
-                            <SkipForward className="mr-2 h-4 w-4" />
-                            Step Forward
+                        <Button variant="outline" size="icon" onClick={handleStepForward} disabled={isPlaying || !hasStarted} title="Step Forward">
+                            <SkipForward className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" onClick={handleReset} disabled={isPlaying || !hasFrames}>
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            Reset
+                        <Button variant="outline" size="icon" onClick={handleReset} disabled={isPlaying || !hasStarted} title="Reset">
+                            <RotateCcw className="h-4 w-4" />
                         </Button>
-                    </div>
 
-                    {/* Speed control */}
-                    <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Speed</span>
-                            <span>{SPEED_LABELS[speedIdx]}</span>
-                        </div>
-                        <Slider value={[speedIdx]} min={0} max={4} step={1} onValueChange={([v]) => handleSpeedChange(v)} disabled={isPlaying} />
-                        <div className="flex justify-between text-[10px] text-muted-foreground">
-                            {SPEED_LABELS.map((l) => <span key={l}>{l}</span>)}
+                        {/* Speed control inline */}
+                        <div className="flex items-center gap-3 ml-auto">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Speed: {SPEED_LABELS[speedIdx]}</span>
+                            <div className="w-32">
+                                <Slider value={[speedIdx]} min={0} max={SPEED_MS.length - 1} step={1}
+                                    onValueChange={([v]) => handleSpeedChange(v)} disabled={isPlaying} />
+                            </div>
+                            <div className="flex gap-1 text-[10px] text-muted-foreground">
+                                {SPEED_LABELS.map((l) => <span key={l}>{l}</span>)}
+                            </div>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
             {/* Visualizations */}
-            {values.length === 0 ? (
-                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-xl text-muted-foreground">
-                    Click &quot;Generate Random Array&quot; to start comparing algorithms
+            {values.length < 2 ? (
+                <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-xl text-muted-foreground text-sm">
+                    {values.length === 0
+                        ? 'Add at least 2 numbers above or click "Random" to generate an array'
+                        : "Add at least one more number to start"}
                 </div>
             ) : (
                 <div className="grid grid-cols-2 gap-4">
-                    {/* Algorithm A Panel */}
-                    <Card className="overflow-hidden">
+                    {/* Panel A */}
+                    <Card>
                         <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="text-base">{ALGORITHM_NAMES[algoA]}</CardTitle>
-                                {isComplete && <span className="text-xs text-green-500 font-medium">✓ Done</span>}
+                                <CardTitle className="text-base text-blue-500 dark:text-blue-400">{ALGORITHM_NAMES[algoA]}</CardTitle>
+                                {isComplete && <span className="text-xs text-green-500 font-bold">✓ Done</span>}
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <BarChart bars={barsA} label="" />
-                            {/* Progress bar */}
+                            <BarChart bars={barsA.length ? barsA : values.map((v) => ({ value: v, state: "default" }))} />
                             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-primary rounded-full transition-all duration-200" style={{ width: `${progressA}%` }} />
+                                <div className="h-full bg-blue-500 rounded-full transition-all duration-150" style={{ width: `${progressA}%` }} />
                             </div>
-                            {/* Stats */}
+                            {descA && <p className="text-xs text-center text-muted-foreground min-h-[16px]">{descA}</p>}
                             <div className="grid grid-cols-2 gap-2 text-center">
                                 <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-lg font-bold">{statsA.comparisons}</div>
+                                    <div className="text-xl font-bold tabular-nums">{statsA.comparisons}</div>
                                     <div className="text-[10px] text-muted-foreground">Comparisons</div>
                                 </div>
                                 <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-lg font-bold">{statsA.swaps}</div>
+                                    <div className="text-xl font-bold tabular-nums">{statsA.swaps}</div>
                                     <div className="text-[10px] text-muted-foreground">Swaps</div>
                                 </div>
                             </div>
-                            {/* Complexity */}
-                            <div className="text-[10px] text-muted-foreground space-y-0.5 border-t pt-2">
-                                <div>Best: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoA].best}</span></div>
-                                <div>Avg: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoA].average}</span></div>
-                                <div>Worst: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoA].worst}</span></div>
-                                <div>Space: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoA].space}</span></div>
+                            <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
+                                <div>Best: <span className="font-mono">{COMPLEXITY[algoA].best}</span></div>
+                                <div>Space: <span className="font-mono">{COMPLEXITY[algoA].space}</span></div>
+                                <div>Avg: <span className="font-mono">{COMPLEXITY[algoA].avg}</span></div>
+                                <div>Worst: <span className="font-mono">{COMPLEXITY[algoA].worst}</span></div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Algorithm B Panel */}
-                    <Card className="overflow-hidden">
+                    {/* Panel B */}
+                    <Card>
                         <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="text-base">{ALGORITHM_NAMES[algoB]}</CardTitle>
-                                {isComplete && <span className="text-xs text-green-500 font-medium">✓ Done</span>}
+                                <CardTitle className="text-base text-purple-500 dark:text-purple-400">{ALGORITHM_NAMES[algoB]}</CardTitle>
+                                {isComplete && <span className="text-xs text-green-500 font-bold">✓ Done</span>}
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <BarChart bars={barsB} label="" />
-                            {/* Progress bar */}
+                            <BarChart bars={barsB.length ? barsB : values.map((v) => ({ value: v, state: "default" }))} />
                             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-primary rounded-full transition-all duration-200" style={{ width: `${progressB}%` }} />
+                                <div className="h-full bg-purple-500 rounded-full transition-all duration-150" style={{ width: `${progressB}%` }} />
                             </div>
-                            {/* Stats */}
+                            {descB && <p className="text-xs text-center text-muted-foreground min-h-[16px]">{descB}</p>}
                             <div className="grid grid-cols-2 gap-2 text-center">
                                 <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-lg font-bold">{statsB.comparisons}</div>
+                                    <div className="text-xl font-bold tabular-nums">{statsB.comparisons}</div>
                                     <div className="text-[10px] text-muted-foreground">Comparisons</div>
                                 </div>
                                 <div className="bg-muted/40 rounded-md p-2">
-                                    <div className="text-lg font-bold">{statsB.swaps}</div>
+                                    <div className="text-xl font-bold tabular-nums">{statsB.swaps}</div>
                                     <div className="text-[10px] text-muted-foreground">Swaps</div>
                                 </div>
                             </div>
-                            {/* Complexity */}
-                            <div className="text-[10px] text-muted-foreground space-y-0.5 border-t pt-2">
-                                <div>Best: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoB].best}</span></div>
-                                <div>Avg: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoB].average}</span></div>
-                                <div>Worst: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoB].worst}</span></div>
-                                <div>Space: <span className="font-mono">{ALGORITHM_COMPLEXITY[algoB].space}</span></div>
+                            <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
+                                <div>Best: <span className="font-mono">{COMPLEXITY[algoB].best}</span></div>
+                                <div>Space: <span className="font-mono">{COMPLEXITY[algoB].space}</span></div>
+                                <div>Avg: <span className="font-mono">{COMPLEXITY[algoB].avg}</span></div>
+                                <div>Worst: <span className="font-mono">{COMPLEXITY[algoB].worst}</span></div>
                             </div>
                         </CardContent>
                     </Card>
@@ -519,13 +628,7 @@ export default function SortingComparison() {
 
             {/* Legend */}
             <div className="flex flex-wrap gap-4 justify-center text-xs">
-                {[
-                    { color: "bg-primary/60", label: "Unsorted" },
-                    { color: "bg-blue-400", label: "Comparing" },
-                    { color: "bg-yellow-400", label: "Swapping" },
-                    { color: "bg-purple-500", label: "Pivot" },
-                    { color: "bg-green-400", label: "Sorted" },
-                ].map(({ color, label }) => (
+                {([["bg-primary/60", "Unsorted"], ["bg-blue-400", "Comparing"], ["bg-yellow-400", "Swapping"], ["bg-purple-500", "Pivot"], ["bg-green-400", "Sorted"]] as const).map(([color, label]) => (
                     <div key={label} className="flex items-center gap-1.5">
                         <div className={`w-3 h-3 rounded-sm ${color}`} />
                         <span className="text-muted-foreground">{label}</span>
