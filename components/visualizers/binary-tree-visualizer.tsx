@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,7 @@ import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import { computeTreeLayout } from "@/lib/tree-layout"
 
 type TreeNode = {
   id: number
@@ -189,97 +190,55 @@ export default function BinaryTreeVisualizer() {
     setTimeout(() => player.play(), 50)
   }
 
-  // Calculate tree dimensions
-  const getTreeDimensions = (node: TreeNode | null, level = 0, position = 0): { width: number; height: number } => {
-    if (!node) return { width: 0, height: 0 }
-
-    const leftDimensions = getTreeDimensions(node.left, level + 1, position - 1)
-    const rightDimensions = getTreeDimensions(node.right, level + 1, position + 1)
-
-    const width = Math.max(Math.abs(position) * 50 + 30, leftDimensions.width, rightDimensions.width) // Reduced from 60/40
-    const height = (level + 1) * 70 // Reduced from 80
-
-    return { width, height }
-  }
-
-  const treeDimensions = root ? getTreeDimensions(root) : { width: 0, height: 0 }
-  const viewBoxWidth = Math.max(300, treeDimensions.width * 2)
-  const viewBoxHeight = Math.max(200, treeDimensions.height + 40)
-
-  // Add node dragging functionality
+  // ── Tree Layout (crossing-free in-order assignment) ──────────────────────
+  const NODE_R = isMobile ? 14 : 18
+  const treeLayout = useMemo(() => computeTreeLayout(root as never, 60, 80), [root])
   const [nodePositions, setNodePositions] = useState<Record<number, { x: number; y: number }>>({})
 
-  // Update the renderTree function to better utilize space and add dragging functionality
-  const renderTree = (node: TreeNode | null, x: number, y: number, level: number) => {
+  // SVG viewBox based on computed positions
+  const svgPadding = 30
+  const layoutPositions = Array.from(treeLayout.values())
+  const minX = layoutPositions.length ? Math.min(...layoutPositions.map((p) => p.x)) : 0
+  const maxX = layoutPositions.length ? Math.max(...layoutPositions.map((p) => p.x)) : 0
+  const maxY = layoutPositions.length ? Math.max(...layoutPositions.map((p) => p.y)) : 0
+  const svgW = Math.max(300, maxX - minX + svgPadding * 2)
+  const svgH = Math.max(200, maxY + svgPadding * 2)
+
+  const renderTree = (node: TreeNode | null): React.ReactNode => {
     if (!node) return null
+    const pos = treeLayout.get(node.id)
+    if (!pos) return null
+    const nodeX = (nodePositions[node.id]?.x ?? (pos.x - minX + svgPadding))
+    const nodeY = (nodePositions[node.id]?.y ?? (pos.y + svgPadding))
+    const defaultX = pos.x - minX + svgPadding
+    const defaultY = pos.y + svgPadding
+    const drawX = nodePositions[node.id]?.x ?? defaultX
+    const drawY = nodePositions[node.id]?.y ?? defaultY
 
-    // Adjust spacing based on tree size and device - REDUCED NODE SIZE
-    const nodeSize = isMobile ? 24 : 32 // Reduced from 30/40
-    const horizontalSpacing = isMobile ? Math.max(25, 100 / (level + 1)) : Math.max(50, 180 / (level + 0.5)) // Reduced spacing
-    const verticalSpacing = isMobile ? 50 : 70 // Reduced from 60/80
-
-    // Use custom position if available
-    const customPos = nodePositions[node.id]
-    const nodeX = customPos ? customPos.x : x
-    const nodeY = customPos ? customPos.y : y
+    const getChildCoords = (child: TreeNode) => {
+      if (nodePositions[child.id]) return nodePositions[child.id]
+      const cp = treeLayout.get(child.id)
+      return cp ? { x: cp.x - minX + svgPadding, y: cp.y + svgPadding } : { x: drawX, y: drawY }
+    }
 
     return (
       <g key={node.id}>
-        {/* Draw lines to children */}
-        {node.left && (
-          <line
-            key={`line-left-${node.id}`}
-            x1={nodeX}
-            y1={nodeY + nodeSize / 2}
-            x2={nodePositions[node.left.id]?.x || nodeX - horizontalSpacing}
-            y2={nodePositions[node.left.id]?.y || nodeY + verticalSpacing - nodeSize / 2}
-            stroke="currentColor"
-            strokeOpacity="0.3"
-            strokeWidth="1.5" // Reduced from 2
-          />
-        )}
-
-        {node.right && (
-          <line
-            key={`line-right-${node.id}`}
-            x1={nodeX}
-            y1={nodeY + nodeSize / 2}
-            x2={nodePositions[node.right.id]?.x || nodeX + horizontalSpacing}
-            y2={nodePositions[node.right.id]?.y || nodeY + verticalSpacing - nodeSize / 2}
-            stroke="currentColor"
-            strokeOpacity="0.3"
-            strokeWidth="1.5" // Reduced from 2
-          />
-        )}
-
-        {/* Draw the node */}
-        <circle
-          cx={nodeX}
-          cy={nodeY}
-          r={nodeSize / 2}
-          className={`
-    transition-all duration-500 ease-in-out cursor-grab active:cursor-grabbing
-    ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : "fill-card stroke-primary"}
-    ${node.isNew ? "stroke-green-500 stroke-[2]" : "stroke-[1.5]"}  /* Reduced stroke width */
-    ${node.isDeleting ? "fill-red-200 stroke-red-500 dark:fill-red-900" : ""}
-  `}
-          onMouseDown={(e) => handleNodeDrag(e, node.id, nodeX, nodeY)}
-          onTouchStart={(e) => handleNodeTouchStart(e, node.id, nodeX, nodeY)}
+        {node.left && (() => { const c = getChildCoords(node.left!); return <line x1={drawX} y1={drawY + NODE_R} x2={c.x} y2={c.y - NODE_R} stroke="currentColor" strokeOpacity="0.3" strokeWidth="1.5" /> })()}
+        {node.right && (() => { const c = getChildCoords(node.right!); return <line x1={drawX} y1={drawY + NODE_R} x2={c.x} y2={c.y - NODE_R} stroke="currentColor" strokeOpacity="0.3" strokeWidth="1.5" /> })()}
+        <circle cx={drawX} cy={drawY} r={NODE_R}
+          className={`transition-all duration-300 ease-in-out cursor-grab active:cursor-grabbing stroke-[1.5]
+            ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : "fill-card stroke-primary"}
+            ${node.isNew ? "stroke-green-500 stroke-[2]" : ""}
+            ${node.isDeleting ? "fill-red-200 stroke-red-500 dark:fill-red-900" : ""}`}
+          onMouseDown={(e) => handleNodeDrag(e, node.id, drawX, drawY)}
+          onTouchStart={(e) => handleNodeTouchStart(e, node.id, drawX, drawY)}
         />
-
-        <text
-          x={nodeX}
-          y={nodeY}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className={`text-${isMobile ? "xs" : "xs"} font-medium fill-current pointer-events-none`} // Reduced text size
-        >
+        <text x={drawX} y={drawY} textAnchor="middle" dominantBaseline="middle"
+          className="text-xs font-medium fill-current pointer-events-none select-none">
           {node.value}
         </text>
-
-        {/* Render children */}
-        {node.left && renderTree(node.left, nodeX - horizontalSpacing, nodeY + verticalSpacing, level + 1)}
-        {node.right && renderTree(node.right, nodeX + horizontalSpacing, nodeY + verticalSpacing, level + 1)}
+        {renderTree(node.left)}
+        {renderTree(node.right)}
       </g>
     )
   }
@@ -602,7 +561,7 @@ export default function BinaryTreeVisualizer() {
                   ref={svgRef}
                   width="100%"
                   height="100%"
-                  viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
+                  viewBox={`${pan.x} ${pan.y} ${svgW} ${svgH}`}
                   style={{
                     transform: `scale(${scale})`,
                     transformOrigin: "center",
@@ -611,7 +570,7 @@ export default function BinaryTreeVisualizer() {
                   }}
                   className="max-w-none"
                 >
-                  <g>{renderTree(root, 0, 0, 1)}</g>
+                  <g>{renderTree(root)}</g>
                 </svg>
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">Empty tree</div>

@@ -43,7 +43,7 @@ export function useAnimationPlayer<T>(
     const isPlayingRef = useRef(false)
     const speedRef = useRef(DEFAULT_SPEED)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
-    const isMountedRef = useRef(true)
+    const isMountedRef = useRef(false)  // set true inside effect so Strict Mode re-mounts work correctly
     const onFrameChangeRef = useRef(onFrameChange)
 
     // Keep onFrameChange ref up-to-date without causing re-renders
@@ -52,6 +52,7 @@ export function useAnimationPlayer<T>(
     })
 
     useEffect(() => {
+        isMountedRef.current = true          // ← crucial: reset on every (re-)mount
         return () => {
             isMountedRef.current = false
             if (timerRef.current) clearTimeout(timerRef.current)
