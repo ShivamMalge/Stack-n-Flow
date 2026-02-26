@@ -9,7 +9,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <GitMerge className="h-5 w-5" />
-              <span className="text-lg font-bold">Stack'n'Flow</span>
+              <span className="text-lg font-bold">Stack&apos;n&apos;Flow</span>
             </div>
             <p className="text-sm text-muted-foreground">
               An interactive tool to learn and visualize data structures and algorithms.
@@ -77,7 +77,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 pt-4 border-t text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Stack'n'Flow. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Stack&apos;n&apos;Flow. All rights reserved.</p>
         </div>
       </div>
     </footer>

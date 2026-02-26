@@ -24,8 +24,9 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 
 // Update metadata title
-export async function generateMetadata({ params }: { params: { dataStructure: string } }): Promise<Metadata> {
-  const formattedName = params.dataStructure
+export async function generateMetadata({ params }: { params: Promise<{ dataStructure: string }> }): Promise<Metadata> {
+  const { dataStructure } = await params
+  const formattedName = dataStructure
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ")
@@ -670,8 +671,9 @@ const dataStructureInfo = {
   },
 }
 
-export default function DataStructurePage({ params }: { params: { dataStructure: string } }) {
-  const dsInfo = dataStructureInfo[params.dataStructure as keyof typeof dataStructureInfo]
+export default async function DataStructurePage({ params }: { params: Promise<{ dataStructure: string }> }) {
+  const { dataStructure } = await params
+  const dsInfo = dataStructureInfo[dataStructure as keyof typeof dataStructureInfo]
 
   if (!dsInfo) {
     return (
@@ -694,9 +696,9 @@ export default function DataStructurePage({ params }: { params: { dataStructure:
 
   const { name, icon: Icon, description, content } = dsInfo
   const isAlgorithm =
-    params.dataStructure.includes("algorithms") ||
-    params.dataStructure === "divide-conquer" ||
-    params.dataStructure === "dynamic-programming"
+    dataStructure.includes("algorithms") ||
+    dataStructure === "divide-conquer" ||
+    dataStructure === "dynamic-programming"
 
   return (
     <div className="flex flex-col min-h-screen dark">
@@ -839,7 +841,7 @@ export default function DataStructurePage({ params }: { params: { dataStructure:
               {!isAlgorithm && (
                 <div className="mt-4 text-center">
                   <Button asChild size="lg">
-                    <Link href={`/visualize?ds=${params.dataStructure}`}>
+                    <Link href={`/visualize?ds=${dataStructure}`}>
                       Visualize {name}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
@@ -851,17 +853,16 @@ export default function DataStructurePage({ params }: { params: { dataStructure:
                 <div className="mt-4 text-center">
                   <Button asChild size="lg">
                     <Link
-                      href={`/visualize?algo=${
-                        params.dataStructure === "searching-algorithms"
-                          ? "binary-search"
-                          : params.dataStructure === "sorting-algorithms"
-                            ? "quick-sort"
-                            : params.dataStructure === "greedy-algorithms"
-                              ? "greedy"
-                              : params.dataStructure === "divide-conquer"
-                                ? "divide-conquer"
-                                : "binary-search"
-                      }`}
+                      href={`/visualize?algo=${dataStructure === "searching-algorithms"
+                        ? "binary-search"
+                        : dataStructure === "sorting-algorithms"
+                          ? "quick-sort"
+                          : dataStructure === "greedy-algorithms"
+                            ? "greedy"
+                            : dataStructure === "divide-conquer"
+                              ? "divide-conquer"
+                              : "binary-search"
+                        }`}
                     >
                       Try Algorithm Visualizer
                       <ArrowRight className="ml-2 h-4 w-4" />

@@ -23,7 +23,7 @@ export default function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold">Stack'n'Flow</span>
+            <span className="text-xl font-bold">Stack&apos;n&apos;Flow</span>
           </Link>
         </div>
 
@@ -33,9 +33,8 @@ export default function Navbar() {
             <Link
               key={item.path}
               href={item.path}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                pathname === item.path ? "text-foreground" : "text-muted-foreground"
-              }`}
+              className={`text-sm font-medium transition-colors hover:text-primary ${pathname === item.path ? "text-foreground" : "text-muted-foreground"
+                }`}
             >
               {item.name}
             </Link>
@@ -60,9 +59,8 @@ export default function Navbar() {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`py-3 text-sm font-medium transition-colors hover:text-primary ${
-                  pathname === item.path ? "text-foreground" : "text-muted-foreground"
-                }`}
+                className={`py-3 text-sm font-medium transition-colors hover:text-primary ${pathname === item.path ? "text-foreground" : "text-muted-foreground"
+                  }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 {item.name}

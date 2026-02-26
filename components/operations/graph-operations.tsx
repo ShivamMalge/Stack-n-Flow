@@ -336,18 +336,19 @@ export default function GraphOperations() {
               break
             }
 
-            unvisited.delete(current)
-            newSteps.push(`Processing vertex '${current}' with distance ${distances[current]}`)
+            const currentVertex = current
+            unvisited.delete(currentVertex)
+            newSteps.push(`Processing vertex '${currentVertex}' with distance ${distances[currentVertex]}`)
 
             // Update distances to neighbors
-            adjacencyList[current].forEach((neighbor) => {
+            adjacencyList[currentVertex].forEach((neighbor) => {
               if (unvisited.has(neighbor.id)) {
                 const weight = neighbor.weight || 1
-                const distance = distances[current] + weight
+                const distance = distances[currentVertex] + weight
 
                 if (distance < distances[neighbor.id]) {
                   distances[neighbor.id] = distance
-                  previous[neighbor.id] = current
+                  previous[neighbor.id] = currentVertex
                   newSteps.push(`Updated distance to '${neighbor.id}': ${distance}`)
                 }
               }

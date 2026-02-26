@@ -16,9 +16,9 @@ export default function AboutPage() {
       <main className="flex-1">
         <section className="py-12 px-4 bg-muted/30">
           <div className="container mx-auto max-w-4xl">
-            <h1 className="text-4xl font-bold mb-6">About Stack'n'Flow</h1>
+            <h1 className="text-4xl font-bold mb-6">About Stack&apos;n&apos;Flow</h1>
             <p className="text-xl text-muted-foreground mb-8">
-              <strong>Stack'n'Flow</strong> is an interactive DSA visualizer designed and developed by{" "}
+              <strong>Stack&apos;n&apos;Flow</strong> is an interactive DSA visualizer designed and developed by{" "}
               <strong>Shivam Malge</strong>.
               <br />
               Its mission is to make data structures and algorithms more accessible, intuitive, and engaging for
@@ -38,8 +38,8 @@ export default function AboutPage() {
                   to truly grasp their inner workings.
                 </p>
                 <p className="text-muted-foreground">
-                  <strong>Stack'n'Flow</strong> bridges that gap by bringing these concepts to life through real-time
-                  animations, step-by-step visualizations, and interactive controls. Whether you're a student,
+                  <strong>Stack&apos;n&apos;Flow</strong> bridges that gap by bringing these concepts to life through real-time
+                  animations, step-by-step visualizations, and interactive controls. Whether you&apos;re a student,
                   self-learner, or software engineer, this platform is built to help you visualize logic, develop
                   intuition, and strengthen your problem-solving skills.
                 </p>
@@ -53,11 +53,11 @@ export default function AboutPage() {
             <h2 className="text-2xl font-semibold mb-8">About Me</h2>
             <div className="bg-card rounded-lg p-8 shadow-sm border">
               <p className="mb-4">
-                I'm <strong>Shivam Malge</strong>, a Computer Science Engineering student passionate about the
+                I&apos;m <strong>Shivam Malge</strong>, a Computer Science Engineering student passionate about the
                 intersection of <strong>web development, finance, and AI</strong>.
                 <br />
                 With a strong foundation in full-stack development and a growing interest in data science and system
-                design, I created <strong>Stack'n'Flow</strong> to combine my love for elegant user experiences with
+                design, I created <strong>Stack&apos;n&apos;Flow</strong> to combine my love for elegant user experiences with
                 meaningful educational tools.
               </p>
               <p className="mb-6">

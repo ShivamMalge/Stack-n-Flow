@@ -159,7 +159,7 @@ export default function LinkedListOperations() {
           }
 
           const newSteps = []
-          let newHead = { ...head }
+          let newHead: ListNode | null = { ...head }
 
           if (pos === 0) {
             // Delete from beginning
@@ -170,7 +170,7 @@ export default function LinkedListOperations() {
               newSteps.push(`Deleted node at position 0 with value ${newHead.value}`)
               newHead = newHead.next
             }
-          } else {
+          } else if (newHead) {
             // Delete from position
             let current = newHead
             let index = 0
@@ -209,7 +209,7 @@ export default function LinkedListOperations() {
           }
 
           const newSteps = []
-          let current = head
+          let current: ListNode | null = head
           let index = 0
           let found = false
 
