@@ -26,6 +26,15 @@ export async function completeOnboarding(data: OnboardingData) {
 
             // 1. Create the specific role profile
             if (validatedData.role === "STUDENT") {
+                // Check if USN already exists to avoid Prisma unique constraint crashes
+                const existingStudent = await tx.studentProfile.findUnique({
+                    where: { usn: validatedData.usn },
+                })
+
+                if (existingStudent) {
+                    throw new Error("This USN is already registered to an account.")
+                }
+
                 await tx.studentProfile.create({
                     data: {
                         userId: session.user.id,
@@ -60,6 +69,9 @@ export async function completeOnboarding(data: OnboardingData) {
     } catch (error) {
         if (error instanceof z.ZodError) {
             return { error: "Invalid form data provided." }
+        }
+        if (error instanceof Error && error.message === "This USN is already registered to an account.") {
+            return { error: error.message }
         }
         console.error("Onboarding Error:", error)
         return { error: "An unexpected error occurred during onboarding." }
