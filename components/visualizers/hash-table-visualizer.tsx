@@ -164,8 +164,13 @@ const ENTRY_BG: Record<BucketEntry["state"], string> = {
     deleted: "bg-red-500/20 border-red-500 opacity-60 line-through",
 }
 
-export default function HashTableVisualizer() {
-    const [buckets, setBuckets] = useState<BucketEntry[][]>(Array.from({ length: TABLE_SIZE }, () => []))
+export default function HashTableVisualizer({
+    controlledBuckets,
+}: {
+    controlledBuckets?: BucketEntry[][];
+} = {}) {
+    const [internalBuckets, setBuckets] = useState<BucketEntry[][]>(Array.from({ length: TABLE_SIZE }, () => []))
+    const buckets = controlledBuckets !== undefined ? controlledBuckets : internalBuckets;
     const [keyInput, setKeyInput] = useState("")
     const [valueInput, setValueInput] = useState("")
     const [searchKey, setSearchKey] = useState("")

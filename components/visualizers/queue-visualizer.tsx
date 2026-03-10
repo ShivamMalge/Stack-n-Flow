@@ -37,9 +37,14 @@ type QueueItem = {
   isDequeuing?: boolean
 }
 
-export default function QueueVisualizer() {
+export default function QueueVisualizer({
+  controlledNodes,
+}: {
+  controlledNodes?: QueueItem[];
+} = {}) {
   // Initialize with empty queue
-  const [queue, setQueue] = useState<QueueItem[]>([])
+  const [internalQueue, setQueue] = useState<QueueItem[]>([])
+  const queue = controlledNodes || internalQueue;
   const [inputValue, setInputValue] = useState("")
   const [animating, setAnimating] = useState(false)
   const [nextId, setNextId] = useState(4)

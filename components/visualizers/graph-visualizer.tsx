@@ -63,9 +63,17 @@ type GraphFrame = {
   activeLine: number | null
 }
 
-export default function GraphVisualizer() {
-  const [nodes, setNodes] = useState<GraphNode[]>([])
-  const [edges, setEdges] = useState<Edge[]>([])
+export default function GraphVisualizer({
+  controlledNodes,
+  controlledEdges,
+}: {
+  controlledNodes?: GraphNode[];
+  controlledEdges?: Edge[];
+} = {}) {
+  const [internalNodes, setNodes] = useState<GraphNode[]>([])
+  const [internalEdges, setEdges] = useState<Edge[]>([])
+  const nodes = controlledNodes !== undefined ? controlledNodes : internalNodes;
+  const edges = controlledEdges !== undefined ? controlledEdges : internalEdges;
   const [sourceNode, setSourceNode] = useState("")
   const [targetNode, setTargetNode] = useState("")
   const [nodeLabel, setNodeLabel] = useState("")

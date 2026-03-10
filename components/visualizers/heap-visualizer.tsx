@@ -280,10 +280,18 @@ function HeapArrayView({ heap, states }: { heap: number[]; states: NodeState[] }
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
-export default function HeapVisualizer() {
+export default function HeapVisualizer({
+    controlledHeap,
+    controlledStates,
+}: {
+    controlledHeap?: number[];
+    controlledStates?: NodeState[];
+} = {}) {
     const [heapType, setHeapType] = useState<"min" | "max">("min")
-    const [heap, setHeap] = useState<number[]>([])
-    const [states, setStates] = useState<NodeState[]>([])
+    const [internalHeap, setHeap] = useState<number[]>([])
+    const [internalStates, setStates] = useState<NodeState[]>([])
+    const heap = controlledHeap !== undefined ? controlledHeap : internalHeap;
+    const states = controlledStates !== undefined ? controlledStates : internalStates;
     const [inputValue, setInputValue] = useState("")
     const [steps, setSteps] = useState<string[]>([])
 

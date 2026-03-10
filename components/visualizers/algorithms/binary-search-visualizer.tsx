@@ -23,11 +23,21 @@ type BinarySearchFrame = {
   searchResult?: string | null
 }
 
-export default function BinarySearchVisualizer({ mini = false }: { mini?: boolean } = {}) {
-  const [array, setArray] = useState<ArrayItem[]>([])
+export default function BinarySearchVisualizer({ 
+  mini = false,
+  controlledArray,
+  controlledSearchResult,
+}: { 
+  mini?: boolean;
+  controlledArray?: ArrayItem[];
+  controlledSearchResult?: string | null;
+} = {}) {
+  const [internalArray, setArray] = useState<ArrayItem[]>([])
   const [inputValue, setInputValue] = useState("")
   const [searchValue, setSearchValue] = useState("")
-  const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [internalSearchResult, setSearchResult] = useState<string | null>(null)
+  const array = controlledArray !== undefined ? controlledArray : internalArray;
+  const searchResult = controlledSearchResult !== undefined ? controlledSearchResult : internalSearchResult;
   const [steps, setSteps] = useState<string[]>([])
   const [isSorted, setIsSorted] = useState(true)
 

@@ -59,9 +59,16 @@ type Node = {
   isDeleting?: boolean
 }
 
-export default function LinkedListVisualizer({ mini = false }: { mini?: boolean } = {}) {
+export default function LinkedListVisualizer({ 
+  mini = false,
+  controlledNodes,
+}: { 
+  mini?: boolean;
+  controlledNodes?: Node[];
+} = {}) {
   // Initialize with empty list
-  const [nodes, setNodes] = useState<Node[]>([])
+  const [internalNodes, setNodes] = useState<Node[]>([])
+  const nodes = controlledNodes || internalNodes;
   const [inputValue, setInputValue] = useState("")
   // Add operation state and update the Tabs component
   const [operation, setOperation] = useState("insertFront")

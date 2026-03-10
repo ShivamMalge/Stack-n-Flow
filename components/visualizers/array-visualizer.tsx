@@ -41,8 +41,15 @@ type ArrayItem = {
   isDeleting?: boolean
 }
 
-export default function ArrayVisualizer({ mini = false }: { mini?: boolean } = {}) {
-  const [array, setArray] = useState<ArrayItem[]>([])
+export default function ArrayVisualizer({ 
+  mini = false,
+  controlledNodes,
+}: { 
+  mini?: boolean;
+  controlledNodes?: ArrayItem[];
+} = {}) {
+  const [internalArray, setArray] = useState<ArrayItem[]>([])
+  const array = controlledNodes || internalArray;
   const [inputValue, setInputValue] = useState("")
   const [indexValue, setIndexValue] = useState("")
   const [operation, setOperation] = useState("insert")

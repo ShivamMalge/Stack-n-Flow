@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+src/pratyaksha.egg-info/PKG-INFO
+src/pratyaksha.egg-info/SOURCES.txt
+src/pratyaksha.egg-info/dependency_links.txt
+src/pratyaksha.egg-info/requires.txt
+src/pratyaksha.egg-info/top_level.txt

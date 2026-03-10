@@ -67,8 +67,13 @@ type Node = {
   isDeleting?: boolean
 }
 
-export default function DoublyLinkedListVisualizer() {
-  const [nodes, setNodes] = useState<Node[]>([])
+export default function DoublyLinkedListVisualizer({
+  controlledNodes,
+}: {
+  controlledNodes?: Node[];
+} = {}) {
+  const [internalNodes, setNodes] = useState<Node[]>([])
+  const nodes = controlledNodes !== undefined ? controlledNodes : internalNodes;
   const [inputValue, setInputValue] = useState("")
   const [operation, setOperation] = useState("insertFront")
   const [animating, setAnimating] = useState(false)

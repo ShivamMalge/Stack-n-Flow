@@ -20,8 +20,13 @@ type TreeNode = {
   isDeleting?: boolean
 }
 
-export default function TreeVisualizer() {
-  const [root, setRoot] = useState<TreeNode | null>(null)
+export default function TreeVisualizer({
+  controlledRoot,
+}: {
+  controlledRoot?: TreeNode | null;
+} = {}) {
+  const [internalRoot, setRoot] = useState<TreeNode | null>(null)
+  const root = controlledRoot !== undefined ? controlledRoot : internalRoot;
   const [inputValue, setInputValue] = useState("")
   const [operation, setOperation] = useState("insert")
   const [animating, setAnimating] = useState(false)

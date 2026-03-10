@@ -55,8 +55,13 @@ type Node = {
   isDeleting?: boolean
 }
 
-export default function CircularLinkedListVisualizer() {
-  const [nodes, setNodes] = useState<Node[]>([])
+export default function CircularLinkedListVisualizer({
+  controlledNodes,
+}: {
+  controlledNodes?: Node[];
+} = {}) {
+  const [internalNodes, setNodes] = useState<Node[]>([])
+  const nodes = controlledNodes !== undefined ? controlledNodes : internalNodes;
   const [inputValue, setInputValue] = useState("")
   const [operation, setOperation] = useState("insert")
   const [animating, setAnimating] = useState(false)

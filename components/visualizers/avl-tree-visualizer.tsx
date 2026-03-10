@@ -57,8 +57,13 @@ type TreeNode = {
 
 type AVLFrame = { root: TreeNode | null; traversalPath: number[]; searchResult: string | null; activeLine: number | null }
 
-export default function AVLTreeVisualizer() {
-  const [root, setRoot] = useState<TreeNode | null>(null)
+export default function AVLTreeVisualizer({
+  controlledRoot,
+}: {
+  controlledRoot?: TreeNode | null;
+} = {}) {
+  const [internalRoot, setRoot] = useState<TreeNode | null>(null)
+  const root = controlledRoot !== undefined ? controlledRoot : internalRoot;
   const [inputValue, setInputValue] = useState("")
   const [operation, setOperation] = useState("insert")
   const [animating, setAnimating] = useState(false)

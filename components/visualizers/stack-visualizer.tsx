@@ -37,9 +37,16 @@ type StackItem = {
   isPopping?: boolean
 }
 
-export default function StackVisualizer({ mini = false }: { mini?: boolean } = {}) {
+export default function StackVisualizer({ 
+  mini = false,
+  controlledNodes,
+}: { 
+  mini?: boolean;
+  controlledNodes?: StackItem[];
+} = {}) {
   // Initialize with empty stack
-  const [stack, setStack] = useState<StackItem[]>([])
+  const [internalStack, setStack] = useState<StackItem[]>([])
+  const stack = controlledNodes || internalStack;
   const [inputValue, setInputValue] = useState("")
   const [animating, setAnimating] = useState(false)
   const [nextId, setNextId] = useState(4)

@@ -38,14 +38,28 @@ type QueueItem = {
   isDequeuing?: boolean
 }
 
-export default function CircularQueueVisualizer() {
-  const [queue, setQueue] = useState<QueueItem[]>([])
+export default function CircularQueueVisualizer({
+  controlledQueue,
+  controlledFront,
+  controlledRear,
+  controlledSize,
+}: {
+  controlledQueue?: QueueItem[];
+  controlledFront?: number;
+  controlledRear?: number;
+  controlledSize?: number;
+} = {}) {
+  const [internalQueue, setQueue] = useState<QueueItem[]>([])
   const [inputValue, setInputValue] = useState("")
   const [animating, setAnimating] = useState(false)
   const [nextId, setNextId] = useState(1)
-  const [front, setFront] = useState(0)
-  const [rear, setRear] = useState(-1)
-  const [size, setSize] = useState(0)
+  const [internalFront, setFront] = useState(0)
+  const [internalRear, setRear] = useState(-1)
+  const [internalSize, setSize] = useState(0)
+  const queue = controlledQueue !== undefined ? controlledQueue : internalQueue;
+  const front = controlledFront !== undefined ? controlledFront : internalFront;
+  const rear = controlledRear !== undefined ? controlledRear : internalRear;
+  const size = controlledSize !== undefined ? controlledSize : internalSize;
   const [maxSize, setMaxSize] = useState(5)
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [activeCode, setActiveCode] = useState<string[]>([])

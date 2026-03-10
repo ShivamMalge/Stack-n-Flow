@@ -22,10 +22,16 @@ type QuickSortFrame = {
   stepDescription: string
 }
 
-export default function QuickSortVisualizer() {
-  const [array, setArray] = useState<ArrayItem[]>([])
+export default function QuickSortVisualizer({
+  controlledArray,
+}: {
+  controlledArray?: ArrayItem[];
+} = {}) {
+  const [internalArray, setArray] = useState<ArrayItem[]>([])
   const [inputValue, setInputValue] = useState("")
   const [nextId, setNextId] = useState(1)
+  const [animating, setAnimating] = useState(false)
+  const array = controlledArray !== undefined ? controlledArray : internalArray;
   const [steps, setSteps] = useState<string[]>([])
 
   const onFrameChange = useCallback((snapshot: QuickSortFrame, _frameIndex: number) => {
