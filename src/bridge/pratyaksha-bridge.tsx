@@ -1,21 +1,9 @@
 import * as React from "react";
-import { createRender } from "@anywidget/react";
-import StackVisualizer from "../../components/visualizers/stack-visualizer";
-import QueueVisualizer from "../../components/visualizers/queue-visualizer";
-import ArrayVisualizer from "../../components/visualizers/array-visualizer";
-import TreeVisualizer from "../../components/visualizers/tree-visualizer";
-import LinkedListVisualizer from "../../components/visualizers/linked-list-visualizer";
-import AVLTreeVisualizer from "../../components/visualizers/avl-tree-visualizer";
-import GraphVisualizer from "../../components/visualizers/graph-visualizer";
-import HashTableVisualizer from "../../components/visualizers/hash-table-visualizer";
-import HeapVisualizer from "../../components/visualizers/heap-visualizer";
-import CircularLinkedListVisualizer from "../../components/visualizers/circular-linked-list-visualizer";
-import DoublyLinkedListVisualizer from "../../components/visualizers/doubly-linked-list-visualizer";
-import CircularQueueVisualizer from "../../components/visualizers/circular-queue-visualizer";
-import BinarySearchVisualizer from "../../components/visualizers/algorithms/binary-search-visualizer";
-import QuickSortVisualizer from "../../components/visualizers/algorithms/quick-sort-visualizer";
+import { createRender, useModel } from "@anywidget/react";
+import { getVisualizerComponent, isRendererOnlyComponent } from "./registry";
 
-const VisualizerRouter = ({ model }: { model: any }) => {
+const VisualizerRouter: React.FC = () => {
+  const model = useModel<Record<string, any>>();
   const [structure, setStructure] = React.useState(model.get("structure") || "STACK");
   const [nodes, setNodes] = React.useState(model.get("nodes") || []);
   const [metadata, setMetadata] = React.useState(model.get("metadata") || {});
@@ -37,41 +25,60 @@ const VisualizerRouter = ({ model }: { model: any }) => {
   }, [model]);
 
   const containerClass = "pratyaksha-container w-full h-full min-h-[400px]";
+  const Component = getVisualizerComponent(structure);
 
-  switch (structure) {
-    case "STACK":
-      return <div className={containerClass}><StackVisualizer controlledNodes={nodes} /></div>;
-    case "QUEUE":
-      return <div className={containerClass}><QueueVisualizer controlledNodes={nodes} /></div>;
-    case "ARRAY":
-      return <div className={containerClass}><ArrayVisualizer controlledNodes={nodes} /></div>;
-    case "LINKED_LIST":
-      return <div className={containerClass}><LinkedListVisualizer controlledNodes={nodes} /></div>;
-    case "TREE":
-      return <div className={containerClass}><TreeVisualizer controlledRoot={nodes as any} /></div>;
-    case "AVL_TREE":
-      return <div className={containerClass}><AVLTreeVisualizer controlledRoot={nodes as any} /></div>;
-    case "GRAPH":
-      return <div className={containerClass}><GraphVisualizer controlledNodes={nodes as any} controlledEdges={metadata.edges || []} /></div>;
-    case "HASH_TABLE":
-      return <div className={containerClass}><HashTableVisualizer controlledBuckets={nodes as any} /></div>;
-    case "HEAP":
-      return <div className={containerClass}><HeapVisualizer controlledHeap={nodes as any} controlledStates={metadata.states || []} /></div>;
-    case "CIRCULAR_LINKED_LIST":
-      return <div className={containerClass}><CircularLinkedListVisualizer controlledNodes={nodes as any} /></div>;
-    case "DOUBLY_LINKED_LIST":
-      return <div className={containerClass}><DoublyLinkedListVisualizer controlledNodes={nodes as any} /></div>;
-    case "CIRCULAR_QUEUE":
-      return <div className={containerClass}><CircularQueueVisualizer controlledQueue={nodes as any} controlledFront={metadata.front} controlledRear={metadata.rear} controlledSize={metadata.size} /></div>;
-    case "BINARY_SEARCH":
-      return <div className={containerClass}><BinarySearchVisualizer controlledArray={nodes as any} controlledSearchResult={metadata.searchResult} /></div>;
-    case "QUICK_SORT":
-      return <div className={containerClass}><QuickSortVisualizer controlledArray={nodes as any} /></div>;
-    default:
-      return <div className="p-4 text-red-500">Unsupported structure: {structure}</div>;
+  if (!Component) {
+    return <div className="p-4 text-red-500">Unsupported structure: {structure}</div>;
   }
+
+  if (isRendererOnlyComponent(Component)) {
+    if (structure === "STACK" || structure === "QUEUE") {
+      return (
+        <div className={containerClass}>
+          <Component items={nodes as any} searchResult={metadata.searchResult} />
+        </div>
+      );
+    }
+  }
+
+  if (structure === "TREE" || structure === "AVL_TREE") {
+    return <div className={containerClass}><Component controlledRoot={nodes as any} /></div>;
+  }
+
+  if (structure === "GRAPH") {
+    return <div className={containerClass}><Component controlledNodes={nodes as any} controlledEdges={metadata.edges || []} /></div>;
+  }
+
+  if (structure === "HASH_TABLE") {
+    return <div className={containerClass}><Component controlledBuckets={nodes as any} /></div>;
+  }
+
+  if (structure === "HEAP") {
+    return <div className={containerClass}><Component controlledHeap={nodes as any} controlledStates={metadata.states || []} /></div>;
+  }
+
+  if (structure === "CIRCULAR_QUEUE") {
+    return (
+      <div className={containerClass}>
+        <Component
+          controlledQueue={nodes as any}
+          controlledFront={metadata.front}
+          controlledRear={metadata.rear}
+          controlledSize={metadata.size}
+        />
+      </div>
+    );
+  }
+
+  if (structure === "BINARY_SEARCH") {
+    return <div className={containerClass}><Component controlledArray={nodes as any} controlledSearchResult={metadata.searchResult} /></div>;
+  }
+
+  return <div className={containerClass}><Component controlledNodes={nodes as any} controlledArray={nodes as any} /></div>;
 };
 
-export default {
+const widget = {
   render: createRender(VisualizerRouter),
 };
+
+export default widget;
