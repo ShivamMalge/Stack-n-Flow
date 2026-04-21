@@ -231,3 +231,31 @@ class CircularQueue(BaseStructure):
             "rear": self.rear,
             "size": self.size
         }
+
+
+from .structures.stack import Stack as TelemetryStack
+from .structures.queue import Queue as TelemetryQueue
+from .structures.linked_list import LinkedList as TelemetryLinkedList
+from .structures.array_list import ArrayList as TelemetryArrayList
+from .structures.tree import BinaryTree as TelemetryBinaryTree, AVLTree as TelemetryAVLTree
+from .structures.graph import Graph as TelemetryGraph
+from .structures.hash_table import HashTable as TelemetryHashTable
+from .structures.heap import Heap as TelemetryHeap
+from .structures.linked_list_variants import (
+    CircularLinkedList as TelemetryCircularLinkedList,
+    DoublyLinkedList as TelemetryDoublyLinkedList,
+)
+from .structures.circular_queue import CircularQueue as TelemetryCircularQueue
+
+Stack = TelemetryStack
+Queue = TelemetryQueue
+LinkedList = TelemetryLinkedList
+ArrayList = TelemetryArrayList
+BinaryTree = TelemetryBinaryTree
+AVLTree = TelemetryAVLTree
+Graph = TelemetryGraph
+HashTable = TelemetryHashTable
+Heap = TelemetryHeap
+CircularLinkedList = TelemetryCircularLinkedList
+DoublyLinkedList = TelemetryDoublyLinkedList
+CircularQueue = TelemetryCircularQueue

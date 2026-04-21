@@ -12,5 +12,5 @@ class VisualizerWidget(anywidget.AnyWidget):
     _css = _css_path.read_text() if _css_path.exists() else ""
     
     structure: str = traitlets.Unicode("STACK").tag(sync=True)
-    nodes: list = traitlets.List([]).tag(sync=True)
+    nodes = traitlets.Any([]).tag(sync=True)
     metadata: dict = traitlets.Dict({}).tag(sync=True)

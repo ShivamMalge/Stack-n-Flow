@@ -37,3 +37,10 @@ class QuickSort(AlgorithmDriver):
         if array:
             self.nodes = [{"id": i, "value": v} for i, v in enumerate(array)]
         super().__init__("QUICK_SORT")
+
+
+from .algorithms.binary_search import BinarySearch as TelemetryBinarySearch
+from .algorithms.quick_sort import QuickSort as TelemetryQuickSort
+
+BinarySearch = TelemetryBinarySearch
+QuickSort = TelemetryQuickSort
