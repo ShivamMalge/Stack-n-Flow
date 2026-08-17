@@ -87,7 +87,9 @@ Working tree (excluding `node_modules`/`.git`) is now 2.5 MB, down from ~6 MB.
 
 ## Phase 3 — Web App Correctness Bugs ✅ COMPLETE (2026-08-17)
 
-**Verification:** `next build` succeeds, `tsc` clean on application code, 19 JS tests pass (5 new tests in `tests/components/visualizer-modes.test.tsx` lock in the mini/controlled behaviour).
+**Verification:** `next build` succeeds, **`tsc --noEmit` is now completely clean across the whole project** (test files included, for the first time), 19 JS tests pass (5 new in `tests/components/visualizer-modes.test.tsx` lock in the mini/controlled behaviour), 16 Python tests still pass.
+
+Two extras beyond the checklist: `window.alert()` is gone from all ten visualizers, replaced by a shared `components/ui/inline-alert.tsx` rendered next to the offending input; and `tsconfig.json` now declares `vitest/globals` + `@testing-library/jest-dom`, which cleared the "Cannot find name describe/it/expect" errors that had been reported in every test file (this was listed as a Phase 5 item).
 
 ### Two extra bugs found while fixing the timers
 Neither was in the original audit; both were found by reading the code around the timer cleanup.
