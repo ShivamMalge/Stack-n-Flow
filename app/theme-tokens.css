@@ -69,7 +69,10 @@
   --node-heapified-fill: 269 100% 92%;
   --node-heapified-stroke: 271 91% 65%;
   --node-edge: 220 9% 46%;
-  --node-index-label: 220 9% 46%
+  --node-index-label: 220 9% 46%;
+  /* Value drawn inside a node. The fills above are near-white in this theme, so
+     a fixed light label is invisible — it must flip with the theme. */
+  --node-label: 0 0% 9%
 }
 .dark {
 
@@ -134,5 +137,8 @@
   --node-heapified-fill: 274 87% 21%;
   --node-heapified-stroke: 271 91% 65%;
   --node-edge: 220 9% 34%;
-  --node-index-label: 220 9% 46%
+  /* Lightened from the shared 46%: at 9px on the dark background that value
+     measured about 4:1, below the AA floor. */
+  --node-index-label: 220 9% 65%;
+  --node-label: 0 0% 98%
 }

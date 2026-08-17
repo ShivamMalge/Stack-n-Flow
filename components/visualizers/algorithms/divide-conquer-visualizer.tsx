@@ -230,7 +230,7 @@ export default function DivideConquerVisualizer() {
   const visibleStepIndex = player.currentFrame
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       <div className="space-y-6">
         <Card>
           <CardHeader>
@@ -354,7 +354,10 @@ export default function DivideConquerVisualizer() {
           <CardDescription>Visual representation of Merge Sort</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-between h-[350px]">
+          {/* Scrolls instead of escaping the card: the array row, the per-level
+              phase stack and the legend together exceed 350px once the array
+              has more than a handful of elements. */}
+          <div className="flex flex-col items-center gap-3 min-h-[350px] max-h-[60vh] overflow-auto">
             {array.length === 0 ? (
               <div className="text-muted-foreground self-center">Add elements to create an array</div>
             ) : (
@@ -438,7 +441,7 @@ export default function DivideConquerVisualizer() {
                   </div>
                 )}
 
-                <div className="flex justify-center mt-2 space-x-4">
+                <div className="flex flex-wrap justify-center mt-2 gap-x-4 gap-y-2">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900 border border-blue-500 rounded-sm mr-2"></div>
                     <span className="text-xs">Dividing</span>

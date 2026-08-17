@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
+import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import CodePanel from "@/components/ui/code-panel"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
@@ -749,6 +749,16 @@ export default function BTreeVisualizer() {
     setPan((prevPan) => ({ ...prevPan, x: prevPan.x + 20 }))
   }
 
+  // pan.y was already interpolated into the viewBox but nothing ever set it,
+  // so vertical clipping had no control at all.
+  const handlePanUp = () => {
+    setPan((prevPan) => ({ ...prevPan, y: prevPan.y - 20 }))
+  }
+
+  const handlePanDown = () => {
+    setPan((prevPan) => ({ ...prevPan, y: prevPan.y + 20 }))
+  }
+
   const handleReset = () => {
     setScale(1)
     setPan({ x: 0, y: 0 })
@@ -838,12 +848,12 @@ export default function BTreeVisualizer() {
 
       {/* Visualization Panel - Second on Mobile, Top-Right on Desktop */}
       <div className="order-2 md:col-start-2 md:row-start-1">
-        <Card className="h-full">
+        <Card className="flex flex-col h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
             <CardDescription>Visual representation of the B-Tree</CardDescription>
           </CardHeader>
-          <CardContent className="p-0 overflow-hidden">
+          <CardContent className="flex flex-col flex-1 min-h-0 p-0 overflow-hidden">
             {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
 
             <div className="flex flex-wrap gap-2 mb-2 px-6">
@@ -859,37 +869,48 @@ export default function BTreeVisualizer() {
               <Button size="sm" variant="outline" onClick={handlePanRight}>
                 <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
               </Button>
+              <Button size="sm" variant="outline" onClick={handlePanUp}>
+                <MoveVertical className="h-4 w-4 mr-1" /> Pan Up
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanDown}>
+                <MoveVertical className="h-4 w-4 mr-1" /> Pan Down
+              </Button>
               <Button size="sm" variant="outline" onClick={handleReset}>
                 Reset View
               </Button>
             </div>
 
-            <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
-              <div className="absolute inset-0 flex items-center justify-center p-4">
-                {root ? (
-                  <div className="w-full h-full flex items-center justify-center overflow-auto">
-                    <svg
-                      ref={svgRef}
-                      width="100%"
-                      height="100%"
-                      viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
-                      style={{
-                        transform: `scale(${scale})`,
-                        transformOrigin: "center",
-                        transition: "transform 0.2s ease",
-                        touchAction: "none",
-                      }}
-                      className="max-w-none"
-                    >
-                      <g>{renderTree(root, 0, 40, viewBoxWidth, 1)}</g>
-                    </svg>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                    Empty B-Tree (Order: {treeOrder})
-                  </div>
-                )}
-              </div>
+            {/*
+              The plate is the scroller itself: the old `absolute inset-0` child
+              made the outer `overflow-auto` a dead scroller, and centring a
+              scrolling box with `items-center` spilled the overflow both ways,
+              so the leading half (the root node first) could never be reached
+              because scrollLeft/scrollTop cannot go negative. `m-auto` on the
+              svg centres it while it fits and scrolls from the true origin once
+              it does not.
+            */}
+            <div className="flex flex-1 min-h-[300px] max-h-[60vh] w-full overflow-auto border-t p-4" style={{ overscrollBehavior: "contain" }}>
+              {root ? (
+                <svg
+                  ref={svgRef}
+                  width="100%"
+                  height="100%"
+                  viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
+                  style={{
+                    transform: `scale(${scale})`,
+                    transformOrigin: "center",
+                    transition: "transform 0.2s ease",
+                    touchAction: "none",
+                  }}
+                  className="m-auto max-w-none"
+                >
+                  <g>{renderTree(root, 0, 40, viewBoxWidth, 1)}</g>
+                </svg>
+              ) : (
+                <div className="m-auto text-muted-foreground text-sm">
+                  Empty B-Tree (Order: {treeOrder})
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap justify-center mt-4 gap-3 text-[10px] md:text-xs px-6 border-t pt-4">

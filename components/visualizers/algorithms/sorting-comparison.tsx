@@ -274,6 +274,13 @@ const GENERATORS: Record<AlgorithmKey, (v: number[]) => AnimationFrame<SortFrame
 
 // ── Bar Chart ───────────────────────────────────────────────────────────────
 
+// Bar heights are computed in pixels, so the plate holding them has to be a
+// known pixel height as well — a responsive plate let the tallest bar (168px)
+// overflow the mobile box. Bars are percentages of the plate, so the plate keeps
+// bar can leave the plate.
+const BAR_MAX_PCT = 90
+const BAR_MAX_PCT_DENSE = 70
+
 const BAR_COLORS: Record<BarState, string> = {
     default: "bg-primary/60",
     comparing: "bg-blue-400 dark:bg-blue-500",
@@ -285,15 +292,16 @@ const BAR_COLORS: Record<BarState, string> = {
 function BarChart({ bars }: { bars: BarItem[] }) {
     const maxVal = Math.max(...bars.map((b) => b.value), 1)
     return (
-        <div className="flex items-end justify-center gap-[2px] h-[140px] md:h-[180px] w-full px-1">
+        <div className="flex items-end justify-center gap-[2px] h-[150px] md:h-[190px] w-full px-1">
             {bars.map((bar, idx) => {
-                const h = Math.max(4, Math.round((bar.value / maxVal) * (bars.length > 15 ? 130 : 168)))
+                const pct = Math.max(2, (bar.value / maxVal) * (bars.length > 15 ? BAR_MAX_PCT_DENSE : BAR_MAX_PCT))
                 return (
                     <div
                         key={idx}
                         title={String(bar.value)}
                         style={{
-                            height: `${h}px`,
+                            height: `${pct}%`,
+                            maxHeight: "100%",
                             flex: "1 1 0%",
                             maxWidth: bars.length > 20 ? "12px" : "24px",
                             minWidth: "2px"

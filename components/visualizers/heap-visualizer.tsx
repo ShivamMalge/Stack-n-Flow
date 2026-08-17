@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
+import { Plus, Trash2, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
@@ -205,6 +205,8 @@ function HeapTreeSVG({
     const svgH = (maxDepth + 1) * yGap + 60
 
     return (
+        // `m-auto` centres the tree inside the scrolling plate while it fits and
+        // lets it scroll from the true origin once it does not.
         <svg
             width="100%"
             height="100%"
@@ -214,6 +216,7 @@ function HeapTreeSVG({
                 transformOrigin: "center top",
                 transition: "transform 0.2s ease",
             }}
+            className="m-auto"
         >
             {/* Edges */}
             {heap.map((_, i) => {
@@ -242,7 +245,7 @@ function HeapTreeSVG({
                             fill={NODE_FILL[st]} stroke={NODE_STROKE[st]} strokeWidth="2"
                             style={{ transition: "all 0.3s ease" }} />
                         <text x={positions[i].x} y={positions[i].y} textAnchor="middle" dominantBaseline="middle"
-                            fill="white" fontSize="12" fontWeight="bold" className="select-none pointer-events-none">
+                            fill="hsl(var(--node-label))" fontSize="12" fontWeight="bold" className="select-none pointer-events-none">
                             {val}
                         </text>
                         <text x={positions[i].x} y={positions[i].y + R + 13} textAnchor="middle"
@@ -512,7 +515,7 @@ export default function HeapVisualizer({
                         <CardTitle>Tree View</CardTitle>
                         <CardDescription>Visual representation as a complete binary tree</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+                    <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
                         {/* Zoom / Pan controls */}
                         <div className="flex flex-wrap gap-2 px-4 pb-2">
                             <Button size="sm" variant="outline" onClick={() => setScale((s) => Math.min(s * 1.2, 4))}>
@@ -527,24 +530,34 @@ export default function HeapVisualizer({
                             <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, x: p.x + 40 }))}>
                                 <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
                             </Button>
+                            {/* pan.y was already in the viewBox but nothing ever set it. */}
+                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, y: p.y - 40 }))}>
+                                <MoveVertical className="h-4 w-4 mr-1" /> Pan Up
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, y: p.y + 40 }))}>
+                                <MoveVertical className="h-4 w-4 mr-1" /> Pan Down
+                            </Button>
                             <Button size="sm" variant="outline" onClick={() => { setScale(1); setPan({ x: 0, y: 0 }) }}>
                                 Reset View
                             </Button>
                         </div>
 
-                        {/* SVG canvas */}
-                        <div className="relative flex-1 overflow-auto border-t min-h-[300px]" style={{ overscrollBehavior: "contain" }}>
-                            <div className="absolute inset-0 flex items-center justify-center p-4">
-                                {displayHeap.length === 0 ? (
-                                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm text-center">
-                                        Insert values to build the heap
-                                    </div>
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center overflow-auto">
-                                        <HeapTreeSVG heap={displayHeap} states={displayStates} scale={scale} pan={pan} />
-                                    </div>
-                                )}
-                            </div>
+                        {/*
+                            SVG canvas. The plate is the scroller itself: the old
+                            `absolute inset-0` child made this `overflow-auto` a dead
+                            scroller, and centring a scrolling box with `items-center`
+                            spilled the overflow both ways, so the leading half (the
+                            root node first) could never be reached because
+                            scrollLeft/scrollTop cannot go negative.
+                        */}
+                        <div className="flex flex-1 min-h-[300px] max-h-[60vh] w-full overflow-auto border-t p-4" style={{ overscrollBehavior: "contain" }}>
+                            {displayHeap.length === 0 ? (
+                                <div className="m-auto text-muted-foreground text-sm text-center">
+                                    Insert values to build the heap
+                                </div>
+                            ) : (
+                                <HeapTreeSVG heap={displayHeap} states={displayStates} scale={scale} pan={pan} />
+                            )}
                         </div>
                     </CardContent>
                 </Card>

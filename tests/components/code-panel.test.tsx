@@ -29,7 +29,9 @@ describe("CodePanel", () => {
     expect(screen.getByText("if")).toHaveClass("text-purple-400");
     expect(screen.getByText("true")).toHaveClass("text-orange-400");
     expect(screen.getByText("42")).toHaveClass("text-yellow-400");
-    expect(screen.getByText("// done")).toHaveClass("text-muted-foreground");
+    // Pinned slate, not `text-muted-foreground`: the panel is always a dark
+    // surface, and the muted token failed contrast against it in the light theme.
+    expect(screen.getByText("// done")).toHaveClass("text-slate-400");
   });
 
   it("renders markup in the source as literal text, never as HTML", () => {

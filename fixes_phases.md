@@ -186,6 +186,52 @@ The telemetry core and bridge are healthy; the distribution path is broken end-t
 - [x] 🟡 **Footer was taller than some page content.** Three stacked columns with a five-item
       vertical nav list and a four-item vertical social list. Rebuilt as two compact rows.
 
+### Second pass — full static UI audit (2026-08-17)
+
+Two exhaustive read-only audits were run: one on layout/responsive/SVG-overflow across all 24
+visualizer files, one on light-theme correctness. Both confirmed the user's instinct that the first
+visual pass had only scratched the surface. Headline findings:
+
+- 🔴 **Content that overflowed an SVG plate was permanently unreachable.** Six visualizers used
+      `items-center justify-center` on an `overflow-auto` box; centred overflow spills symmetrically
+      and `scrollLeft`/`scrollTop` cannot go negative, so the leading half could never be scrolled
+      to. Concretely: on a 6-level tree **the root node was the first thing to vanish**, and a
+      20-node binary tree lost roughly its 5 leftmost nodes. Compounded by an `absolute inset-0`
+      child that made the outer `overflow-auto` a **dead scroller**, and by `pan.y` existing in
+      state but never being set by any control — so vertical clipping had no recourse at all.
+- 🔴 **`tree-visualizer` drew nodes outside its own viewBox.** The sizer and the renderer used
+      different spacing maths, so any **3-level tree hid its deepest nodes entirely**; zoom-out
+      could not help because `transform: scale()` scales an already-clipped raster.
+- 🔴 **Heap node labels were invisible in light mode** — a regression from Phase 2: the circle
+      fills were migrated to theme tokens (near-white in light) while the label stayed
+      `fill="white"`, giving 1.05:1 contrast. The file's own comment claimed both themes worked.
+- 🟠 **Bar charts were taller than their containers** by arithmetic: heap-sort computed 200px bars
+      inside a 160px plate, sorting-comparison 168px inside 140px.
+- 🟠 **`divide-conquer` had no overflow handling** on a fixed 350px box whose content reaches
+      ~480px, so recursion levels rendered outside the card border.
+- 🟠 **Graph nodes could be dragged off-canvas unrecoverably** (no clamp, no zoom/pan, no view
+      reset), and the drag ignored the SVG's CSS scale so the node lagged the cursor ~16%.
+- 🟠 **`/operations` put 7 tabs in a `grid-cols-4` inside a fixed 36px pill**, forcing two squashed
+      rows with colliding nowrap labels.
+- 🟠 **The code panel rendered a 280px black void** on all 15 pages until the user ran something —
+      the first thing every visitor saw.
+
+### Fixed in the second pass
+- [x] 🔴 Heap label + `--node-label` token (light/dark), and a real dark value for
+      `--node-index-label`, which was byte-identical in both themes and failed AA at 9px.
+- [x] 🔴 Centred-scroller plate replaced in all six SVG visualizers; dead `absolute inset-0`
+      wrappers flattened; vertical pan controls added.
+- [x] 🟠 Bar-height arithmetic, `divide-conquer` overflow, graph drag clamp + scale correction.
+- [x] 🟠 `/operations` tab list rebuilt as a horizontal scroller (the pattern `/visualize` already used).
+- [x] 🟠 Code panel now shows "Run an operation to follow the code line by line."
+- [x] 🟠 `md:items-start` added to the 7 grids that were missing it — the exact defect class the
+      user reported, where a short visualization card is stretched by a much taller left column.
+- [x] 🟡 Code panels committed to a deliberately dark surface with pinned slates, and the
+      contrast failures inside them fixed (`text-muted-foreground` comments at 4.3:1, line
+      numbers at 2.3:1). The misleading "via theme tokens" comment was corrected.
+- [x] 🟡 Legends given `flex-wrap`; `doubly-linked-list` desktop grid widened to stop label overlap;
+      BST visualization moved back to `order-2` on mobile.
+
 ### Still open — needs a proper click-through
 - [ ] 🟠 **Audit every visualizer at desktop and mobile widths.** The three fixed above were found
       from two screenshots; 15 visualizers have never been reviewed visually. Look specifically for:
@@ -193,8 +239,29 @@ The telemetry core and bridge are healthy; the distribution path is broken end-t
       empty, and controls that wrap badly under ~400 px.
 - [ ] 🟡 **Tree visualizers with deep trees.** SVG canvases use fixed dimensions; a tree past a few
       levels likely overflows or clips. Zoom/pan exists but should not be the only recourse.
-- [ ] 🟡 **Consistent panel heights.** Code panels are variously `h-[250px]` and `h-[280px]`;
-      standardise, ideally in `lib/constants.ts`.
+- [x] 🟡 **Consistent panel heights** — all 15 code panels are now `h-[280px]`.
+- [ ] 🟡 **Remaining visual inconsistency, catalogued but not yet unified.** The audit found the
+      "highlighted" state rendered **seven** different ways across three encodings (paired
+      `-100/-900`, `-200` fill, `/20` alpha); `binary-search`, `divide-conquer`, `quick-sort` and
+      `sorting-comparison` use blue where 12 other files use yellow; `pathfinding` uses blue for
+      "visited" where `graph` uses green; `heap-sort` alone maps comparing→yellow and
+      swapping→orange, inverting the shared sorter vocabulary. Also six different step-pane heights
+      and four different headings for the same pane. Extend the `--node-*` tokens to all
+      visualizers and collapse these into one vocabulary.
+- [ ] 🟡 **Tree state precedence is arbitrary.** All the tree visualizers concatenate
+      mutually-non-exclusive state classes (a node can emit `fill-yellow-200` *and*
+      `fill-orange-200`), so which wins is decided by Tailwind's palette ordering in the generated
+      stylesheet rather than by intent. Resolve state to a single class with a `switch`.
+- [ ] 🟡 **`b-tree` shrinks to illegibility.** A 1500×300 viewBox in a ~496px plate renders at
+      0.33 scale, so `fontSize="12"` keys become ~4px; zoom is immediately re-clipped by
+      `CardContent p-0 overflow-hidden`.
+- [ ] 🟡 **Graph new-node placement piles up.** All nodes land on one ellipse, so with the golden
+      angle the ~9th added node overlaps an earlier one. Spiral the radius or force-relax.
+- [ ] 🟡 **`prose dark:prose-invert` is dead** on the learn page — `@tailwindcss/typography` is not
+      installed, so learn-page body copy has no typographic styling in either theme.
+- [ ] ⚪ **Success alerts are light-only** in all 7 operations panels (`bg-green-50` with no `dark:`);
+      add a `success` variant to `components/ui/alert.tsx` and replace the 7 hand-rolled copies.
+- [ ] ⚪ **`text-[10px]` at ~25 sites** sits right on the AA contrast line; raise the floor to `text-xs`.
 - [ ] 🟡 **Light theme pass.** The theme toggle only started working in Phase 3, so light mode has
       effectively never been reviewed. Several visualizers still use fixed dark palettes
       (`bg-slate-950` in the code panel, `#0d1117` in multi-language-code).

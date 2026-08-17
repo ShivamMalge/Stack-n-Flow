@@ -104,6 +104,15 @@ function generateHeapSort(values: number[]): AnimationFrame<HSSFrame>[] {
     return frames
 }
 
+// Bar heights are computed in pixels, so the plate holding them has to be a
+// known pixel height as well — a responsive plate let the tallest bar (200px)
+// overflow the 160px mobile box and paint over the card text above it. Every
+// bar is a fraction of PLATE_HEIGHT, so no bar can leave the plate.
+// Percentages of the plate, so the plate keeps its responsive height and a bar
+// still cannot overflow it at any breakpoint.
+const BAR_MAX_PCT = 90
+const BAR_MAX_PCT_DENSE = 65
+
 const BAR_COLORS: Record<BarState, string> = {
     default: "bg-primary/50",
     heap: "bg-blue-400 dark:bg-blue-500",
@@ -164,7 +173,7 @@ export default function HeapSortVisualizer() {
     const maxVal = displayBars.length ? Math.max(...displayBars.map((b) => b.value)) : 1
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
             {/* Controls */}
             <Card>
                 <CardHeader>
@@ -251,13 +260,14 @@ export default function HeapSortVisualizer() {
                     <CardDescription>Bar chart — colors show heap position vs sorted</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-end justify-center gap-[2px] h-[160px] md:h-[220px] w-full px-1">
+                    <div className="flex items-end justify-center gap-[2px] h-[180px] md:h-[220px] w-full px-1">
                         {displayBars.map((bar, idx) => {
-                            const h = Math.max(4, Math.round((bar.value / maxVal) * (displayBars.length > 15 ? 140 : 200)))
+                            const pct = Math.max(2, (bar.value / maxVal) * (displayBars.length > 15 ? BAR_MAX_PCT_DENSE : BAR_MAX_PCT))
                             return (
                                 <div key={idx} title={String(bar.value)}
                                     style={{
-                                        height: `${h}px`,
+                                        height: `${pct}%`,
+                                        maxHeight: "100%",
                                         flex: "1 1 0%",
                                         maxWidth: displayBars.length > 20 ? "12px" : "24px",
                                         minWidth: "2px"

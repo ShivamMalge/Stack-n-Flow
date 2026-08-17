@@ -280,7 +280,7 @@ export default function PathfindingVisualizer() {
     const stepDesc = player.currentSnapshot?.stepDescription ?? ""
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
             {/* Algorithm + Draw Controls - Top on Mobile, Left on Desktop */}
             <div className="order-1 md:col-start-1">
                 <Card>
@@ -301,7 +301,7 @@ export default function PathfindingVisualizer() {
                             </div>
 
                             {/* Draw modes */}
-                            <div className="flex gap-1 ml-2">
+                            <div className="flex flex-wrap gap-1">
                                 {(["wall", "start", "end", "erase"] as DrawMode[]).map((m) => (
                                     <Button key={m} size="sm"
                                         variant={drawMode === m ? "secondary" : "outline"}

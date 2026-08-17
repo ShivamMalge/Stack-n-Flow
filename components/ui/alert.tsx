@@ -11,6 +11,11 @@ const alertVariants = cva(
         default: "bg-background text-foreground",
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        // Each operations panel had hand-rolled this as `bg-green-50 text-green-800
+        // border-green-200` with no dark counterpart, so it was a glaring near-white
+        // box in dark mode.
+        success:
+          "border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-600 dark:border-green-900 dark:bg-green-950 dark:text-green-200 dark:[&>svg]:text-green-400",
       },
     },
     defaultVariants: {

@@ -26,15 +26,21 @@ export default function OperationsPage() {
         </p>
 
         <Tabs defaultValue="array" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 md:grid-cols-7 mb-8">
-            <TabsTrigger value="array">Array</TabsTrigger>
-            <TabsTrigger value="linkedList">Linked List</TabsTrigger>
-            <TabsTrigger value="stack">Stack</TabsTrigger>
-            <TabsTrigger value="queue">Queue</TabsTrigger>
-            <TabsTrigger value="tree">Tree</TabsTrigger>
-            <TabsTrigger value="graph">Graph</TabsTrigger>
-            <TabsTrigger value="polynomial">Polynomial</TabsTrigger>
-          </TabsList>
+          {/* Horizontal scroller rather than a grid: TabsList is a fixed-height
+              inline-flex, so `grid-cols-4` with seven triggers forced two rows
+              into a 36px pill and the nowrap labels collided. Same pattern as
+              the visualize page, which has many more tabs. */}
+          <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <TabsList className="inline-flex whitespace-nowrap mb-8 md:grid md:w-full md:grid-cols-7">
+              <TabsTrigger value="array" className="whitespace-nowrap text-xs md:text-sm">Array</TabsTrigger>
+              <TabsTrigger value="linkedList" className="whitespace-nowrap text-xs md:text-sm">Linked List</TabsTrigger>
+              <TabsTrigger value="stack" className="whitespace-nowrap text-xs md:text-sm">Stack</TabsTrigger>
+              <TabsTrigger value="queue" className="whitespace-nowrap text-xs md:text-sm">Queue</TabsTrigger>
+              <TabsTrigger value="tree" className="whitespace-nowrap text-xs md:text-sm">Tree</TabsTrigger>
+              <TabsTrigger value="graph" className="whitespace-nowrap text-xs md:text-sm">Graph</TabsTrigger>
+              <TabsTrigger value="polynomial" className="whitespace-nowrap text-xs md:text-sm">Polynomial</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="array" className="mt-0">
             <ArrayOperations />

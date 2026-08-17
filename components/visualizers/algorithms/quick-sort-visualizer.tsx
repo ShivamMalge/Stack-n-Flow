@@ -24,6 +24,12 @@ type QuickSortFrame = {
   stepDescription: string
 }
 
+// Tallest bar allowed, in pixels. The plate is 240px tall on mobile with 32px of
+// top padding, and each column also carries a ~24px index label under the bar,
+// which leaves ~184px for the bar itself. The old cap of 260px clipped any value
+// >= 94 against the top edge of the card.
+const MAX_BAR_HEIGHT = 180
+
 export default function QuickSortVisualizer({
   controlledArray,
 }: {
@@ -231,7 +237,7 @@ export default function QuickSortVisualizer({
   const visibleStepIndex = player.currentFrame >= 0 ? player.currentFrame : -1
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {/* Operations Panel */}
       <div className="space-y-6">
         <Card>
@@ -376,14 +382,14 @@ export default function QuickSortVisualizer({
               <div className="text-muted-foreground">Add elements to create an array</div>
             ) : (
               array.map((item, index) => {
-                const height = Math.min(item.value * 2 + 20, 260)
+                const height = Math.min(item.value * 2 + 20, MAX_BAR_HEIGHT)
 
                 return (
                   <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center flex-1 max-w-[40px] mx-0.5">
                     <div
                       style={{ height: `${height}px` }}
                       className={`
-                        w-full rounded-t-sm md:rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
+                        w-full max-h-full rounded-t-sm md:rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
                         ${item.isPivot ? "bg-purple-500 dark:bg-purple-600" : ""}
                         ${item.highlighted ? "bg-blue-400 dark:bg-blue-500" : ""}
                         ${item.isSorted ? "bg-green-400 dark:bg-green-500" : ""}
@@ -407,7 +413,7 @@ export default function QuickSortVisualizer({
             </div>
           )}
 
-          <div className="flex justify-center mt-4 space-x-4">
+          <div className="flex flex-wrap justify-center mt-4 gap-x-4 gap-y-2">
             <div className="flex items-center">
               <div className="w-4 h-4 bg-purple-500 dark:bg-purple-600 rounded-sm mr-2"></div>
               <span className="text-xs">Pivot</span>

@@ -60,6 +60,13 @@ type Edge = {
 const CANVAS_WIDTH = 500
 const CANVAS_HEIGHT = 300
 const NODE_MARGIN = 50
+/** Radius of the rendered node circle; also the drag clamp inset. */
+const NODE_RADIUS = 20
+
+/** Keeps a dragged coordinate inside the canvas so a node can never be lost. */
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
 
 /** Starting graph, laid out to show a branch and a re-join. */
 const SAMPLE_GRAPH: { nodes: GraphNode[]; edges: Edge[] } = {
@@ -302,9 +309,20 @@ export default function GraphVisualizer({
     if (!node) return
     const startNodeX = node.x, startNodeY = node.y
 
+    // The svg is drawn in viewBox units but rendered at whatever width the column
+    // allows, so client-space deltas have to be divided by that scale or the node
+    // trails the cursor. Coordinates are then clamped to the canvas so a node can
+    // never be dragged out of sight (there is no pan or view reset here).
+    const renderedWidth = svgRef.current?.getBoundingClientRect().width ?? 0
+    const scale = renderedWidth > 0 ? renderedWidth / CANVAS_WIDTH : 1
+
     const onMove = (e: MouseEvent) => {
-      const dx = e.clientX - startX, dy = e.clientY - startY
-      setNodes((prev) => prev.map((n) => n.id === nodeId ? { ...n, x: startNodeX + dx, y: startNodeY + dy } : n))
+      const dx = (e.clientX - startX) / scale, dy = (e.clientY - startY) / scale
+      setNodes((prev) => prev.map((n) => n.id === nodeId ? {
+        ...n,
+        x: clamp(startNodeX + dx, NODE_RADIUS, CANVAS_WIDTH - NODE_RADIUS),
+        y: clamp(startNodeY + dy, NODE_RADIUS, CANVAS_HEIGHT - NODE_RADIUS),
+      } : n))
     }
     const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp) }
     document.addEventListener("mousemove", onMove)
@@ -455,8 +473,11 @@ export default function GraphVisualizer({
             <CardDescription>Visual representation of the graph — drag nodes to reposition</CardDescription>
           </CardHeader>
           <CardContent className="p-0 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-center min-h-[300px] md:h-[400px] py-4 bg-muted/5 border-t overflow-auto">
-              <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} className="max-w-none md:max-w-full">
+            {/* No flex centring: centring a 500px svg inside a narrower scroll
+                container hides the overflow on both sides where it cannot be
+                scrolled to. `m-auto` centres it only when it already fits. */}
+            <div className="flex min-h-[300px] py-4 bg-muted/5 border-t overflow-auto">
+              <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} className="m-auto max-w-none md:max-w-full">
                 {edges.map((edge) => {
                   const src = nodes.find((n) => n.id === edge.source)
                   const tgt = nodes.find((n) => n.id === edge.target)
@@ -478,7 +499,7 @@ export default function GraphVisualizer({
                     onClick={() => handleNodeClick(node.id)}
                     className="cursor-pointer"
                   >
-                    <circle r={20} className={`
+                    <circle r={NODE_RADIUS} className={`
                       transition-all duration-300 ease-in-out
                       ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : ""}
                       ${node.visited && !node.highlighted ? "fill-green-100 stroke-green-500 dark:fill-green-900" : ""}

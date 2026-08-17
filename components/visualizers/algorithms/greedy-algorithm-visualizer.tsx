@@ -179,7 +179,7 @@ export default function GreedyAlgorithmVisualizer() {
   const visibleStepIndex = player.currentFrame
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       <div className="space-y-6">
         <Card>
           <CardHeader>

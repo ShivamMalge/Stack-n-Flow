@@ -341,8 +341,8 @@ export default function StackOperations() {
             )}
 
             {success && (
-              <Alert className="bg-green-50 text-green-800 border-green-200">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <Alert variant="success">
+                <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>{success}</AlertDescription>
               </Alert>
             )}

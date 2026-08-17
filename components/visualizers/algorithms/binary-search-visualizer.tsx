@@ -271,7 +271,7 @@ export default function BinarySearchVisualizer({
   const visibleStepIndex = player.currentFrame >= 0 ? player.currentFrame : -1
 
   return (
-    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
+    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start"}>
       {/* Operations Panel - Order 1 on Mobile, Left on Desktop */}
       {!mini && (
         <div className="order-1 md:col-start-1">
@@ -464,7 +464,7 @@ export default function BinarySearchVisualizer({
                   </div>
                 )}
 
-                <div className="flex justify-center mt-8 space-x-4">
+                <div className="flex flex-wrap justify-center mt-8 gap-x-4 gap-y-2">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900 border border-blue-500 rounded-sm mr-2"></div>
                     <span className="text-xs">Search Range</span>

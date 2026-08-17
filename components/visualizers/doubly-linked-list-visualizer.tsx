@@ -278,7 +278,10 @@ export default function DoublyLinkedListVisualizer({
           <CardContent>
             <Tabs value={operation} onValueChange={setOperation}>
               <div className="overflow-x-auto pb-2">
-                <TabsList className="inline-flex min-w-full md:grid md:grid-cols-5 mb-4">
+                {/* Five nowrap labels need ~96px each; a 5-column grid only gives
+                    ~66px per cell between 768px and ~1100px, so the labels
+                    overlapped. Wrap to two rows until there is room for five. */}
+                <TabsList className="inline-flex min-w-full md:grid md:h-auto md:grid-cols-3 md:gap-1 lg:grid-cols-5 mb-4">
                   <TabsTrigger value="insertFront" className="whitespace-nowrap text-xs md:text-sm">
                     Insert Front
                   </TabsTrigger>

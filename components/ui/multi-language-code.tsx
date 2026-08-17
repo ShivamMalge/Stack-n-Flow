@@ -68,9 +68,10 @@ export function MultiLanguageCode({
                 </DropdownMenu>
             </div>
 
-            {/* Matches the dark surface CodePanel uses, via theme tokens rather
-                than the GitHub-dark hex values that were inlined here. */}
-            <div className="bg-slate-950 text-slate-300 p-4 overflow-x-auto text-sm font-mono leading-relaxed max-h-[400px]">
+            {/* Deliberately a dark surface in both themes, matching CodePanel.
+                The slates are pinned for that reason, not theme tokens — those
+                would invert in light mode and wash the code out. */}
+            <div className="bg-slate-950 text-slate-300 p-4 overflow-auto text-sm font-mono leading-relaxed max-h-[400px]">
                 <pre className="m-0">
                     <code className="block whitespace-pre">{currentImpl.code}</code>
                 </pre>
