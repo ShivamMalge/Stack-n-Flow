@@ -118,23 +118,42 @@ Neither was in the original audit; both were found by reading the code around th
 
 ---
 
-## Phase 4 — Pratyaksha Delivery Path (≈ 2–3 days) — "make it actually installable"
+## Phase 4 — Pratyaksha Delivery Path ✅ COMPLETE (2026-08-17)
+
+**The library is now installable and renders in notebooks.** All four critical defects were fixed and verified end-to-end: a wheel was built, installed into a clean virtualenv outside the repo, and confirmed to import from `site-packages`, load both assets non-empty, and return a real `application/vnd.jupyter.widget-view+json` mimebundle. That full path had never been executed before.
+
+| Before | After |
+|---|---|
+| wheel contained **0** Python modules | 23 modules + assets + `py.typed` |
+| assets sought at `site-packages/dist` (never exists) | `pratyaksha/static/`, shipped as package-data |
+| missing asset → blank widget, no error | `RuntimeError` naming the path and build command |
+| `_repr_html_` (suppressed widget rendering) | `_repr_mimebundle_` |
+
+**Verification:** 23 Python tests (up from 16), 19 JS tests, `next build` succeeds, `tsc --noEmit` clean.
+
+### Notable details
+- **The CSS would have restyled the whole notebook.** anywidget injects the stylesheet into the host document, and the app's CSS carried Tailwind Preflight plus global `*` and `body` rules. The bundle now builds from `src/bridge/bridge.css` via `tailwind.bridge.config.ts` (Preflight disabled, base rules scoped to `.pratyaksha-container`). Design tokens moved to `app/theme-tokens.css`, shared by both stylesheets so they cannot drift.
+- **Tokens could not stay inside `@layer base`.** Next.js compiles the imported tokens file as its own module, where no `@tailwind base` directive is in scope, so the build failed until the layer wrapper was dropped. Custom properties do not need it.
+- **`dist/` is gone**, replaced by `pratyaksha/static/`. Docs updated accordingly.
+- **Still true after this phase:** only Stack and Queue are real renderers, there are no animations, and `QuickSort` does not sort. `documentation.md` now says so plainly instead of claiming otherwise — those are P2/P3 in `pratyaksha_phases.md`.
+
+### Original checklist
 
 The telemetry core and bridge are healthy; the distribution path is broken end-to-end. In dependency order:
 
-- [ ] 🔴 **`pip install .` ships zero Python code.** `pyproject.toml` has no package config; setuptools auto-discovery takes the src-layout branch (because `src/` exists) and builds a wheel containing only an empty `bridge` package. Fix:
+- [x] 🔴 **`pip install .` ships zero Python code.** `pyproject.toml` has no package config; setuptools auto-discovery takes the src-layout branch (because `src/` exists) and builds a wheel containing only an empty `bridge` package. Fix:
   ```toml
   [tool.setuptools.packages.find]
   include = ["pratyaksha*"]
   ```
-- [ ] 🔴 **Widget assets can never load after install** — `widget.py:6` resolves `../dist` to `site-packages/dist`, and `dist/` isn't package data anyway. Build tsup output to `pratyaksha/static/`, add `[tool.setuptools.package-data] pratyaksha = ["static/*"]`, point `widget.py` at `Path(__file__).parent / "static"`.
-- [ ] 🔴 **Silent failure + encoding hazard** — `widget.py:11-12` falls back to `""` when assets are missing (blank widget, no error) and `read_text()` uses the locale codec (cp1252 on Windows). Use `read_text(encoding="utf-8")` and `raise RuntimeError("run npm run build-lib")` when missing.
-- [ ] 🔴 **Wrong notebook render hook** — `structures/base.py:40-41` and `algorithms/base.py:33-34` delegate to `widget._repr_html_()`, which anywidget widgets don't expose (they use `_repr_mimebundle_`), and static HTML can't carry a live comm anyway. Replace with `_repr_mimebundle_(**kwargs)` delegation, **then open a real notebook and verify a Stack renders and animates** — this is the one thing never tested end-to-end.
-- [ ] 🟠 **HashTable type bug** — `structures/hash_table.py:30,60`: keys stored as `str(key)` but compared as raw `key`, so `insert(5, …)` twice creates a duplicate instead of an update. Normalize `key = str(key)` once at the top. (Existing test uses only string keys, masking this.)
-- [ ] 🟠 **Global CSS leak into notebooks** — `dist/pratyaksha.css` starts with Tailwind Preflight (`*` selectors); anywidget injects it document-wide and will restyle Jupyter/Colab chrome. Scope under `.pratyaksha-container` or disable preflight for the bridge build. Also add `./src/**/*.{ts,tsx}` to `tailwind.config.ts` content globs (bridge classes currently survive only because the app happens to use them).
-- [ ] 🟡 **Bridge polish:** `nodes: null` coerced to `[]` on mount but not on update (`pratyaksha-bridge.tsx:8,13`); renderer types declare `id: number` while Python sends 8-char UUID strings — widen to `string | number` and remove the eight `as any` casts; add an `else`/error branch after the `isRendererOnlyComponent` guard.
-- [ ] 🟡 **Truthful metadata & docs:** fill `pyproject.toml` (`requires-python`, `readme`, `license`, `authors`, dependency floors, `[project.optional-dependencies] dev = ["pytest"]`); pin the Colab notebook's `pip install git+…` to a tag; rewrite `documentation.md:78-83` — three of the four "Phase 1 complete" checkboxes are not currently true, and Framer Motion animation is documented in three places but imported nowhere. Scope the claim to what will now be real: "Stack and Queue render live in a notebook."
-- [ ] ⚪ Implement or delete the stubs: `QuickSort` has an identity reducer and no `sort()`; `BinarySearch` has only `set_result()` — the caller does the searching. Either implement stepwise algorithms on the telemetry core (great demo material) or remove them from the public API.
+- [x] 🔴 **Widget assets can never load after install** — `widget.py:6` resolves `../dist` to `site-packages/dist`, and `dist/` isn't package data anyway. Build tsup output to `pratyaksha/static/`, add `[tool.setuptools.package-data] pratyaksha = ["static/*"]`, point `widget.py` at `Path(__file__).parent / "static"`.
+- [x] 🔴 **Silent failure + encoding hazard** — `widget.py:11-12` falls back to `""` when assets are missing (blank widget, no error) and `read_text()` uses the locale codec (cp1252 on Windows). Use `read_text(encoding="utf-8")` and `raise RuntimeError("run npm run build-lib")` when missing.
+- [x] 🔴 **Wrong notebook render hook** — `structures/base.py:40-41` and `algorithms/base.py:33-34` delegate to `widget._repr_html_()`, which anywidget widgets don't expose (they use `_repr_mimebundle_`), and static HTML can't carry a live comm anyway. Replace with `_repr_mimebundle_(**kwargs)` delegation, **then open a real notebook and verify a Stack renders and animates** — this is the one thing never tested end-to-end.
+- [x] 🟠 **HashTable type bug** — `structures/hash_table.py:30,60`: keys stored as `str(key)` but compared as raw `key`, so `insert(5, …)` twice creates a duplicate instead of an update. Normalize `key = str(key)` once at the top. (Existing test uses only string keys, masking this.)
+- [x] 🟠 **Global CSS leak into notebooks** — `dist/pratyaksha.css` starts with Tailwind Preflight (`*` selectors); anywidget injects it document-wide and will restyle Jupyter/Colab chrome. Scope under `.pratyaksha-container` or disable preflight for the bridge build. Also add `./src/**/*.{ts,tsx}` to `tailwind.config.ts` content globs (bridge classes currently survive only because the app happens to use them).
+- [x] 🟡 **Bridge polish:** `nodes: null` coerced to `[]` on mount but not on update (`pratyaksha-bridge.tsx:8,13`); renderer types declare `id: number` while Python sends 8-char UUID strings — widen to `string | number` and remove the eight `as any` casts; add an `else`/error branch after the `isRendererOnlyComponent` guard.
+- [x] 🟡 **Truthful metadata & docs:** fill `pyproject.toml` (`requires-python`, `readme`, `license`, `authors`, dependency floors, `[project.optional-dependencies] dev = ["pytest"]`); pin the Colab notebook's `pip install git+…` to a tag; rewrite `documentation.md:78-83` — three of the four "Phase 1 complete" checkboxes are not currently true, and Framer Motion animation is documented in three places but imported nowhere. Scope the claim to what will now be real: "Stack and Queue render live in a notebook."
+- [ ] ⚪ *(deferred to pratyaksha_phases.md P3)* Implement or delete the stubs: `QuickSort` has an identity reducer and no `sort()`; `BinarySearch` has only `set_result()` — the caller does the searching. Either implement stepwise algorithms on the telemetry core (great demo material) or remove them from the public API.
 
 ---
 
