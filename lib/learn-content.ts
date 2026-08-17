@@ -511,3 +511,12 @@ for (const ds of unpopulatedDataStructures) {
         }
     }
 }
+
+/**
+ * Whether a topic has written content. The /learn catalogue lists more topics
+ * than are written up, so cards use this to show "Coming soon" instead of
+ * linking to a "Topic Not Found" page.
+ */
+export function hasLearnContent(slug: string): boolean {
+    return slug in dataStructureInfo
+}

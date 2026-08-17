@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -190,24 +190,35 @@ export default function HashTableVisualizer({
     const stepDesc = player.currentSnapshot?.stepDescription ?? ""
     const hl = player.currentSnapshot?.hashIndex ?? highlightIndex
 
+    // Buckets the run currently loaded in the player will leave behind. They are
+    // committed to the base state only once the player reports the run genuinely
+    // finished; a wall-clock timer would fire regardless of the user pausing,
+    // stepping, scrubbing or changing speed and clobber the display.
+    const pendingFinalRef = useRef<BucketEntry[][] | null>(null)
+
+    useEffect(() => {
+        if (!player.isComplete) return
+        const finalBuckets = pendingFinalRef.current
+        if (!finalBuckets) return
+        pendingFinalRef.current = null   // commit once per run, never on re-render
+        setBuckets(resetStates(finalBuckets))
+    }, [player.isComplete])
+
     const handleInsert = () => {
         if (!keyInput || player.isPlaying) return
         const frames = generateInsert(buckets, keyInput.trim(), valueInput.trim() || keyInput.trim())
-        // After animation completes, update base state
-        const lastSnap = frames[frames.length - 1].snapshot
+        // Base state is updated from the effect above once the run completes
+        pendingFinalRef.current = frames[frames.length - 1].snapshot.buckets
         setSteps(frames.map((f) => f.description))
         player.loadFrames(frames)
         setTimeout(() => player.play(), 50)
-        // Apply final state after animation
-        setTimeout(() => {
-            setBuckets(resetStates(lastSnap.buckets))
-        }, frames.length * player.speed + 200)
         setKeyInput(""); setValueInput("")
     }
 
     const handleSearch = () => {
         if (!searchKey || player.isPlaying) return
         const frames = generateSearch(buckets, searchKey.trim())
+        pendingFinalRef.current = null   // a search never mutates the table
         setSteps(frames.map((f) => f.description))
         player.loadFrames(frames)
         setTimeout(() => player.play(), 50)
@@ -216,21 +227,22 @@ export default function HashTableVisualizer({
     const handleDelete = () => {
         if (!searchKey || player.isPlaying) return
         const frames = generateDelete(buckets, searchKey.trim())
-        const lastSnap = frames[frames.length - 1].snapshot
+        pendingFinalRef.current = frames[frames.length - 1].snapshot.buckets
         setSteps(frames.map((f) => f.description))
         player.loadFrames(frames)
         setTimeout(() => player.play(), 50)
-        setTimeout(() => { setBuckets(resetStates(lastSnap.buckets)) }, frames.length * player.speed + 200)
     }
 
     const handleClear = () => {
         if (player.isPlaying) return
+        pendingFinalRef.current = null
         setBuckets(Array.from({ length: TABLE_SIZE }, () => []))
         setSteps([]); player.clear(); setHighlightIndex(-1)
     }
 
     const loadSample = () => {
         if (player.isPlaying) return
+        pendingFinalRef.current = null
         const pairs = [["apple", "fruit"], ["banana", "fruit"], ["car", "vehicle"], ["dog", "animal"], ["cat", "animal"]]
         const b: BucketEntry[][] = Array.from({ length: TABLE_SIZE }, () => [])
         for (const [k, v] of pairs) {
@@ -269,13 +281,13 @@ export default function HashTableVisualizer({
                         {operation === "insert" && (
                             <div className="space-y-3">
                                 <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Identifier (Key)</label>
-                                    <Input placeholder="e.g. 'name' or 'id'" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
+                                    <label htmlFor="ht-key" className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Identifier (Key)</label>
+                                    <Input id="ht-key" placeholder="e.g. 'name' or 'id'" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Data (Value)</label>
-                                    <Input placeholder="e.g. 'John' or '123'" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
+                                    <label htmlFor="ht-value" className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Data (Value)</label>
+                                    <Input id="ht-value" placeholder="e.g. 'John' or '123'" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
                                 </div>
                                 <Button onClick={handleInsert} disabled={player.isPlaying || !keyInput} className="w-full">
@@ -287,8 +299,8 @@ export default function HashTableVisualizer({
                         {(operation === "search" || operation === "delete") && (
                             <div className="space-y-3">
                                 <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Key to find</label>
-                                    <Input placeholder="Enter the key" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
+                                    <label htmlFor="ht-search" className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Key to find</label>
+                                    <Input id="ht-search" placeholder="Enter the key" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && (operation === "search" ? handleSearch() : handleDelete())}
                                         disabled={player.isPlaying} />
                                 </div>

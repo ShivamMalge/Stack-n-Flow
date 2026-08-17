@@ -42,10 +42,14 @@ export default function StackVisualizer({
 } = {}) {
   // Initialize with empty stack
   const [internalStack, setStack] = useState<StackItem[]>([])
-  const stack = controlledNodes || internalStack;
+  // When a parent supplies nodes it owns the state, so the interactive controls
+  // are disabled rather than silently writing to internal state that is never read.
+  const isControlled = controlledNodes !== undefined
+  const stack = isControlled ? controlledNodes : internalStack;
   const [inputValue, setInputValue] = useState("")
   const [animating, setAnimating] = useState(false)
-  const [nextId, setNextId] = useState(4)
+  // Derived from the current contents so ids cannot collide with preset data.
+  const nextId = stack.reduce((max, item) => Math.max(max, item.id), 0) + 1
   // Update the search (peek) function to show search results
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [activeCode, setActiveCode] = useState<string[]>([])
@@ -63,7 +67,7 @@ export default function StackVisualizer({
   }, [mini, stack.length]);
 
   const handlePush = () => {
-    if (!inputValue || animating) return
+    if (!inputValue || animating || isControlled) return
 
     const value = Number.parseInt(inputValue)
     setAnimating(true)
@@ -75,7 +79,6 @@ export default function StackVisualizer({
       // Create a new item with the "isNew" flag for animation
       const newItem = { id: nextId, value, isNew: true }
       setStack([newItem, ...stack])
-      setNextId(nextId + 1)
 
       setTimeout(() => {
         setActiveLine(3)
@@ -92,7 +95,7 @@ export default function StackVisualizer({
   }
 
   const handlePop = () => {
-    if (stack.length === 0 || animating) return
+    if (stack.length === 0 || animating || isControlled) return
 
     setAnimating(true)
     setActiveCode(POP_CODE)
@@ -116,7 +119,7 @@ export default function StackVisualizer({
   }
 
   const handlePeek = () => {
-    if (stack.length === 0 || animating) return
+    if (stack.length === 0 || animating || isControlled) return
 
     setAnimating(true)
     setSearchResult(null)
@@ -148,17 +151,19 @@ export default function StackVisualizer({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Operations Panel - Top on Mobile, Left on Desktop */}
-      <div className="order-1 md:col-start-1">
-        <StackController
-          inputValue={inputValue}
-          animating={animating}
-          hasItems={stack.length > 0}
-          onInputChange={setInputValue}
-          onPush={handlePush}
-          onPop={handlePop}
-          onPeek={handlePeek}
-        />
-      </div>
+      {!mini && !isControlled && (
+        <div className="order-1 md:col-start-1">
+          <StackController
+            inputValue={inputValue}
+            animating={animating}
+            hasItems={stack.length > 0}
+            onInputChange={setInputValue}
+            onPush={handlePush}
+            onPop={handlePop}
+            onPeek={handlePeek}
+          />
+        </div>
+      )}
 
       {/* Visualization Panel - Second on Mobile, Right on Desktop */}
       <div className="order-2 md:col-start-2 md:row-span-3">

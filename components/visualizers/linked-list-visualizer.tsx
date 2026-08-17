@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -79,6 +79,44 @@ export default function LinkedListVisualizer({
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
 
+  // Timer registry so every pending animation step is cancelled on unmount
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
+
+  // Mirror of the latest nodes so timer callbacks never read a stale snapshot
+  const nodesRef = useRef<Node[]>(nodes)
+
+  useEffect(() => {
+    nodesRef.current = nodes
+  }, [nodes])
+
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms)
+    timersRef.current.push(id)
+    return id
+  }, [])
+
+  const scheduleInterval = useCallback((fn: () => void, ms: number): ReturnType<typeof setInterval> => {
+    const id = setInterval(fn, ms)
+    intervalsRef.current.push(id)
+    return id
+  }, [])
+
+  const cancelInterval = useCallback((id: ReturnType<typeof setInterval>) => {
+    clearInterval(id)
+    intervalsRef.current = intervalsRef.current.filter((intervalId) => intervalId !== id)
+  }, [])
+
+  useEffect(
+    () => () => {
+      timersRef.current.forEach(clearTimeout)
+      intervalsRef.current.forEach(clearInterval)
+      timersRef.current = []
+      intervalsRef.current = []
+    },
+    [],
+  )
+
   useEffect(() => {
     if (mini && nodes.length === 0) {
       setNodes([
@@ -98,19 +136,19 @@ export default function LinkedListVisualizer({
     setActiveCode(INSERT_FRONT_CODE)
     setActiveLine(0)
 
-    setTimeout(() => {
+    schedule(() => {
       setActiveLine(1)
-      setTimeout(() => {
+      schedule(() => {
         setActiveLine(2)
         // Create a new node with the "isNew" flag for animation
         const newNode = { id: nextId, value, isNew: true }
-        setNodes([newNode, ...nodes])
+        setNodes([newNode, ...nodesRef.current])
         setNextId(nextId + 1)
 
-        setTimeout(() => {
+        schedule(() => {
           setActiveLine(3)
           // After animation, remove the "isNew" flag
-          setTimeout(() => {
+          schedule(() => {
             setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
             setAnimating(false)
             setActiveLine(null)
@@ -130,17 +168,17 @@ export default function LinkedListVisualizer({
     setActiveCode(INSERT_REAR_CODE)
     setActiveLine(0)
 
-    setTimeout(() => {
+    schedule(() => {
       setActiveLine(1)
-      setTimeout(() => {
-        if (nodes.length === 0) {
+      schedule(() => {
+        if (nodesRef.current.length === 0) {
           setActiveLine(2)
-          setTimeout(() => {
+          schedule(() => {
             setActiveLine(3)
             const newNode = { id: nextId, value, isNew: true }
             setNodes([newNode])
             setNextId(nextId + 1)
-            setTimeout(() => {
+            schedule(() => {
               setNodes((nodes) => nodes.map((n) => (n.id === newNode.id ? { ...n, isNew: false } : n)))
               setAnimating(false)
               setActiveLine(null)
@@ -150,14 +188,14 @@ export default function LinkedListVisualizer({
         }
 
         setActiveLine(5)
-        setTimeout(() => {
+        schedule(() => {
           setActiveLine(6)
-          setTimeout(() => {
+          schedule(() => {
             setActiveLine(8)
             const newNode = { id: nextId, value, isNew: true }
-            setNodes([...nodes, newNode])
+            setNodes([...nodesRef.current, newNode])
             setNextId(nextId + 1)
-            setTimeout(() => {
+            schedule(() => {
               setNodes((nodes) => nodes.map((n) => (n.id === newNode.id ? { ...n, isNew: false } : n)))
               setAnimating(false)
               setActiveLine(null)
@@ -182,13 +220,13 @@ export default function LinkedListVisualizer({
     setActiveCode(DELETE_CODE)
     setActiveLine(0)
 
-    setTimeout(() => {
+    schedule(() => {
       setActiveLine(2)
       if (nodeIndex === 0) {
         setActiveLine(3)
-        setTimeout(() => {
+        schedule(() => {
           setNodes((nodes) => nodes.map((node, index) => (index === 0 ? { ...node, isDeleting: true } : node)))
-          setTimeout(() => {
+          schedule(() => {
             setNodes((nodes) => nodes.slice(1))
             setAnimating(false)
             setActiveLine(null)
@@ -198,12 +236,12 @@ export default function LinkedListVisualizer({
       }
 
       setActiveLine(5)
-      setTimeout(() => {
+      schedule(() => {
         setActiveLine(6)
-        setTimeout(() => {
+        schedule(() => {
           setActiveLine(9)
           setNodes((nodes) => nodes.map((node, index) => (index === nodeIndex ? { ...node, isDeleting: true } : node)))
-          setTimeout(() => {
+          schedule(() => {
             setNodes((nodes) => nodes.filter((_, index) => index !== nodeIndex))
             setAnimating(false)
             setActiveLine(null)
@@ -231,17 +269,17 @@ export default function LinkedListVisualizer({
     let currentIndex = 0
     let found = false
 
-    setTimeout(() => {
+    schedule(() => {
       setActiveLine(1)
-      const searchInterval = setInterval(() => {
-        if (currentIndex >= nodes.length) {
-          clearInterval(searchInterval)
+      const searchInterval = scheduleInterval(() => {
+        if (currentIndex >= nodesRef.current.length) {
+          cancelInterval(searchInterval)
           setAnimating(false)
           if (!found) {
             setSearchResult("Element not found")
             setActiveLine(5)
           }
-          setTimeout(() => setActiveLine(null), 1000)
+          schedule(() => setActiveLine(null), 1000)
           return
         }
 
@@ -253,14 +291,14 @@ export default function LinkedListVisualizer({
         )
 
         setActiveLine(2)
-        setTimeout(() => {
+        schedule(() => {
           setActiveLine(3)
           // Check if current node has the value we're looking for
-          if (nodes[currentIndex].value === value) {
+          if (nodesRef.current[currentIndex]?.value === value) {
             found = true
             setSearchResult("Element found")
-            clearInterval(searchInterval)
-            setTimeout(() => {
+            cancelInterval(searchInterval)
+            schedule(() => {
               setNodes((nodes) => nodes.map((node) => ({ ...node, highlighted: false })))
               setAnimating(false)
               setActiveLine(null)

@@ -24,13 +24,22 @@ export default function ArrayOperations() {
   const [steps, setSteps] = useState<string[]>([])
 
   const parseArray = (input: string): number[] => {
+    // Guard the empty string first: "".split(",") is [""], and Number("") is 0,
+    // so blank input used to produce [0] and report success.
+    if (!input.trim()) {
+      setError("Please enter at least one number")
+      return []
+    }
+
     try {
       return input.split(",").map((item) => {
-        const num = Number(item.trim())
+        const trimmed = item.trim()
+        if (trimmed === "") throw new Error("Empty value in array")
+        const num = Number(trimmed)
         if (isNaN(num)) throw new Error("Invalid number in array")
         return num
       })
-    } catch (err) {
+    } catch {
       setError("Please enter valid numbers separated by commas")
       return []
     }

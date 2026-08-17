@@ -14,7 +14,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
 
   if (!dsInfo) {
     return (
-      <div className="flex flex-col min-h-screen dark">
+      <div className="flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-1 container mx-auto py-12 px-4">
           <h1 className="text-3xl font-bold mb-4">Topic Not Found</h1>
@@ -39,7 +39,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
     dataStructure === "binary-search"
 
   return (
-    <div className="flex flex-col min-h-screen dark bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       <Navbar />
 
       <main className="flex-1">

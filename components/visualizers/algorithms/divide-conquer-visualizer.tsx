@@ -8,6 +8,7 @@ import { RotateCcw, Plus, ArrowDown, ArrowUp, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+import InlineAlert from "@/components/ui/inline-alert"
 
 type ArrayItem = {
   id: number
@@ -34,6 +35,7 @@ export default function DivideConquerVisualizer() {
   const [currentPhase, setCurrentPhase] = useState<"divide" | "merge" | "none">("none")
   const [dividePhase, setDividePhase] = useState<{ arrays: number[][]; level: number }[]>([])
   const [mergePhase, setMergePhase] = useState<{ arrays: number[][]; level: number }[]>([])
+  const [inputError, setInputError] = useState<string | null>(null)
 
   const onFrameChange = useCallback((snapshot: DivideConquerFrame) => {
     setArray(snapshot.array)
@@ -45,10 +47,11 @@ export default function DivideConquerVisualizer() {
   const player = useAnimationPlayer<DivideConquerFrame>(onFrameChange)
 
   const handleAddElement = () => {
+    setInputError(null)
     if (!inputValue || player.isPlaying) return
     const value = parseBoundedInt(inputValue)
     if (value === null) {
-      alert(MAX_INPUT_MESSAGE)
+      setInputError(MAX_INPUT_MESSAGE)
       return
     }
     setArray((prev) => [...prev, { id: nextId, value }])
@@ -63,6 +66,7 @@ export default function DivideConquerVisualizer() {
     setCurrentPhase("none")
     setDividePhase([])
     setMergePhase([])
+    setInputError(null)
     player.clear()
   }
 
@@ -80,6 +84,7 @@ export default function DivideConquerVisualizer() {
     setCurrentPhase("none")
     setDividePhase([])
     setMergePhase([])
+    setInputError(null)
     player.clear()
   }
 

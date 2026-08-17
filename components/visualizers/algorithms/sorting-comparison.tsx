@@ -9,6 +9,7 @@ import { Shuffle, Play, Pause, RotateCcw, SkipForward, SkipBack, Plus, X } from 
 import { Slider } from "@/components/ui/slider"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MOBILE_BREAKPOINT, SPEED_PRESETS } from "@/lib/constants"
+import InlineAlert from "@/components/ui/inline-alert"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -312,14 +313,13 @@ export default function SortingComparison() {
     const [algoB, setAlgoB] = useState<AlgorithmKey>("merge")
     const [values, setValues] = useState<number[]>([])                // source array
     const [inputVal, setInputVal] = useState("")
+    const [inputError, setInputError] = useState<string | null>(null)
     const [speedIdx, setSpeedIdx] = useState(1)
 
     const [barsA, setBarsA] = useState<BarItem[]>([])
     const [statsA, setStatsA] = useState({ comparisons: 0, swaps: 0 })
     const [barsB, setBarsB] = useState<BarItem[]>([])
     const [statsB, setStatsB] = useState({ comparisons: 0, swaps: 0 })
-    const [descA, setDescA] = useState("")
-    const [descB, setDescB] = useState("")
     const [stepsA, setStepsA] = useState<string[]>([])
     const [stepsB, setStepsB] = useState<string[]>([])
     const activeStepRefA = useRef<HTMLLIElement | null>(null)
@@ -356,11 +356,10 @@ export default function SortingComparison() {
         }
     }, [playerB.currentFrame])
 
-    // Update descriptions from players
-    const dA = playerA.currentDescription
-    const dB = playerB.currentDescription
-    if (dA !== descA) setDescA(dA)
-    if (dB !== descB) setDescB(dB)
+    // Read straight from the players. These were previously mirrored into state
+    // and assigned during render, which triggers a re-render loop warning.
+    const descA = playerA.currentDescription
+    const descB = playerB.currentDescription
 
     const isPlaying = playerA.isPlaying || playerB.isPlaying
     const hasStarted = playerA.totalFrames > 0
@@ -373,15 +372,15 @@ export default function SortingComparison() {
         setBarsB(vals.map((v) => ({ value: v, state: "default" })))
         setStatsA({ comparisons: 0, swaps: 0 })
         setStatsB({ comparisons: 0, swaps: 0 })
-        setDescA(""); setDescB("")
         setStepsA([]); setStepsB([])
         playerA.clear(); playerB.clear()
     }
 
     const handleAddValue = () => {
+        setInputError(null)
         const n = Number.parseInt(inputVal)
         if (!inputVal || isNaN(n) || n <= 0 || n > 999) return
-        if (values.length >= 20) { alert("Maximum 20 elements allowed"); return }
+        if (values.length >= 20) { setInputError("Maximum 20 elements allowed"); return }
         const newVals = [...values, n]
         setValues(newVals)
         syncBars(newVals)
@@ -396,6 +395,7 @@ export default function SortingComparison() {
 
     const handleRandom = () => {
         if (isPlaying) return
+        setInputError(null)
         const count = 12
         const newVals = Array.from({ length: count }, () => Math.floor(Math.random() * 90) + 10)
         setValues(newVals)
@@ -404,6 +404,7 @@ export default function SortingComparison() {
 
     const handleClearInput = () => {
         if (isPlaying) return
+        setInputError(null)
         setValues([])
         syncBars([])
     }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -65,6 +65,37 @@ export default function CircularQueueVisualizer({
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
 
+  // Timer registry so every pending animation step is cancelled on unmount
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
+
+  // Mirrors of the latest queue state so timer callbacks never read a stale snapshot
+  const queueRef = useRef<QueueItem[]>(queue)
+  const frontRef = useRef(front)
+  const sizeRef = useRef(size)
+
+  useEffect(() => {
+    queueRef.current = queue
+    frontRef.current = front
+    sizeRef.current = size
+  }, [queue, front, size])
+
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms)
+    timersRef.current.push(id)
+    return id
+  }, [])
+
+  useEffect(
+    () => () => {
+      timersRef.current.forEach(clearTimeout)
+      intervalsRef.current.forEach(clearInterval)
+      timersRef.current = []
+      intervalsRef.current = []
+    },
+    [],
+  )
+
   const handleEnqueue = () => {
     if (!inputValue || animating || size === maxSize) return
 
@@ -95,7 +126,7 @@ export default function CircularQueueVisualizer({
     setActiveLine(3) // queue[rear] = value
 
     // After animation, remove the "isNew" flag
-    setTimeout(() => {
+    schedule(() => {
       setQueue((queue) => queue.map((item) => (item.id === newItem.id ? { ...item, isNew: false } : item)))
       setAnimating(false)
       setActiveLine(null)
@@ -115,15 +146,15 @@ export default function CircularQueueVisualizer({
     setQueue((queue) => queue.map((item, index) => (index === front ? { ...item, isDequeuing: true } : item)))
 
     // After animation, update the front
-    setTimeout(() => {
+    schedule(() => {
       // Mark the slot as empty by setting it to null or a placeholder
-      const newQueue = [...queue]
-      newQueue[front] = { id: -1, value: -1 } // Placeholder for empty slot
+      const newQueue = [...queueRef.current]
+      newQueue[frontRef.current] = { id: -1, value: -1 } // Placeholder for empty slot
       setQueue(newQueue)
 
       // Update front and size
-      setFront((front + 1) % maxSize)
-      setSize(size - 1)
+      setFront((frontRef.current + 1) % maxSize)
+      setSize(sizeRef.current - 1)
       setAnimating(false)
       setActiveLine(null)
     }, 1000)
@@ -149,7 +180,7 @@ export default function CircularQueueVisualizer({
     setSearchResult("Front element: " + queue[front].value)
 
     // After animation, remove the highlight
-    setTimeout(() => {
+    schedule(() => {
       setQueue((queue) => queue.map((item) => ({ ...item, highlighted: false })))
       setAnimating(false)
       setActiveLine(null)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -59,6 +59,44 @@ export default function ArrayVisualizer({
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
 
+  // Timer registry so every pending animation step is cancelled on unmount
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
+
+  // Mirror of the latest array so timer callbacks never read a stale snapshot
+  const arrayRef = useRef<ArrayItem[]>(array)
+
+  useEffect(() => {
+    arrayRef.current = array
+  }, [array])
+
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms)
+    timersRef.current.push(id)
+    return id
+  }, [])
+
+  const scheduleInterval = useCallback((fn: () => void, ms: number): ReturnType<typeof setInterval> => {
+    const id = setInterval(fn, ms)
+    intervalsRef.current.push(id)
+    return id
+  }, [])
+
+  const cancelInterval = useCallback((id: ReturnType<typeof setInterval>) => {
+    clearInterval(id)
+    intervalsRef.current = intervalsRef.current.filter((intervalId) => intervalId !== id)
+  }, [])
+
+  useEffect(
+    () => () => {
+      timersRef.current.forEach(clearTimeout)
+      intervalsRef.current.forEach(clearInterval)
+      timersRef.current = []
+      intervalsRef.current = []
+    },
+    [],
+  )
+
   useEffect(() => {
     if (mini && array.length === 0) {
       setArray([
@@ -87,25 +125,25 @@ export default function ArrayVisualizer({
     setActiveCode(INSERT_CODE)
     setActiveLine(0)
 
-    setTimeout(() => {
+    schedule(() => {
       setActiveLine(2)
-      setTimeout(() => {
+      schedule(() => {
         setActiveLine(3)
-        setTimeout(() => {
+        schedule(() => {
           setActiveLine(4)
           // Create a new item with the "isNew" flag for animation
           const newItem = { id: nextId, value, isNew: true }
 
           // Insert at the specified index
-          const newArray = [...array]
+          const newArray = [...arrayRef.current]
           newArray.splice(index, 0, newItem)
           setArray(newArray)
           setNextId(nextId + 1)
 
-          setTimeout(() => {
+          schedule(() => {
             setActiveLine(5)
             // After animation, remove the "isNew" flag
-            setTimeout(() => {
+            schedule(() => {
               setArray((array) => array.map((item) => (item.id === newItem.id ? { ...item, isNew: false } : item)))
               setAnimating(false)
               setActiveLine(null)
@@ -134,17 +172,17 @@ export default function ArrayVisualizer({
     setActiveCode(DELETE_CODE)
     setActiveLine(0)
 
-    setTimeout(() => {
+    schedule(() => {
       setActiveLine(2)
-      setTimeout(() => {
+      schedule(() => {
         setActiveLine(3)
         // Mark the item for deletion animation
         setArray((array) => array.map((item, i) => (i === index ? { ...item, isDeleting: true } : item)))
 
-        setTimeout(() => {
+        schedule(() => {
           setActiveLine(4)
           // After animation, remove the item
-          setTimeout(() => {
+          schedule(() => {
             setArray((array) => array.filter((_, i) => i !== index))
             setAnimating(false)
             setActiveLine(null)
@@ -172,15 +210,15 @@ export default function ArrayVisualizer({
     let currentIndex = 0
     let found = false
 
-    const searchInterval = setInterval(() => {
+    const searchInterval = scheduleInterval(() => {
       setActiveLine(1)
-      if (currentIndex >= array.length) {
-        clearInterval(searchInterval)
+      if (currentIndex >= arrayRef.current.length) {
+        cancelInterval(searchInterval)
         setAnimating(false)
         if (!found) {
           setSearchResult("Element not found")
           setActiveLine(4)
-          setTimeout(() => setActiveLine(null), 1000)
+          schedule(() => setActiveLine(null), 1000)
         }
         return
       }
@@ -194,12 +232,12 @@ export default function ArrayVisualizer({
 
       setActiveLine(2)
       // Check if current item has the value we're looking for
-      if (array[currentIndex].value === value) {
+      if (arrayRef.current[currentIndex]?.value === value) {
         found = true
         setSearchResult(`Element found at index ${currentIndex}`)
         setActiveLine(3)
-        clearInterval(searchInterval)
-        setTimeout(() => {
+        cancelInterval(searchInterval)
+        schedule(() => {
           setArray((array) => array.map((item) => ({ ...item, highlighted: false })))
           setAnimating(false)
           setActiveLine(null)
@@ -210,8 +248,8 @@ export default function ArrayVisualizer({
       currentIndex++
 
       // If we've reached the end without finding the value
-      if (currentIndex >= array.length && !found) {
-        setTimeout(() => {
+      if (currentIndex >= arrayRef.current.length && !found) {
+        schedule(() => {
           setSearchResult("Element not found")
         }, 500)
       }

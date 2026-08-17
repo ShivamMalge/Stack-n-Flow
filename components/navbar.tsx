@@ -27,6 +27,7 @@ export default function Navbar() {
     { name: "Home", path: "/" },
     { name: "Learn", path: "/learn" },
     { name: "Visualize", path: "/visualize" },
+    { name: "Operations", path: "/operations" },
     { name: "About", path: "/about" },
   ]
 
@@ -63,7 +64,7 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full overflow-hidden border">
                     {session.user.image ? (
-                      <img src={session.user.image} alt="Avatar" className="object-cover" />
+                      <Image src={session.user.image} alt={session.user.name ?? "Your profile picture"} width={36} height={36} className="object-cover" />
                     ) : (
                       <User className="h-5 w-5 text-muted-foreground" />
                     )}
@@ -135,7 +136,7 @@ export default function Navbar() {
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full overflow-hidden border shrink-0">
                     {session.user.image ? (
-                      <img src={session.user.image} alt="Avatar" className="h-full w-full object-cover" />
+                      <Image src={session.user.image} alt={session.user.name ?? "Your profile picture"} width={40} height={40} className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full bg-muted flex items-center justify-center">
                         <User className="h-5 w-5 text-muted-foreground" />

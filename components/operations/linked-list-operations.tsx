@@ -74,7 +74,7 @@ export default function LinkedListOperations() {
       setHead(newHead)
       setSuccess("Linked list created successfully")
       setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
+    } catch {
       setError("Please enter valid numbers separated by commas")
     }
   }

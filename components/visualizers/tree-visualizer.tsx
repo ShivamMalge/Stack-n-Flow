@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+import InlineAlert from "@/components/ui/inline-alert"
 
 type TreeNode = {
   id: number
@@ -35,10 +36,29 @@ export default function TreeVisualizer({
   const [traversalPath, setTraversalPath] = useState<number[]>([])
   const [traversalType, setTraversalType] = useState("inorder")
   const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [inputError, setInputError] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const svgRef = useRef<SVGSVGElement>(null)
   const isMobile = useMobile()
+
+  // Registry of every animation timer. This component renders inside a tab, so it
+  // can be unmounted mid-animation; without this, pending callbacks keep firing
+  // and call setState on an unmounted component (leaving `animating` stuck true).
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
+
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout)
+    intervalsRef.current.forEach(clearInterval)
+  }, [])
+
+  // Mirror of the live tree so timer callbacks read the current value instead of
+  // the one captured in the closure at click time.
+  const rootRef = useRef(root)
+  useEffect(() => {
+    rootRef.current = root
+  }, [root])
 
   // Initialize with an empty tree
   useEffect(() => {
@@ -62,26 +82,29 @@ export default function TreeVisualizer({
 
   // Add validation to the handleInsert function
   const handleInsert = () => {
+    setInputError(null)
+
     if (!inputValue || animating) return
 
     const value = parseBoundedInt(inputValue)
 
     // Reject empty, non-numeric, and out-of-range input
     if (value === null) {
-      alert(MAX_INPUT_MESSAGE)
+      setInputError(MAX_INPUT_MESSAGE)
       return
     }
 
     setAnimating(true)
 
     // Create a deep copy of the tree and insert the new node
-    const newRoot = root ? JSON.parse(JSON.stringify(root)) : null
+    const currentRoot = rootRef.current
+    const newRoot = currentRoot ? structuredClone(currentRoot) : null
     const updatedRoot = insertNode(newRoot, value, nextId)
     setRoot(updatedRoot)
     setNextId(nextId + 1)
 
     // After animation, remove the "isNew" flag
-    setTimeout(() => {
+    timersRef.current.push(setTimeout(() => {
       const removeNewFlag = (node: TreeNode | null): TreeNode | null => {
         if (node === null) return null
 
@@ -95,7 +118,7 @@ export default function TreeVisualizer({
 
       setRoot(removeNewFlag(updatedRoot))
       setAnimating(false)
-    }, 1000)
+    }, 1000))
 
     setInputValue("")
   }
@@ -119,11 +142,11 @@ export default function TreeVisualizer({
       }
     }
 
-    setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
+    setRoot(resetHighlights(structuredClone(rootRef.current)))
 
     // Animate search through the tree
     const searchPath: number[] = []
-    let currentNode = root
+    let currentNode = rootRef.current
     let found = false
 
     const searchInterval = setInterval(() => {
@@ -149,16 +172,16 @@ export default function TreeVisualizer({
         }
       }
 
-      setRoot(highlightNode(JSON.parse(JSON.stringify(root)), searchPath))
+      setRoot(highlightNode(structuredClone(rootRef.current), searchPath))
 
       if (currentNode.value === value) {
         found = true
         setSearchResult("Element found")
         clearInterval(searchInterval)
-        setTimeout(() => {
-          setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
+        timersRef.current.push(setTimeout(() => {
+          setRoot(resetHighlights(structuredClone(rootRef.current)))
           setAnimating(false)
-        }, 1500)
+        }, 1500))
         return
       }
 
@@ -170,15 +193,17 @@ export default function TreeVisualizer({
 
       if (!currentNode) {
         clearInterval(searchInterval)
-        setTimeout(() => {
-          setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
+        timersRef.current.push(setTimeout(() => {
+          setRoot(resetHighlights(structuredClone(rootRef.current)))
           setAnimating(false)
           if (!found) {
             setSearchResult("Element not found")
           }
-        }, 1000)
+        }, 1000))
       }
     }, 500)
+
+    intervalsRef.current.push(searchInterval)
 
     setInputValue("")
   }
@@ -201,7 +226,8 @@ export default function TreeVisualizer({
       }
     }
 
-    setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
+    const currentRoot = rootRef.current
+    setRoot(resetHighlights(structuredClone(currentRoot)))
 
     // Get traversal path based on selected type
     const path: number[] = []
@@ -228,11 +254,11 @@ export default function TreeVisualizer({
     }
 
     if (traversalType === "inorder") {
-      inOrderTraversal(root)
+      inOrderTraversal(currentRoot)
     } else if (traversalType === "preorder") {
-      preOrderTraversal(root)
+      preOrderTraversal(currentRoot)
     } else {
-      postOrderTraversal(root)
+      postOrderTraversal(currentRoot)
     }
 
     // Animate traversal
@@ -241,10 +267,10 @@ export default function TreeVisualizer({
     const traversalInterval = setInterval(() => {
       if (index >= path.length) {
         clearInterval(traversalInterval)
-        setTimeout(() => {
-          setRoot(resetHighlights(JSON.parse(JSON.stringify(root))))
+        timersRef.current.push(setTimeout(() => {
+          setRoot(resetHighlights(structuredClone(rootRef.current)))
           setAnimating(false)
-        }, 1000)
+        }, 1000))
         return
       }
 
@@ -261,10 +287,12 @@ export default function TreeVisualizer({
         }
       }
 
-      setRoot(highlightNode(JSON.parse(JSON.stringify(root)), path[index]))
+      setRoot(highlightNode(structuredClone(rootRef.current), path[index]))
 
       index++
     }, 800)
+
+    intervalsRef.current.push(traversalInterval)
   }
 
   // Calculate tree dimensions
@@ -459,6 +487,7 @@ export default function TreeVisualizer({
   const handleReset = () => {
     setScale(1)
     setPan({ x: 0, y: 0 })
+    setInputError(null)
   }
 
   // Update the SVG container to fill more space

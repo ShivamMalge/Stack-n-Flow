@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import { hasLearnContent } from "@/lib/learn-content"
 
 export const metadata: Metadata = {
   title: "Learn DSA | Stack'n'Flow",
@@ -115,6 +116,12 @@ const dataStructures = [
 
 const algorithms = [
   {
+    name: "Binary Search",
+    description: "A divide-and-conquer search that halves a sorted range at every step.",
+    icon: Search,
+    slug: "binary-search",
+  },
+  {
     name: "Searching Algorithms",
     description: "Algorithms for finding an element within a data structure.",
     icon: Search,
@@ -154,7 +161,7 @@ const algorithms = [
 
 export default function LearnPage() {
   return (
-    <div className="flex flex-col min-h-screen dark">
+    <div className="flex flex-col min-h-screen">
       <Navbar />
 
       <main className="flex-1">
@@ -191,12 +198,18 @@ export default function LearnPage() {
                         </ul>
                       </CardContent>
                       <CardFooter>
-                        <Button asChild variant="outline" className="w-full">
-                          <Link href={`/learn/${ds.slug}`}>
-                            Learn More
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Link>
-                        </Button>
+                        {hasLearnContent(ds.slug) ? (
+                          <Button asChild variant="outline" className="w-full">
+                            <Link href={`/learn/${ds.slug}`}>
+                              Learn More
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" className="w-full" disabled>
+                            Coming soon
+                          </Button>
+                        )}
                       </CardFooter>
                     </Card>
                   ))}
@@ -223,12 +236,18 @@ export default function LearnPage() {
                         </ul>
                       </CardContent>
                       <CardFooter>
-                        <Button asChild variant="outline" className="w-full">
-                          <Link href={`/learn/${algo.slug}`}>
-                            Learn More
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Link>
-                        </Button>
+                        {hasLearnContent(algo.slug) ? (
+                          <Button asChild variant="outline" className="w-full">
+                            <Link href={`/learn/${algo.slug}`}>
+                              Learn More
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" className="w-full" disabled>
+                            Coming soon
+                          </Button>
+                        )}
                       </CardFooter>
                     </Card>
                   ))}

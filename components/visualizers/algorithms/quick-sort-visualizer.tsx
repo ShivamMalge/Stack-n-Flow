@@ -8,6 +8,7 @@ import { Plus, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+import InlineAlert from "@/components/ui/inline-alert"
 
 type ArrayItem = {
   id: number
@@ -34,6 +35,7 @@ export default function QuickSortVisualizer({
   const [animating, setAnimating] = useState(false)
   const array = controlledArray !== undefined ? controlledArray : internalArray;
   const [steps, setSteps] = useState<string[]>([])
+  const [inputError, setInputError] = useState<string | null>(null)
 
   const onFrameChange = useCallback((snapshot: QuickSortFrame, _frameIndex: number) => {
     setArray(snapshot.array)
@@ -42,11 +44,13 @@ export default function QuickSortVisualizer({
   const player = useAnimationPlayer<QuickSortFrame>(onFrameChange)
 
   const handleAddElement = () => {
+    setInputError(null)
+
     if (!inputValue || player.isPlaying) return
 
     const value = parseBoundedInt(inputValue)
     if (value === null) {
-      alert(MAX_INPUT_MESSAGE)
+      setInputError(MAX_INPUT_MESSAGE)
       return
     }
 
@@ -59,6 +63,7 @@ export default function QuickSortVisualizer({
     if (player.isPlaying) return
     setArray([])
     setSteps([])
+    setInputError(null)
     player.clear()
   }
 
@@ -73,6 +78,7 @@ export default function QuickSortVisualizer({
     setNextId(id)
     setArray(newArray)
     setSteps([])
+    setInputError(null)
     player.clear()
   }
 

@@ -8,6 +8,7 @@ import { Plus, Trash, RotateCcw, Coins } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+import InlineAlert from "@/components/ui/inline-alert"
 
 type Coin = {
   id: number
@@ -30,6 +31,7 @@ export default function GreedyAlgorithmVisualizer() {
   const [steps, setSteps] = useState<string[]>([])
   const [nextId, setNextId] = useState(1)
   const [result, setResult] = useState<{ coins: Coin[]; total: number } | null>(null)
+  const [inputError, setInputError] = useState<string | null>(null)
 
   const onFrameChange = useCallback((snapshot: GreedyFrame) => {
     setCoins(snapshot.coins)
@@ -39,10 +41,11 @@ export default function GreedyAlgorithmVisualizer() {
   const player = useAnimationPlayer<GreedyFrame>(onFrameChange)
 
   const handleAddCoin = () => {
+    setInputError(null)
     if (!coinValue || player.isPlaying) return
     const value = parseBoundedInt(coinValue)
     if (value === null) {
-      alert(MAX_INPUT_MESSAGE)
+      setInputError(MAX_INPUT_MESSAGE)
       return
     }
     const newCoin: Coin = { id: nextId, value, isNew: true }
@@ -56,9 +59,9 @@ export default function GreedyAlgorithmVisualizer() {
 
   const handleRemoveCoin = (id: number) => {
     if (player.isPlaying) return
-    const coinToRemove = coins.find((c) => c.id === id)
-    if (!coinToRemove) return
-    setCoins(coins.filter((c) => c.value !== coinToRemove.value))
+    // Filter by id, not value: filtering by value removed every coin of that
+    // denomination rather than the one whose button was clicked.
+    setCoins((coins) => coins.filter((c) => c.id !== id))
   }
 
   const handleClearCoins = () => {
@@ -66,6 +69,7 @@ export default function GreedyAlgorithmVisualizer() {
     setCoins([])
     setSteps([])
     setResult(null)
+    setInputError(null)
     player.clear()
   }
 

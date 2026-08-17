@@ -61,7 +61,15 @@ export default function AnimationControls({
                     </span>
                 </div>
                 <div
-                    className="h-2 bg-muted rounded-full overflow-hidden cursor-pointer"
+                    role="slider"
+                    tabIndex={hasFrames && onFrameChange ? 0 : -1}
+                    aria-label="Animation progress"
+                    aria-valuemin={0}
+                    aria-valuemax={Math.max(0, totalFrames - 1)}
+                    aria-valuenow={Math.max(0, currentFrame)}
+                    aria-valuetext={hasFrames ? `Step ${Math.max(0, currentFrame + 1)} of ${totalFrames}` : "No animation"}
+                    aria-disabled={!hasFrames || !onFrameChange}
+                    className="h-2 bg-muted rounded-full overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     onClick={(e) => {
                         if (!hasFrames || !onFrameChange) return
                         const rect = e.currentTarget.getBoundingClientRect()
@@ -69,6 +77,19 @@ export default function AnimationControls({
                         const pct = x / rect.width
                         const frame = Math.round(pct * (totalFrames - 1))
                         onFrameChange(frame)
+                    }}
+                    onKeyDown={(e) => {
+                        if (!hasFrames || !onFrameChange) return
+                        const lastFrame = totalFrames - 1
+                        const step = (delta: number) => {
+                            e.preventDefault()
+                            onFrameChange(Math.min(lastFrame, Math.max(0, currentFrame + delta)))
+                        }
+
+                        if (e.key === "ArrowRight" || e.key === "ArrowUp") step(1)
+                        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") step(-1)
+                        else if (e.key === "Home") { e.preventDefault(); onFrameChange(0) }
+                        else if (e.key === "End") { e.preventDefault(); onFrameChange(lastFrame) }
                     }}
                 >
                     <div

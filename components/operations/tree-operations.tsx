@@ -315,7 +315,7 @@ export default function TreeOperations() {
       setSteps(newSteps)
       setSuccess("Binary search tree created successfully")
       setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
+    } catch {
       setError("Please enter valid numbers separated by commas")
     }
   }

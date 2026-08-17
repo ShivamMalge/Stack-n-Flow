@@ -14,6 +14,7 @@ import CodePanel from "@/components/ui/code-panel"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { computeTreeLayout } from "@/lib/tree-layout"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+import InlineAlert from "@/components/ui/inline-alert"
 
 const SEARCH_CODE = [
   "def search(node, value):",
@@ -71,6 +72,7 @@ export default function BinarySearchTreeVisualizer() {
   const [traversalPath, setTraversalPath] = useState<number[]>([])
   const [traversalType, setTraversalType] = useState("inorder")
   const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [inputError, setInputError] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [steps, setSteps] = useState<string[]>([])
@@ -109,13 +111,15 @@ export default function BinarySearchTreeVisualizer() {
 
   // Add validation to the handleInsert function
   const handleInsert = () => {
+    setInputError(null)
+
     if (!inputValue || animating) return
 
     const value = parseBoundedInt(inputValue)
 
     // Reject empty, non-numeric, and out-of-range input
     if (value === null) {
-      alert(MAX_INPUT_MESSAGE)
+      setInputError(MAX_INPUT_MESSAGE)
       return
     }
 
@@ -496,6 +500,7 @@ export default function BinarySearchTreeVisualizer() {
   const handleReset = () => {
     setScale(1)
     setPan({ x: 0, y: 0 })
+    setInputError(null)
   }
 
   // Add this function to handle touch events:

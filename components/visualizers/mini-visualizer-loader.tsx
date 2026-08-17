@@ -2,6 +2,7 @@
 
 import LinkedListVisualizer from "@/components/visualizers/linked-list-visualizer"
 import StackVisualizer from "@/components/visualizers/stack-visualizer"
+import QueueVisualizer from "@/components/visualizers/queue-visualizer"
 import ArrayVisualizer from "@/components/visualizers/array-visualizer"
 import BinarySearchVisualizer from "@/components/visualizers/algorithms/binary-search-visualizer"
 import { MonitorPlay } from "lucide-react"
@@ -12,6 +13,8 @@ export default function MiniVisualizerLoader({ dataStructure }: { dataStructure:
             return <LinkedListVisualizer mini={true} />
         case "stack":
             return <StackVisualizer mini={true} />
+        case "queue":
+            return <QueueVisualizer mini={true} />
         case "array":
             return <ArrayVisualizer mini={true} />
         case "binary-search":

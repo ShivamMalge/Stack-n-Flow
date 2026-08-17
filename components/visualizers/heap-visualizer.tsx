@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -307,37 +307,52 @@ export default function HeapVisualizer({
     }, [])
     const player = useAnimationPlayer<HeapFrame>(onFrameChange)
 
+    // Final snapshot of the run currently loaded in the player. It is committed to
+    // the base heap only once the player reports the run genuinely finished; a
+    // wall-clock timer would fire regardless of the user pausing, stepping,
+    // scrubbing or changing speed and clobber the display with the end state.
+    const pendingFinalRef = useRef<HeapFrame | null>(null)
+
+    useEffect(() => {
+        if (!player.isComplete) return
+        const final = pendingFinalRef.current
+        if (!final) return
+        pendingFinalRef.current = null   // commit once per run, never on re-render
+        setHeap(final.heap)
+        setStates(final.states.map(() => "default"))
+    }, [player.isComplete])
+
     const handleInsert = () => {
         if (!inputValue || player.isPlaying) return
         const val = parseInt(inputValue)
         if (isNaN(val) || val < 1 || val > 999) return
         setInputValue("")
         const frames = generateInsert(heap, val, heapType === "min")
-        const lastSnap = frames[frames.length - 1].snapshot
+        pendingFinalRef.current = frames[frames.length - 1].snapshot
         setSteps(frames.map((f) => f.description))
         player.loadFrames(frames)
         setTimeout(() => player.play(), 50)
-        setTimeout(() => { setHeap(lastSnap.heap); setStates(lastSnap.states.map(() => "default")) }, frames.length * player.speed + 200)
     }
 
     const handleDeleteRoot = () => {
         if (heap.length === 0 || player.isPlaying) return
         const frames = generateDeleteRoot(heap, heapType === "min")
-        const lastSnap = frames[frames.length - 1].snapshot
+        pendingFinalRef.current = frames[frames.length - 1].snapshot
         setSteps(frames.map((f) => f.description))
         player.loadFrames(frames)
         setTimeout(() => player.play(), 50)
-        setTimeout(() => { setHeap(lastSnap.heap); setStates(lastSnap.states.map(() => "default")) }, frames.length * player.speed + 200)
     }
 
     const handleClear = () => {
         if (player.isPlaying) return
+        pendingFinalRef.current = null
         player.clear(); setHeap([]); setStates([]); setSteps([])
         setScale(1); setPan({ x: 0, y: 0 })
     }
 
     const handleRandom = () => {
         if (player.isPlaying) return
+        pendingFinalRef.current = null
         player.clear()
         const vals = Array.from({ length: 7 }, () => Math.floor(Math.random() * 50) + 1)
         const h: number[] = []
@@ -355,6 +370,7 @@ export default function HeapVisualizer({
 
     const handleTypeChange = (t: "min" | "max") => {
         if (player.isPlaying) return
+        pendingFinalRef.current = null
         setHeapType(t); setHeap([]); setStates([]); setSteps([]); player.clear()
         setScale(1); setPan({ x: 0, y: 0 })
     }

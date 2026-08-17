@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -82,6 +82,44 @@ export default function DoublyLinkedListVisualizer({
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
 
+  // Timer registry so every pending animation step is cancelled on unmount
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
+
+  // Mirror of the latest nodes so timer callbacks never read a stale snapshot
+  const nodesRef = useRef<Node[]>(nodes)
+
+  useEffect(() => {
+    nodesRef.current = nodes
+  }, [nodes])
+
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms)
+    timersRef.current.push(id)
+    return id
+  }, [])
+
+  const scheduleInterval = useCallback((fn: () => void, ms: number): ReturnType<typeof setInterval> => {
+    const id = setInterval(fn, ms)
+    intervalsRef.current.push(id)
+    return id
+  }, [])
+
+  const cancelInterval = useCallback((id: ReturnType<typeof setInterval>) => {
+    clearInterval(id)
+    intervalsRef.current = intervalsRef.current.filter((intervalId) => intervalId !== id)
+  }, [])
+
+  useEffect(
+    () => () => {
+      timersRef.current.forEach(clearTimeout)
+      intervalsRef.current.forEach(clearInterval)
+      timersRef.current = []
+      intervalsRef.current = []
+    },
+    [],
+  )
+
   const handleInsertFront = () => {
     if (!inputValue || animating) return
 
@@ -92,11 +130,11 @@ export default function DoublyLinkedListVisualizer({
 
     // Create a new node with the "isNew" flag for animation
     const newNode = { id: nextId, value, isNew: true }
-    setNodes([newNode, ...nodes])
+    setNodes([newNode, ...nodesRef.current])
     setNextId(nextId + 1)
 
     // After animation, remove the "isNew" flag
-    setTimeout(() => {
+    schedule(() => {
       setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
       setAnimating(false)
       setActiveLine(null)
@@ -115,11 +153,11 @@ export default function DoublyLinkedListVisualizer({
 
     // Create a new node with the "isNew" flag for animation
     const newNode = { id: nextId, value, isNew: true }
-    setNodes([...nodes, newNode])
+    setNodes([...nodesRef.current, newNode])
     setNextId(nextId + 1)
 
     // After animation, remove the "isNew" flag
-    setTimeout(() => {
+    schedule(() => {
       setNodes((nodes) => nodes.map((node) => (node.id === newNode.id ? { ...node, isNew: false } : node)))
       setAnimating(false)
       setActiveLine(null)
@@ -139,7 +177,7 @@ export default function DoublyLinkedListVisualizer({
     setNodes((nodes) => nodes.map((node, index) => (index === 0 ? { ...node, isDeleting: true } : node)))
 
     // After animation, remove the node
-    setTimeout(() => {
+    schedule(() => {
       setNodes((nodes) => nodes.slice(1))
       setAnimating(false)
       setActiveLine(null)
@@ -157,7 +195,7 @@ export default function DoublyLinkedListVisualizer({
     setNodes((nodes) => nodes.map((node, index) => (index === nodes.length - 1 ? { ...node, isDeleting: true } : node)))
 
     // After animation, remove the node
-    setTimeout(() => {
+    schedule(() => {
       setNodes((nodes) => nodes.slice(0, -1))
       setAnimating(false)
       setActiveLine(null)
@@ -180,9 +218,9 @@ export default function DoublyLinkedListVisualizer({
     let currentIndex = 0
     let found = false
 
-    const searchInterval = setInterval(() => {
-      if (currentIndex >= nodes.length) {
-        clearInterval(searchInterval)
+    const searchInterval = scheduleInterval(() => {
+      if (currentIndex >= nodesRef.current.length) {
+        cancelInterval(searchInterval)
         setAnimating(false)
         setActiveLine(null)
         if (!found) {
@@ -200,11 +238,11 @@ export default function DoublyLinkedListVisualizer({
       )
 
       // Check if current node has the value we're looking for
-      if (nodes[currentIndex].value === value) {
+      if (nodesRef.current[currentIndex]?.value === value) {
         found = true
         setSearchResult("Element found")
-        clearInterval(searchInterval)
-        setTimeout(() => {
+        cancelInterval(searchInterval)
+        schedule(() => {
           setNodes((nodes) => nodes.map((node) => ({ ...node, highlighted: false })))
           setAnimating(false)
           setActiveLine(null)
@@ -215,8 +253,8 @@ export default function DoublyLinkedListVisualizer({
       currentIndex++
 
       // If we've reached the end without finding the value
-      if (currentIndex >= nodes.length && !found) {
-        clearInterval(searchInterval)
+      if (currentIndex >= nodesRef.current.length && !found) {
+        cancelInterval(searchInterval)
         setAnimating(false)
         setActiveLine(null)
         setSearchResult("Element not found")

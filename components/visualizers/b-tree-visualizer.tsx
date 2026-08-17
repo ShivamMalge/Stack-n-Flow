@@ -11,6 +11,7 @@ import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import CodePanel from "@/components/ui/code-panel"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+import InlineAlert from "@/components/ui/inline-alert"
 
 // Bounds for the B-Tree order (minimum degree t)
 const MIN_BTREE_ORDER = 2
@@ -65,7 +66,9 @@ export default function BTreeVisualizer() {
   const [operation, setOperation] = useState("insert")
   const [animating, setAnimating] = useState(false)
   const [nextId, setNextId] = useState(1)
+  const nextIdRef = useRef(1)
   const [searchResult, setSearchResult] = useState<string | null>(null)
+  const [inputError, setInputError] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [treeOrder, setTreeOrder] = useState(DEFAULT_BTREE_ORDER) // Default B-Tree order (minimum degree)
@@ -77,7 +80,32 @@ export default function BTreeVisualizer() {
 
   // Refs for animation cleanup
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const isMountedRef = useRef(true)
+  const isMountedRef = useRef(false)  // set true inside the effect so Strict Mode re-mounts work correctly
+  const didInitRef = useRef(false)    // guards the one-time "start with an empty tree" reset
+
+  // Registry of every animation timer. This component renders inside a tab, so it
+  // can be unmounted mid-animation; without this, pending callbacks keep firing
+  // and call setState on an unmounted component (leaving `animating` stuck true).
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
+
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout)
+    intervalsRef.current.forEach(clearInterval)
+  }, [])
+
+  /** Records a timer id so it is guaranteed to be cleared on unmount. */
+  const registerTimer = (id: ReturnType<typeof setTimeout>) => {
+    timersRef.current.push(id)
+    return id
+  }
+
+  // Mirror of the live tree so timer callbacks read the current value instead of
+  // the one captured in the closure at click time.
+  const rootRef = useRef(root)
+  useEffect(() => {
+    rootRef.current = root
+  }, [root])
 
   // Add node dragging functionality
   const [nodePositions, setNodePositions] = useState<Record<number, { x: number; y: number }>>({})
@@ -146,19 +174,32 @@ export default function BTreeVisualizer() {
     document.removeEventListener("touchend", handleTouchEnd)
   }, [handleTouchMove])
 
-  // Initialize with an empty tree
+  // Initialize with an empty tree — mount/unmount only, so zooming (which
+  // re-creates the drag handlers below) can never tear down a running animation.
   useEffect(() => {
     isMountedRef.current = true
-    setRoot(null)
-    setNextId(1)
+
+    // Only reset on a genuine first mount: React 19 Strict Mode double-invokes
+    // this effect on mount, and a second run would wipe the user's tree.
+    if (!didInitRef.current) {
+      didInitRef.current = true
+      setRoot(null)
+      nextIdRef.current = 1
+      setNextId(1)
+    }
 
     return () => {
       isMountedRef.current = false
       if (animationTimeoutRef.current) {
         clearTimeout(animationTimeoutRef.current)
       }
+    }
+  }, [])
 
-      // Clean up event listeners
+  // Defensive listener cleanup — re-runs whenever the memoised drag handlers
+  // change so the current references are the ones detached.
+  useEffect(() => {
+    return () => {
       document.removeEventListener("mousemove", handleMouseMove)
       document.removeEventListener("mouseup", handleMouseUp)
       document.removeEventListener("touchmove", handleTouchMove)
@@ -166,10 +207,14 @@ export default function BTreeVisualizer() {
     }
   }, [handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd])
 
-  // Create a new B-Tree node
+  // Create a new B-Tree node.
+  // The counter lives in a ref, not state: a single insert can create two nodes
+  // (a root split), and reading a state value from the render closure gave both
+  // the same id — duplicate React keys and colliding nodePositions entries.
   const createNode = (isLeaf: boolean): BTreeNode => {
-    const newId = nextId
-    setNextId((prevId) => prevId + 1)
+    const newId = nextIdRef.current
+    nextIdRef.current += 1
+    setNextId(nextIdRef.current)
 
     return {
       id: newId,
@@ -206,13 +251,15 @@ export default function BTreeVisualizer() {
 
   // Add validation to the handleInsert function
   const handleInsert = () => {
+    setInputError(null)
+
     if (!inputValue || animating) return
 
     const value = parseBoundedInt(inputValue)
 
     // Reject empty, non-numeric, and out-of-range input
     if (value === null) {
-      alert(MAX_INPUT_MESSAGE)
+      setInputError(MAX_INPUT_MESSAGE)
       return
     }
 
@@ -227,8 +274,9 @@ export default function BTreeVisualizer() {
     setActiveLine(0)
 
     // Check if value already exists in the tree
-    if (root) {
-      const searchResult = search(root, value)
+    const currentRoot = rootRef.current
+    if (currentRoot) {
+      const searchResult = search(currentRoot, value)
       if (searchResult.node !== null) {
         setOperationInfo(`Value ${value} already exists in the tree`)
         setAnimating(false)
@@ -246,7 +294,7 @@ export default function BTreeVisualizer() {
       }
 
       // After animation, remove the animation flags
-      animationTimeoutRef.current = setTimeout(() => {
+      animationTimeoutRef.current = registerTimer(setTimeout(() => {
         if (!isMountedRef.current) return
 
         const removeAnimationFlags = (node: BTreeNode | null): BTreeNode | null => {
@@ -265,7 +313,7 @@ export default function BTreeVisualizer() {
         setAnimating(false)
         setActiveLine(null)
         animationTimeoutRef.current = null
-      }, 1500)
+      }, 1500))
     } catch (error) {
       console.error("Error inserting into B-Tree:", error)
       setOperationInfo("Error inserting value. Please try again.")
@@ -278,20 +326,21 @@ export default function BTreeVisualizer() {
   // Fix the insert function to properly handle B-Tree insertions
   const insert = (value: number): { root: BTreeNode; info: string | null } => {
     let info: string | null = null
+    const currentRoot = rootRef.current
 
     // If tree is empty
-    if (!root) {
+    if (!currentRoot) {
       const newRoot = createNode(true)
       newRoot.keys = [value]
       return { root: newRoot, info: "Created new root node" }
     }
 
     // If root is full, tree grows in height
-    if (root.keys.length === 2 * treeOrder - 1) {
+    if (currentRoot.keys.length === 2 * treeOrder - 1) {
       const newRoot = createNode(false)
 
       // Make old root as child of new root
-      newRoot.children = [JSON.parse(JSON.stringify(root))]
+      newRoot.children = [structuredClone(currentRoot)]
 
       // Split the old root and move one key to the new root
       splitChild(newRoot, 0, newRoot.children[0])
@@ -304,7 +353,7 @@ export default function BTreeVisualizer() {
       return { root: newRoot, info }
     } else {
       // If root is not full, call insertNonFull for root
-      const rootCopy = JSON.parse(JSON.stringify(root))
+      const rootCopy = structuredClone(currentRoot)
       insertNonFull(rootCopy, value)
       return { root: rootCopy, info: null }
     }
@@ -386,7 +435,8 @@ export default function BTreeVisualizer() {
   }
 
   const handleSearch = () => {
-    if (!inputValue || animating || !root) return
+    const currentRoot = rootRef.current
+    if (!inputValue || animating || !currentRoot) return
 
     const value = Number.parseInt(inputValue)
 
@@ -411,7 +461,7 @@ export default function BTreeVisualizer() {
       }
     }
 
-    setRoot((prevRoot) => (prevRoot ? resetHighlights(JSON.parse(JSON.stringify(prevRoot))) : null))
+    setRoot((prevRoot) => (prevRoot ? resetHighlights(structuredClone(prevRoot)) : null))
 
     // Animate search through the tree
     const searchPath: BTreeNode[] = []
@@ -432,10 +482,10 @@ export default function BTreeVisualizer() {
         }
       }
 
-      setRoot((prevRoot) => (prevRoot ? highlightNodes(JSON.parse(JSON.stringify(prevRoot)), searchPath) : null))
+      setRoot((prevRoot) => (prevRoot ? highlightNodes(structuredClone(prevRoot), searchPath) : null))
       setActiveLine(1) // int i = 0
 
-      animationTimeoutRef.current = setTimeout(() => {
+      animationTimeoutRef.current = registerTimer(setTimeout(() => {
         setActiveLine(2) // while i < keys...
 
         // Find the first key greater than or equal to k
@@ -444,19 +494,19 @@ export default function BTreeVisualizer() {
           i++
         }
 
-        animationTimeoutRef.current = setTimeout(() => {
+        animationTimeoutRef.current = registerTimer(setTimeout(() => {
           setActiveLine(3) // if keys[i] == key
 
           // If the found key is equal to k, we found it
           if (i < node.keys.length && key === node.keys[i]) {
             setSearchResult(`Element found in node with keys: [${node.keys.join(", ")}]`)
-            animationTimeoutRef.current = setTimeout(() => {
+            animationTimeoutRef.current = registerTimer(setTimeout(() => {
               if (!isMountedRef.current) return
-              setRoot((prevRoot) => (prevRoot ? resetHighlights(JSON.parse(JSON.stringify(prevRoot))) : null))
+              setRoot((prevRoot) => (prevRoot ? resetHighlights(structuredClone(prevRoot)) : null))
               setAnimating(false)
               setActiveLine(null)
               animationTimeoutRef.current = null
-            }, 1500)
+            }, 1500))
             return
           }
 
@@ -464,27 +514,27 @@ export default function BTreeVisualizer() {
           if (node.isLeaf) {
             setActiveLine(4)
             setSearchResult("Element not found")
-            animationTimeoutRef.current = setTimeout(() => {
+            animationTimeoutRef.current = registerTimer(setTimeout(() => {
               if (!isMountedRef.current) return
-              setRoot((prevRoot) => (prevRoot ? resetHighlights(JSON.parse(JSON.stringify(prevRoot))) : null))
+              setRoot((prevRoot) => (prevRoot ? resetHighlights(structuredClone(prevRoot)) : null))
               setAnimating(false)
               setActiveLine(null)
               animationTimeoutRef.current = null
-            }, 1500)
+            }, 1500))
             return
           }
 
           // Recur to the appropriate child
           setActiveLine(5) // return search(children[i])
-          animationTimeoutRef.current = setTimeout(() => {
+          animationTimeoutRef.current = registerTimer(setTimeout(() => {
             if (!isMountedRef.current) return
             searchStep(node.children[i], key)
-          }, 1000)
-        }, 500)
-      }, 500)
+          }, 1000))
+        }, 500))
+      }, 500))
     }
 
-    searchStep(root, value)
+    searchStep(currentRoot, value)
     setInputValue("")
   }
 
@@ -703,6 +753,7 @@ export default function BTreeVisualizer() {
     setScale(1)
     setPan({ x: 0, y: 0 })
     setNodePositions({})
+    setInputError(null)
   }
 
   // Replace the Visualization Panel section with this improved version
@@ -717,9 +768,10 @@ export default function BTreeVisualizer() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <label className="text-sm font-medium mb-2 block">B-Tree Order (t)</label>
+              <label htmlFor="btree-order" className="text-sm font-medium mb-2 block">B-Tree Order (t)</label>
               <div className="flex space-x-2 items-center">
                 <Input
+                  id="btree-order"
                   type="number"
                   min={MIN_BTREE_ORDER}
                   max={MAX_BTREE_ORDER}

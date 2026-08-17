@@ -49,7 +49,7 @@ export default function VisualizePage() {
   }, [searchParams])
 
   return (
-    <div className="flex flex-col min-h-screen dark">
+    <div className="flex flex-col min-h-screen">
       <Navbar />
 
       <main className="flex-1 container mx-auto py-4 md:py-8 px-4">
@@ -84,8 +84,10 @@ export default function VisualizePage() {
                 <TabsTrigger value="circular-queue" className="whitespace-nowrap text-xs md:text-sm">
                   Circular Queue
                 </TabsTrigger>
+                {/* Labelled "General Tree" previously, but the component inserts by
+                    comparison, i.e. it builds an ordered binary tree, not an n-ary one. */}
                 <TabsTrigger value="tree" className="whitespace-nowrap text-xs md:text-sm">
-                  General Tree
+                  Tree
                 </TabsTrigger>
                 <TabsTrigger value="binary-tree" className="whitespace-nowrap text-xs md:text-sm">
                   Binary Tree

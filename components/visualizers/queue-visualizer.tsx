@@ -31,23 +31,29 @@ const PEEK_CODE = [
 type QueueItem = QueueRendererItem
 
 export default function QueueVisualizer({
+  mini = false,
   controlledNodes,
 }: {
+  mini?: boolean;
   controlledNodes?: QueueItem[];
 } = {}) {
   // Initialize with empty queue
   const [internalQueue, setQueue] = useState<QueueItem[]>([])
-  const queue = controlledNodes || internalQueue;
+  // When a parent supplies nodes it owns the state, so the interactive controls
+  // are disabled rather than silently writing to internal state that is never read.
+  const isControlled = controlledNodes !== undefined
+  const queue = isControlled ? controlledNodes : internalQueue;
   const [inputValue, setInputValue] = useState("")
   const [animating, setAnimating] = useState(false)
-  const [nextId, setNextId] = useState(4)
+  // Derived from the current contents so ids cannot collide with preset data.
+  const nextId = queue.reduce((max, item) => Math.max(max, item.id), 0) + 1
   // Update the search (peek) function to show search results
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
 
   const handleEnqueue = () => {
-    if (!inputValue || animating) return
+    if (!inputValue || animating || isControlled) return
 
     const value = Number.parseInt(inputValue)
     setAnimating(true)
@@ -59,7 +65,6 @@ export default function QueueVisualizer({
       // Create a new item with the "isNew" flag for animation
       const newItem = { id: nextId, value, isNew: true }
       setQueue([...queue, newItem])
-      setNextId(nextId + 1)
 
       setTimeout(() => {
         setActiveLine(3)
@@ -76,7 +81,7 @@ export default function QueueVisualizer({
   }
 
   const handleDequeue = () => {
-    if (queue.length === 0 || animating) return
+    if (queue.length === 0 || animating || isControlled) return
 
     setAnimating(true)
     setActiveCode(DEQUEUE_CODE)
@@ -100,7 +105,7 @@ export default function QueueVisualizer({
   }
 
   const handlePeek = () => {
-    if (queue.length === 0 || animating) return
+    if (queue.length === 0 || animating || isControlled) return
 
     setAnimating(true)
     setSearchResult(null)
@@ -132,17 +137,19 @@ export default function QueueVisualizer({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Operations Panel - Top on Mobile, Left on Desktop */}
-      <div className="order-1 md:col-start-1">
-        <QueueController
-          inputValue={inputValue}
-          animating={animating}
-          hasItems={queue.length > 0}
-          onInputChange={setInputValue}
-          onEnqueue={handleEnqueue}
-          onDequeue={handleDequeue}
-          onPeek={handlePeek}
-        />
-      </div>
+      {!mini && !isControlled && (
+        <div className="order-1 md:col-start-1">
+          <QueueController
+            inputValue={inputValue}
+            animating={animating}
+            hasItems={queue.length > 0}
+            onInputChange={setInputValue}
+            onEnqueue={handleEnqueue}
+            onDequeue={handleDequeue}
+            onPeek={handlePeek}
+          />
+        </div>
+      )}
 
       {/* Visualization Panel - Second on Mobile, Right on Desktop */}
       <div className="order-2 md:col-start-2 md:row-span-3">
@@ -150,18 +157,22 @@ export default function QueueVisualizer({
       </div>
 
       {/* Live Code Panel - Third on Mobile, Left on Desktop */}
-      <div className="order-3 md:col-start-1 h-[250px]">
-        <CodePanel
-          code={activeCode}
-          activeLine={activeLine}
-          title={activeCode === ENQUEUE_CODE ? "Enqueue Algorithm" : activeCode === DEQUEUE_CODE ? "Dequeue Algorithm" : "Peek Algorithm"}
-        />
-      </div>
+      {!mini && (
+        <div className="order-3 md:col-start-1 h-[250px]">
+          <CodePanel
+            code={activeCode}
+            activeLine={activeLine}
+            title={activeCode === ENQUEUE_CODE ? "Enqueue Algorithm" : activeCode === DEQUEUE_CODE ? "Dequeue Algorithm" : "Peek Algorithm"}
+          />
+        </div>
+      )}
 
       {/* Learning Panel - Last on Mobile, Left on Desktop */}
-      <div className="order-4 md:col-start-1">
-        <QueueDocs />
-      </div>
+      {!mini && (
+        <div className="order-4 md:col-start-1">
+          <QueueDocs />
+        </div>
+      )}
     </div>
   )
 }
