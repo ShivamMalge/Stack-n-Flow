@@ -10,6 +10,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import CodePanel from "@/components/ui/code-panel"
+import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+
+// Bounds for the B-Tree order (minimum degree t)
+const MIN_BTREE_ORDER = 2
+const MAX_BTREE_ORDER = 5
+const DEFAULT_BTREE_ORDER = 3
 
 const SEARCH_CODE = [
   "def search(node, key):",
@@ -62,7 +68,7 @@ export default function BTreeVisualizer() {
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [treeOrder, setTreeOrder] = useState(3) // Default B-Tree order (minimum degree)
+  const [treeOrder, setTreeOrder] = useState(DEFAULT_BTREE_ORDER) // Default B-Tree order (minimum degree)
   const [operationInfo, setOperationInfo] = useState<string | null>(null)
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
@@ -202,11 +208,11 @@ export default function BTreeVisualizer() {
   const handleInsert = () => {
     if (!inputValue || animating) return
 
-    const value = Number.parseInt(inputValue)
+    const value = parseBoundedInt(inputValue)
 
-    // Add validation to limit value to 500
-    if (value > 500) {
-      alert("Please enter a value not greater than 500")
+    // Reject empty, non-numeric, and out-of-range input
+    if (value === null) {
+      alert(MAX_INPUT_MESSAGE)
       return
     }
 
@@ -715,10 +721,14 @@ export default function BTreeVisualizer() {
               <div className="flex space-x-2 items-center">
                 <Input
                   type="number"
-                  min="2"
-                  max="5"
+                  min={MIN_BTREE_ORDER}
+                  max={MAX_BTREE_ORDER}
                   value={treeOrder}
-                  onChange={(e) => setTreeOrder(Math.max(2, Math.min(5, Number.parseInt(e.target.value) || 2)))}
+                  onChange={(e) =>
+                    setTreeOrder(
+                      Math.max(MIN_BTREE_ORDER, Math.min(MAX_BTREE_ORDER, Number.parseInt(e.target.value) || MIN_BTREE_ORDER)),
+                    )
+                  }
                   disabled={animating || root !== null}
                 />
                 <span className="text-xs text-muted-foreground">(Can only be changed for empty tree)</span>

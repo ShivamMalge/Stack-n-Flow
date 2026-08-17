@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Plus, Trash, RotateCcw, Coins } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 
 type Coin = {
   id: number
@@ -39,10 +40,9 @@ export default function GreedyAlgorithmVisualizer() {
 
   const handleAddCoin = () => {
     if (!coinValue || player.isPlaying) return
-    const value = Number.parseInt(coinValue)
-    if (!value || value <= 0) return
-    if (value > 500) {
-      alert("Please enter a value not greater than 500")
+    const value = parseBoundedInt(coinValue)
+    if (value === null) {
+      alert(MAX_INPUT_MESSAGE)
       return
     }
     const newCoin: Coin = { id: nextId, value, isNew: true }
@@ -71,8 +71,9 @@ export default function GreedyAlgorithmVisualizer() {
 
   const handleSolve = () => {
     if (!targetAmount || player.isPlaying || coins.length === 0) return
-    const amount = Number.parseInt(targetAmount)
-    if (!amount || amount <= 0) return
+    // The target is only bounded below — change can be made for any positive amount.
+    const amount = parseBoundedInt(targetAmount, { min: 1, max: Number.MAX_SAFE_INTEGER })
+    if (amount === null) return
 
     setResult(null)
     const frames: AnimationFrame<GreedyFrame>[] = []

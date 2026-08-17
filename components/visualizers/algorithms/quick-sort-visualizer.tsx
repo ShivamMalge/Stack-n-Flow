@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Plus, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 
 type ArrayItem = {
   id: number
@@ -43,11 +44,9 @@ export default function QuickSortVisualizer({
   const handleAddElement = () => {
     if (!inputValue || player.isPlaying) return
 
-    const value = Number.parseInt(inputValue)
-    if (isNaN(value)) return
-
-    if (value > 500) {
-      alert("Please enter a value not greater than 500")
+    const value = parseBoundedInt(inputValue)
+    if (value === null) {
+      alert(MAX_INPUT_MESSAGE)
       return
     }
 

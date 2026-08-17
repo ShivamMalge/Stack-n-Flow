@@ -8,6 +8,7 @@ import { Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import CodePanel from "@/components/ui/code-panel"
+import { MAX_INPUT_VALUE, parseBoundedInt } from "@/lib/constants"
 
 const HEAP_SORT_CODE = [
     "function heapSort(arr):",
@@ -132,8 +133,8 @@ export default function HeapSortVisualizer() {
     const player = useAnimationPlayer<HSSFrame>(onFrameChange)
 
     const handleAdd = () => {
-        const n = parseInt(inputVal)
-        if (isNaN(n) || n < 1 || n > 500) return
+        const n = parseBoundedInt(inputVal)
+        if (n === null) return
         if (values.length >= 20) return
         const nv = [...values, n]
         setValues(nv)
@@ -172,10 +173,10 @@ export default function HeapSortVisualizer() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex gap-2">
-                        <Input type="number" placeholder="Add value (1–500)" value={inputVal}
+                        <Input type="number" placeholder={`Add value (1–${MAX_INPUT_VALUE})`} value={inputVal}
                             onChange={(e) => setInputVal(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                            disabled={player.isPlaying} min={1} max={500} />
+                            disabled={player.isPlaying} min={1} max={MAX_INPUT_VALUE} />
                         <Button onClick={handleAdd} disabled={player.isPlaying || !inputVal || values.length >= 20}>Add</Button>
                     </div>
 

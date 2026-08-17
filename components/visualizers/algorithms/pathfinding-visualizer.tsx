@@ -25,6 +25,9 @@ type GridFrame = {
 
 const ROWS = 15; const COLS = 25
 
+/** Fraction of cells turned into walls by the random maze generator. */
+const WALL_DENSITY = 0.28
+
 function createGrid(): Cell[][] {
     return Array.from({ length: ROWS }, (_, r) =>
         Array.from({ length: COLS }, (_, c) => ({
@@ -265,7 +268,7 @@ export default function PathfindingVisualizer() {
         const ng = createGrid()
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
-                if (Math.random() < 0.28) ng[r][c].type = "wall"
+                if (Math.random() < WALL_DENSITY) ng[r][c].type = "wall"
             }
         }
         setGrid(ng); setDisplayGrid(ng)

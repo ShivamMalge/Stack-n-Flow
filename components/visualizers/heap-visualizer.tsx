@@ -158,21 +158,23 @@ function generateDeleteRoot(heap: number[], isMin: boolean): AnimationFrame<Heap
 
 // ── Node state colors ────────────────────────────────────────────────────────
 
+// Themed via CSS variables (see app/globals.css) so nodes stay legible in both
+// light and dark mode; these were previously dark-only hex literals.
 const NODE_FILL: Record<NodeState, string> = {
-    default: "#1f2937",        // dark card
-    comparing: "#1e3a5f",      // dark blue
-    swapping: "#3d2a00",       // dark amber
-    inserted: "#14532d",       // dark green
-    deleted: "#7f1d1d",        // dark red
-    heapified: "#3b0764",      // dark purple
+    default: "hsl(var(--node-default-fill))",
+    comparing: "hsl(var(--node-comparing-fill))",
+    swapping: "hsl(var(--node-swapping-fill))",
+    inserted: "hsl(var(--node-inserted-fill))",
+    deleted: "hsl(var(--node-deleted-fill))",
+    heapified: "hsl(var(--node-heapified-fill))",
 }
 const NODE_STROKE: Record<NodeState, string> = {
-    default: "#6366f1",
-    comparing: "#3b82f6",
-    swapping: "#f59e0b",
-    inserted: "#22c55e",
-    deleted: "#ef4444",
-    heapified: "#a855f7",
+    default: "hsl(var(--node-default-stroke))",
+    comparing: "hsl(var(--node-comparing-stroke))",
+    swapping: "hsl(var(--node-swapping-stroke))",
+    inserted: "hsl(var(--node-inserted-stroke))",
+    deleted: "hsl(var(--node-deleted-stroke))",
+    heapified: "hsl(var(--node-heapified-stroke))",
 }
 
 // ── SVG Tree Renderer ────────────────────────────────────────────────────────
@@ -221,12 +223,12 @@ function HeapTreeSVG({
                         {l < heap.length && (
                             <line x1={positions[i].x} y1={positions[i].y + R}
                                 x2={positions[l].x} y2={positions[l].y - R}
-                                stroke="#4b5563" strokeWidth="1.5" />
+                                stroke="hsl(var(--node-edge))" strokeWidth="1.5" />
                         )}
                         {r < heap.length && (
                             <line x1={positions[i].x} y1={positions[i].y + R}
                                 x2={positions[r].x} y2={positions[r].y - R}
-                                stroke="#4b5563" strokeWidth="1.5" />
+                                stroke="hsl(var(--node-edge))" strokeWidth="1.5" />
                         )}
                     </g>
                 )
@@ -244,7 +246,7 @@ function HeapTreeSVG({
                             {val}
                         </text>
                         <text x={positions[i].x} y={positions[i].y + R + 13} textAnchor="middle"
-                            fill="#6b7280" fontSize="9" className="select-none pointer-events-none">
+                            fill="hsl(var(--node-index-label))" fontSize="9" className="select-none pointer-events-none">
                             [{i}]
                         </text>
                     </g>

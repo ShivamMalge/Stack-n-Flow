@@ -45,6 +45,8 @@ const DELETE_CODE = [
 // ── Types ──────────────────────────────────────────────────────────────────
 
 const TABLE_SIZE = 10
+/** Odd prime multiplier, as used by Java's String.hashCode. */
+const HASH_MULTIPLIER = 31
 
 type BucketEntry = { key: string; value: string; state: "default" | "active" | "found" | "collision" | "deleted" }
 
@@ -59,7 +61,7 @@ type HashFrame = {
 
 function hashFn(key: string): number {
     let h = 0
-    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % TABLE_SIZE
+    for (let i = 0; i < key.length; i++) h = (h * HASH_MULTIPLIER + key.charCodeAt(i)) % TABLE_SIZE
     return h
 }
 

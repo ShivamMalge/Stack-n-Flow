@@ -12,8 +12,19 @@ import { Label } from "@/components/ui/label"
 import { GraduationCap, Briefcase, User } from "lucide-react"
 import { onboardingSchema, type OnboardingData } from "@/lib/validations/onboarding"
 import { completeOnboarding } from "@/app/actions/onboarding"
+import {
+    DEFAULT_USN_PLACEHOLDER,
+    findInstitution,
+    type Institution,
+} from "@/lib/config/institutions"
 
 type Role = "STUDENT" | "PROFESSOR" | "USER"
+
+/** Returns the part of a USN the user actually types, without the fixed prefix. */
+function stripPrefix(value: string, prefix: string): string {
+    const upper = value.toUpperCase()
+    return upper.startsWith(prefix.toUpperCase()) ? upper.slice(prefix.length) : upper
+}
 
 export default function OnboardingPage() {
     const router = useRouter()
@@ -23,7 +34,7 @@ export default function OnboardingPage() {
     const [selectedRole, setSelectedRole] = useState<Role | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [isAIT, setIsAIT] = useState(false)
+    const [institution, setInstitution] = useState<Institution | null>(null)
 
     const form = useForm<OnboardingData>({
         resolver: zodResolver(onboardingSchema) as any,
@@ -66,22 +77,17 @@ export default function OnboardingPage() {
 
     const errors = form.formState.errors as any
 
-    // Watch institution field to detect AIT
+    // Resolve what the user typed against the institution registry, so a known
+    // college can prefill and constrain its USN format.
     const institutionValue = form.watch("institution" as any) as string | undefined
     useEffect(() => {
-        if (!institutionValue) { setIsAIT(false); return }
-        const normalized = institutionValue.trim().toLowerCase()
-        const isAitMatch = normalized === "ait" ||
-            normalized === "atria institute of technology" ||
-            normalized === "atria" ||
-            normalized.includes("atria institute")
-        setIsAIT(isAitMatch)
+        const matched = findInstitution(institutionValue)
+        setInstitution(matched)
 
-        if (isAitMatch) {
+        if (matched) {
             const currentUsn = (form.getValues("usn" as any) || "") as string
-            // If the USN doesn't already start with 1AT, set it
-            if (!currentUsn.toUpperCase().startsWith("1AT")) {
-                form.setValue("usn" as any, "1AT")
+            if (!currentUsn.toUpperCase().startsWith(matched.usn.prefix)) {
+                form.setValue("usn" as any, matched.usn.prefix)
             }
         }
     }, [institutionValue, form])
@@ -162,30 +168,30 @@ export default function OnboardingPage() {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="usn">USN (Roll Number)</Label>
-                                                    {isAIT ? (
+                                                    {institution ? (
                                                         <div className="flex">
                                                             <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 bg-muted text-muted-foreground text-sm font-mono font-semibold select-none">
-                                                                1AT
+                                                                {institution.usn.prefix}
                                                             </span>
                                                             <Input
                                                                 id="usn"
                                                                 className="rounded-l-none font-mono uppercase"
-                                                                placeholder="23CD048"
-                                                                maxLength={7}
+                                                                placeholder={institution.usn.suffixPlaceholder}
+                                                                maxLength={institution.usn.suffixLength}
                                                                 {...form.register("usn" as any, {
                                                                     onChange: (e: any) => {
-                                                                        const suffix = e.target.value.replace(/^1AT/i, "").toUpperCase()
-                                                                        form.setValue("usn" as any, "1AT" + suffix)
+                                                                        const suffix = stripPrefix(e.target.value, institution.usn.prefix)
+                                                                        form.setValue("usn" as any, institution.usn.prefix + suffix)
                                                                     }
                                                                 })}
-                                                                value={((form.watch("usn" as any) || "") as string).replace(/^1AT/i, "")}
+                                                                value={stripPrefix((form.watch("usn" as any) || "") as string, institution.usn.prefix)}
                                                             />
                                                         </div>
                                                     ) : (
-                                                        <Input id="usn" placeholder="e.g. 1RV21CS001" className="font-mono uppercase" {...form.register("usn" as any)} />
+                                                        <Input id="usn" placeholder={DEFAULT_USN_PLACEHOLDER} className="font-mono uppercase" {...form.register("usn" as any)} />
                                                     )}
                                                     {errors.usn && <p className="text-xs text-destructive">{errors.usn.message as string}</p>}
-                                                    {isAIT && <p className="text-xs text-muted-foreground">Format: 1AT + Year(23/24/25) + Branch(CD/CS/IS) + Number(001-999)</p>}
+                                                    {institution && <p className="text-xs text-muted-foreground">{institution.usn.hint}</p>}
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="semester">Semester</Label>

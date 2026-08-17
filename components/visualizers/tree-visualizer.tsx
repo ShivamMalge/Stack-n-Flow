@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
+import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 
 type TreeNode = {
   id: number
@@ -63,11 +64,11 @@ export default function TreeVisualizer({
   const handleInsert = () => {
     if (!inputValue || animating) return
 
-    const value = Number.parseInt(inputValue)
+    const value = parseBoundedInt(inputValue)
 
-    // Add validation to limit value to 500
-    if (value > 500) {
-      alert("Please enter a value not greater than 500")
+    // Reject empty, non-numeric, and out-of-range input
+    if (value === null) {
+      alert(MAX_INPUT_MESSAGE)
       return
     }
 

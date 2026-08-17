@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { MOBILE_BREAKPOINT } from "@/lib/constants"
 
 export function useMobile() {
   const [isMobile, setIsMobile] = useState(false)
@@ -8,7 +9,7 @@ export function useMobile() {
   useEffect(() => {
     // Function to check if the screen is mobile-sized
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
 
     // Initial check

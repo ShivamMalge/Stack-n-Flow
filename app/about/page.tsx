@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
-import { Github, Linkedin, Instagram } from "lucide-react"
-import { SiLeetcode } from "react-icons/si"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import SocialLinks from "@/components/social-links"
+import { SITE_AUTHOR } from "@/lib/site-config"
 
 export const metadata: Metadata = {
   title: "About | Stack'n'Flow",
@@ -20,7 +20,7 @@ export default function AboutPage() {
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 md:mb-6">About Stack&apos;n&apos;Flow</h1>
             <p className="text-base sm:text-xl text-muted-foreground mb-6 md:mb-8">
               <strong>Stack&apos;n&apos;Flow</strong> is an interactive DSA visualizer designed and developed by{" "}
-              <strong>Shivam Malge</strong>.
+              <strong>{SITE_AUTHOR.name}</strong>.
               <br />
               Its mission is to make data structures and algorithms more accessible, intuitive, and engaging for
               everyone—from beginners to seasoned developers.
@@ -54,7 +54,7 @@ export default function AboutPage() {
             <h2 className="text-2xl font-semibold mb-8">About Me</h2>
             <div className="bg-card rounded-lg p-8 shadow-sm border">
               <p className="mb-4">
-                I&apos;m <strong>Shivam Malge</strong>, a Computer Science Engineering student passionate about the
+                I&apos;m <strong>{SITE_AUTHOR.name}</strong>, a Computer Science Engineering student passionate about the
                 intersection of <strong>web development, finance, and AI</strong>.
                 <br />
                 With a strong foundation in full-stack development and a growing interest in data science and system
@@ -66,44 +66,7 @@ export default function AboutPage() {
                 empower others on their programming journey.
               </p>
 
-              <div className="flex flex-wrap gap-4 mt-6 md:mt-8">
-                <a
-                  href="https://www.instagram.com/epsilon_edge?igsh=MTduNDFqdWd5NGlwMQ=="
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Instagram className="h-5 w-5 mr-2" />
-                  <span>Instagram</span>
-                </a>
-                <a
-                  href="https://www.linkedin.com/in/shivam-malge-12523a293?originalSubdomain=in"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Linkedin className="h-5 w-5 mr-2" />
-                  <span>LinkedIn</span>
-                </a>
-                <a
-                  href="https://leetcode.com/u/ShivamMalge/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <SiLeetcode className="h-5 w-5 mr-2" />
-                  <span>LeetCode</span>
-                </a>
-                <a
-                  href="https://github.com/ShivamMalge"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Github className="h-5 w-5 mr-2" />
-                  <span>GitHub</span>
-                </a>
-              </div>
+              <SocialLinks layout="row" className="mt-6 md:mt-8" />
             </div>
 
             <div className="text-center mt-12 italic text-muted-foreground">

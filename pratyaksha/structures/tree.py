@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot
+from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot, telemetry_metadata
+from ..core.structures import StructureType
 from .base import BaseTelemetryStructure
-
-
-def _telemetry_metadata(event_count: int, last_op: str | None) -> Dict[str, Any]:
-    return {"telemetry": {"event_count": event_count, "last_op": last_op}}
 
 
 def _reduce_tree(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> TelemetrySnapshot:
@@ -25,19 +22,19 @@ def _reduce_tree(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemetr
         sequence=event.sequence,
         structure=snapshot.structure,
         nodes=nodes,
-        metadata=_telemetry_metadata(event.sequence, event.op),
+        metadata=telemetry_metadata(event.sequence, event.op),
     )
 
 
 class BinaryTree(BaseTelemetryStructure):
     def __init__(self):
         run = TelemetryRun(
-            structure="TREE",
+            structure=StructureType.TREE,
             reducer=_reduce_tree,
             initial_nodes=None,
-            initial_metadata=_telemetry_metadata(0, None),
+            initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__("TREE", run)
+        super().__init__(run)
 
     def set_root(self, value: Any):
         self._emit("set_root", {"id": self._gen_id(), "value": value})
@@ -46,12 +43,12 @@ class BinaryTree(BaseTelemetryStructure):
 class AVLTree(BinaryTree):
     def __init__(self):
         run = TelemetryRun(
-            structure="AVL_TREE",
+            structure=StructureType.AVL_TREE,
             reducer=_reduce_tree,
             initial_nodes=None,
-            initial_metadata=_telemetry_metadata(0, None),
+            initial_metadata=telemetry_metadata(0, None),
         )
-        BaseTelemetryStructure.__init__(self, "AVL_TREE", run)
+        BaseTelemetryStructure.__init__(self, run)
 
     def set_root(self, value: Any):
         self._emit("set_root", {"id": self._gen_id(), "value": value})

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
+import { DEFAULT_SPEED } from "@/lib/constants"
 
 export interface AnimationFrame<T> {
     snapshot: T
@@ -26,8 +27,6 @@ export interface AnimationPlayerControls<T> {
     setSpeed: (ms: number) => void
     clear: () => void
 }
-
-const DEFAULT_SPEED = 800
 
 export function useAnimationPlayer<T>(
     onFrameChange?: (snapshot: T, frameIndex: number) => void

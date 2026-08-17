@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Search, Plus, RotateCcw, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 
 type ArrayItem = {
   value: number
@@ -62,11 +63,9 @@ export default function BinarySearchVisualizer({
   const handleAddElement = () => {
     if (!inputValue || player.isPlaying) return
 
-    const value = Number.parseInt(inputValue)
-    if (isNaN(value)) return
-
-    if (value > 500) {
-      alert("Please enter a value not greater than 500")
+    const value = parseBoundedInt(inputValue)
+    if (value === null) {
+      alert(MAX_INPUT_MESSAGE)
       return
     }
 
@@ -121,8 +120,9 @@ export default function BinarySearchVisualizer({
   const handleSearch = () => {
     if (!searchValue || player.isPlaying || array.length === 0 || !isSorted) return
 
-    const target = Number.parseInt(searchValue)
-    if (isNaN(target)) return
+    // Same bounds as handleAddElement: nothing outside them can be in the array.
+    const target = parseBoundedInt(searchValue)
+    if (target === null) return
 
     setSearchResult(null)
 

@@ -55,6 +55,48 @@ type Edge = {
   isNew?: boolean
 }
 
+// Canvas dimensions the node coordinates below are expressed in; must match the
+// <svg> viewBox further down.
+const CANVAS_WIDTH = 500
+const CANVAS_HEIGHT = 300
+const NODE_MARGIN = 50
+
+/** Starting graph, laid out to show a branch and a re-join. */
+const SAMPLE_GRAPH: { nodes: GraphNode[]; edges: Edge[] } = {
+  nodes: [
+    { id: "A", label: "A", x: 100, y: 100 },
+    { id: "B", label: "B", x: 250, y: 50 },
+    { id: "C", label: "C", x: 250, y: 150 },
+    { id: "D", label: "D", x: 400, y: 100 },
+    { id: "E", label: "E", x: 400, y: 200 },
+  ],
+  edges: [
+    { id: "A-B", source: "A", target: "B" },
+    { id: "A-C", source: "A", target: "C" },
+    { id: "B-D", source: "B", target: "D" },
+    { id: "C-D", source: "C", target: "D" },
+    { id: "C-E", source: "C", target: "E" },
+  ],
+}
+
+/**
+ * Places a new node on a ring inside the canvas. Positions used to be random,
+ * which let nodes overlap or land outside the viewBox entirely.
+ */
+function nextNodePosition(index: number): { x: number; y: number } {
+  const angle = index * GOLDEN_ANGLE
+  const radiusX = (CANVAS_WIDTH - NODE_MARGIN * 2) / 2
+  const radiusY = (CANVAS_HEIGHT - NODE_MARGIN * 2) / 2
+
+  return {
+    x: CANVAS_WIDTH / 2 + Math.cos(angle) * radiusX * 0.75,
+    y: CANVAS_HEIGHT / 2 + Math.sin(angle) * radiusY * 0.75,
+  }
+}
+
+/** ~137.5°, spreads successive points evenly around a circle. */
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
+
 type GraphFrame = {
   nodes: GraphNode[]
   edges: Edge[]
@@ -97,29 +139,14 @@ export default function GraphVisualizer({
   const player = useAnimationPlayer<GraphFrame>(onFrameChange)
 
   useEffect(() => {
-    const sampleNodes: GraphNode[] = [
-      { id: "A", label: "A", x: 100, y: 100 },
-      { id: "B", label: "B", x: 250, y: 50 },
-      { id: "C", label: "C", x: 250, y: 150 },
-      { id: "D", label: "D", x: 400, y: 100 },
-      { id: "E", label: "E", x: 400, y: 200 },
-    ]
-    const sampleEdges: Edge[] = [
-      { id: "A-B", source: "A", target: "B" },
-      { id: "A-C", source: "A", target: "C" },
-      { id: "B-D", source: "B", target: "D" },
-      { id: "C-D", source: "C", target: "D" },
-      { id: "C-E", source: "C", target: "E" },
-    ]
-    setNodes(sampleNodes)
-    setEdges(sampleEdges)
+    setNodes(SAMPLE_GRAPH.nodes.map((node) => ({ ...node })))
+    setEdges(SAMPLE_GRAPH.edges.map((edge) => ({ ...edge })))
   }, [])
 
   const handleAddNode = () => {
     if (!nodeLabel || isAdding || player.isPlaying) return
     setIsAdding(true)
-    const x = Math.random() * 300 + 100
-    const y = Math.random() * 150 + 50
+    const { x, y } = nextNodePosition(nodes.length)
     const newNode: GraphNode = { id: nodeLabel, label: nodeLabel, x, y, isNew: true }
     setNodes((prev) => [...prev, newNode])
     setTimeout(() => {
@@ -427,7 +454,7 @@ export default function GraphVisualizer({
           </CardHeader>
           <CardContent className="p-0 overflow-hidden flex flex-col">
             <div className="flex items-center justify-center min-h-[300px] md:h-[400px] py-4 bg-muted/5 border-t overflow-auto">
-              <svg ref={svgRef} width="500" height="300" viewBox="0 0 500 300" className="max-w-none md:max-w-full">
+              <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} className="max-w-none md:max-w-full">
                 {edges.map((edge) => {
                   const src = nodes.find((n) => n.id === edge.source)
                   const tgt = nodes.find((n) => n.id === edge.target)

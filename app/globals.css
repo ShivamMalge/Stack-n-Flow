@@ -55,7 +55,24 @@
 
     --chart-5: 27 87% 67%;
 
-    --radius: 0.5rem
+    --radius: 0.5rem;
+
+    /* Visualizer node states. Previously hardcoded hex values chosen for dark
+       mode only, which made nodes unreadable under the light theme. */
+    --node-default-fill: 220 14% 96%;
+    --node-default-stroke: 239 84% 67%;
+    --node-comparing-fill: 214 95% 93%;
+    --node-comparing-stroke: 217 91% 60%;
+    --node-swapping-fill: 48 96% 89%;
+    --node-swapping-stroke: 38 92% 50%;
+    --node-inserted-fill: 141 79% 85%;
+    --node-inserted-stroke: 142 71% 45%;
+    --node-deleted-fill: 0 93% 94%;
+    --node-deleted-stroke: 0 84% 60%;
+    --node-heapified-fill: 269 100% 92%;
+    --node-heapified-stroke: 271 91% 65%;
+    --node-edge: 220 9% 46%;
+    --node-index-label: 220 9% 46%
   }
   .dark {
 
@@ -105,7 +122,22 @@
 
     --chart-4: 280 65% 60%;
 
-    --chart-5: 340 75% 55%
+    --chart-5: 340 75% 55%;
+
+    --node-default-fill: 215 28% 17%;
+    --node-default-stroke: 239 84% 67%;
+    --node-comparing-fill: 213 53% 25%;
+    --node-comparing-stroke: 217 91% 60%;
+    --node-swapping-fill: 41 100% 12%;
+    --node-swapping-stroke: 38 92% 50%;
+    --node-inserted-fill: 144 61% 20%;
+    --node-inserted-stroke: 142 71% 45%;
+    --node-deleted-fill: 0 63% 31%;
+    --node-deleted-stroke: 0 84% 60%;
+    --node-heapified-fill: 274 87% 21%;
+    --node-heapified-stroke: 271 91% 65%;
+    --node-edge: 220 9% 34%;
+    --node-index-label: 220 9% 46%
   }
 }
 

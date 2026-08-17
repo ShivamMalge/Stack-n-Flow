@@ -2,15 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot
+from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot, telemetry_metadata
+from ..core.structures import StructureType
 from .base import BaseTelemetryStructure
-
-
-def _telemetry_metadata(event_count: int, last_op: str | None, edges: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
-    return {
-        "edges": list(edges or []),
-        "telemetry": {"event_count": event_count, "last_op": last_op},
-    }
 
 
 def _reduce_graph(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> TelemetrySnapshot:
@@ -39,19 +33,19 @@ def _reduce_graph(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
         sequence=event.sequence,
         structure=snapshot.structure,
         nodes=nodes,
-        metadata=_telemetry_metadata(event.sequence, event.op, edges),
+        metadata=telemetry_metadata(event.sequence, event.op, edges=list(edges)),
     )
 
 
 class Graph(BaseTelemetryStructure):
     def __init__(self):
         run = TelemetryRun(
-            structure="GRAPH",
+            structure=StructureType.GRAPH,
             reducer=_reduce_graph,
             initial_nodes=[],
-            initial_metadata=_telemetry_metadata(0, None, []),
+            initial_metadata=telemetry_metadata(0, None, edges=[]),
         )
-        super().__init__("GRAPH", run)
+        super().__init__(run)
         self.edges = []
 
     def add_node(self, label: str, x: Any, y: Any):

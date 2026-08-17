@@ -2,17 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot
+from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot, telemetry_metadata
+from ..core.structures import StructureType
 from .base import BaseTelemetryStructure
-
-
-def _telemetry_metadata(event_count: int, last_op: str | None) -> Dict[str, Any]:
-    return {
-        "telemetry": {
-            "event_count": event_count,
-            "last_op": last_op,
-        }
-    }
 
 
 def _reduce_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> TelemetrySnapshot:
@@ -23,7 +15,7 @@ def _reduce_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
     elif event.op == "dequeue" and nodes:
         nodes = nodes[1:]
     elif event.op == "peek":
-        metadata = _telemetry_metadata(event.sequence, event.op)
+        metadata = telemetry_metadata(event.sequence, event.op)
         if nodes:
             metadata["searchResult"] = f"Front element: {nodes[0]['value']}"
         return TelemetrySnapshot(
@@ -37,19 +29,19 @@ def _reduce_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
         sequence=event.sequence,
         structure=snapshot.structure,
         nodes=nodes,
-        metadata=_telemetry_metadata(event.sequence, event.op),
+        metadata=telemetry_metadata(event.sequence, event.op),
     )
 
 
 class Queue(BaseTelemetryStructure):
     def __init__(self):
         run = TelemetryRun(
-            structure="QUEUE",
+            structure=StructureType.QUEUE,
             reducer=_reduce_queue,
             initial_nodes=[],
-            initial_metadata=_telemetry_metadata(0, None),
+            initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__("QUEUE", run)
+        super().__init__(run)
 
     def enqueue(self, value: Any):
         self._emit("enqueue", {"id": self._gen_id(), "value": value})

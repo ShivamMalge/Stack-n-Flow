@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot
+from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot, telemetry_metadata
+from ..core.structures import StructureType
 from .base import BaseTelemetryStructure
-
-
-def _telemetry_metadata(event_count: int, last_op: str | None) -> Dict[str, Any]:
-    return {"telemetry": {"event_count": event_count, "last_op": last_op}}
 
 
 def _reduce_array(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> TelemetrySnapshot:
@@ -23,7 +20,7 @@ def _reduce_array(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
         if 0 <= index < len(nodes):
             nodes.pop(index)
 
-    metadata = _telemetry_metadata(event.sequence, event.op)
+    metadata = telemetry_metadata(event.sequence, event.op)
     if event.op == "remove_at":
         metadata["removedIndex"] = event.payload["index"]
 
@@ -38,12 +35,12 @@ def _reduce_array(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
 class ArrayList(BaseTelemetryStructure):
     def __init__(self):
         run = TelemetryRun(
-            structure="ARRAY",
+            structure=StructureType.ARRAY,
             reducer=_reduce_array,
             initial_nodes=[],
-            initial_metadata=_telemetry_metadata(0, None),
+            initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__("ARRAY", run)
+        super().__init__(run)
 
     def append(self, value: Any):
         self._emit("append", {"id": self._gen_id(), "value": value})

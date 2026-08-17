@@ -1,7 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Github, Instagram, Linkedin } from "lucide-react"
-import { SiLeetcode } from "react-icons/si"
+import SocialLinks from "@/components/social-links"
 
 export default function Footer() {
   return (
@@ -46,44 +45,7 @@ export default function Footer() {
 
           <div>
             <h3 className="font-semibold mb-4">Connect</h3>
-            <div className="flex flex-col space-y-2">
-              <Link
-                href="https://github.com/ShivamMalge"
-                className="text-muted-foreground hover:text-foreground transition-colors flex items-center"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Github className="h-5 w-5 mr-2" />
-                <span>GitHub</span>
-              </Link>
-              <Link
-                href="https://www.linkedin.com/in/shivam-malge-12523a293?originalSubdomain=in"
-                className="text-muted-foreground hover:text-foreground transition-colors flex items-center"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Linkedin className="h-5 w-5 mr-2" />
-                <span>LinkedIn</span>
-              </Link>
-              <Link
-                href="https://leetcode.com/u/ShivamMalge/"
-                className="text-muted-foreground hover:text-foreground transition-colors flex items-center"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <SiLeetcode className="h-5 w-5 mr-2" />
-                <span>LeetCode</span>
-              </Link>
-              <Link
-                href="https://www.instagram.com/epsilon_edge?igsh=MTduNDFqdWd5NGlwMQ=="
-                className="text-muted-foreground hover:text-foreground transition-colors flex items-center"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Instagram className="h-5 w-5 mr-2" />
-                <span>Instagram</span>
-              </Link>
-            </div>
+            <SocialLinks layout="column" />
           </div>
         </div>
 

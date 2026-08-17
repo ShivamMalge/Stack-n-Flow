@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
+import { SPEED_PRESETS } from "@/lib/constants"
 import {
     Play,
     Pause,
@@ -27,13 +28,6 @@ interface AnimationControlsProps {
     onFrameChange?: (frame: number) => void
 }
 
-const SPEED_PRESETS = [
-    { label: "0.5x", value: 1600 },
-    { label: "1x", value: 800 },
-    { label: "1.5x", value: 533 },
-    { label: "2x", value: 400 },
-    { label: "3x", value: 267 },
-]
 
 export default function AnimationControls({
     currentFrame,

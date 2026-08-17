@@ -5,6 +5,24 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List
 
 
+def telemetry_metadata(
+    event_count: int, last_op: str | None, **extra: Any
+) -> Dict[str, Any]:
+    """Builds the metadata block every reducer attaches to a snapshot.
+
+    Structure-specific keys (``edges``, ``states``, ``front``/``rear``/``size``)
+    are passed as keyword arguments and placed alongside the telemetry block.
+    """
+    # Extra keys are applied first so the telemetry block always reflects the
+    # current event, even when a caller forwards a previous snapshot's metadata.
+    metadata: Dict[str, Any] = dict(extra)
+    metadata["telemetry"] = {
+        "event_count": event_count,
+        "last_op": last_op,
+    }
+    return metadata
+
+
 @dataclass(frozen=True)
 class TelemetryEvent:
     sequence: int

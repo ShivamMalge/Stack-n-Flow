@@ -2,18 +2,19 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot
+from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot, telemetry_metadata
+from ..core.structures import StructureType
 from .base import BaseTelemetryStructure
 
-
-def _telemetry_metadata(event_count: int, last_op: str | None) -> Dict[str, Any]:
-    return {"telemetry": {"event_count": event_count, "last_op": last_op}}
+# Odd prime multiplier, as used by Java's String.hashCode.
+HASH_MULTIPLIER = 31
+DEFAULT_TABLE_SIZE = 10
 
 
 def _hash(key: Any, size: int) -> int:
     h = 0
     for char in str(key):
-        h = (h * 31 + ord(char)) % size
+        h = (h * HASH_MULTIPLIER + ord(char)) % size
     return h
 
 
@@ -34,7 +35,7 @@ def _reduce_hash_table(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Te
                 entry["value"] = str(event.payload["value"])
                 break
 
-    metadata.update(_telemetry_metadata(event.sequence, event.op))
+    metadata.update(telemetry_metadata(event.sequence, event.op))
     return TelemetrySnapshot(
         sequence=event.sequence,
         structure=snapshot.structure,
@@ -44,15 +45,15 @@ def _reduce_hash_table(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Te
 
 
 class HashTable(BaseTelemetryStructure):
-    def __init__(self, size: int = 10):
+    def __init__(self, size: int = DEFAULT_TABLE_SIZE):
         run = TelemetryRun(
-            structure="HASH_TABLE",
+            structure=StructureType.HASH_TABLE,
             reducer=_reduce_hash_table,
             initial_nodes=[[] for _ in range(size)],
-            initial_metadata={"size": size, **_telemetry_metadata(0, None)},
+            initial_metadata={"size": size, **telemetry_metadata(0, None)},
         )
         self.size = size
-        super().__init__("HASH_TABLE", run)
+        super().__init__(run)
 
     def insert(self, key: Any, value: Any):
         bucket_index = _hash(key, self.size)

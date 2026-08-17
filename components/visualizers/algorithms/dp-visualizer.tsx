@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import { parseBoundedInt } from "@/lib/constants"
 
 // ── Fibonacci DP ────────────────────────────────────────────────────────────
 
@@ -39,6 +40,12 @@ function generateFibonacci(n: number): AnimationFrame<FibFrame>[] {
 // ── 0/1 Knapsack DP ─────────────────────────────────────────────────────────
 
 type KnapsackItem = { weight: number; value: number }
+
+/** Seed items the knapsack demo starts with. */
+const DEFAULT_KNAPSACK_ITEMS: KnapsackItem[] = [
+    { weight: 2, value: 6 }, { weight: 3, value: 10 }, { weight: 4, value: 12 },
+]
+
 type KnapsackFrame = {
     dp: number[][]
     currentRow: number; currentCol: number
@@ -100,9 +107,7 @@ export default function DPVisualizer() {
     const [fibSteps, setFibSteps] = useState<string[]>([])
 
     // Knapsack state
-    const [ksItems, setKsItems] = useState<KnapsackItem[]>([
-        { weight: 2, value: 6 }, { weight: 3, value: 10 }, { weight: 4, value: 12 },
-    ])
+    const [ksItems, setKsItems] = useState<KnapsackItem[]>(DEFAULT_KNAPSACK_ITEMS)
     const [ksCapacity, setKsCapacity] = useState("5")
     const [ksDp, setKsDp] = useState<number[][]>([])
     const [ksCurrentRow, setKsCurrentRow] = useState(-1)
@@ -125,8 +130,8 @@ export default function DPVisualizer() {
     const ksPlayer = useAnimationPlayer<KnapsackFrame>(onKsFrame)
 
     const handleRunFib = () => {
-        const n = parseInt(fibN)
-        if (isNaN(n) || n < 0 || n > 20) return
+        const n = parseBoundedInt(fibN, { min: 0, max: 20 })
+        if (n === null) return
         const frames = generateFibonacci(n)
         setFibSteps(frames.map((f) => f.description))
         fibPlayer.loadFrames(frames)
@@ -134,8 +139,8 @@ export default function DPVisualizer() {
     }
 
     const handleRunKnapsack = () => {
-        const cap = parseInt(ksCapacity)
-        if (isNaN(cap) || cap < 1 || cap > 15 || ksItems.length === 0) return
+        const cap = parseBoundedInt(ksCapacity, { min: 1, max: 15 })
+        if (cap === null || ksItems.length === 0) return
         const frames = generateKnapsack(ksItems, cap)
         setKsSteps(frames.map((f) => f.description))
         ksPlayer.loadFrames(frames)
@@ -143,8 +148,10 @@ export default function DPVisualizer() {
     }
 
     const handleAddKsItem = () => {
-        const w = parseInt(ksWeightInput); const v = parseInt(ksValueInput)
-        if (isNaN(w) || isNaN(v) || w < 1 || v < 1 || ksItems.length >= 8) return
+        // Weight and value are only bounded below, as before.
+        const w = parseBoundedInt(ksWeightInput, { min: 1, max: Number.MAX_SAFE_INTEGER })
+        const v = parseBoundedInt(ksValueInput, { min: 1, max: Number.MAX_SAFE_INTEGER })
+        if (w === null || v === null || ksItems.length >= 8) return
         setKsItems([...ksItems, { weight: w, value: v }])
         setKsWeightInput(""); setKsValueInput("")
         ksPlayer.clear(); setKsSteps([])

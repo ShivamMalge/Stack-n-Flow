@@ -2,17 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot
+from ..core.telemetry import TelemetryEvent, TelemetryRun, TelemetrySnapshot, telemetry_metadata
+from ..core.structures import StructureType
 from .base import BaseTelemetryStructure
 
-
-def _telemetry_metadata(event_count: int, last_op: str | None, front: int, rear: int, size: int) -> Dict[str, Any]:
-    return {
-        "front": front,
-        "rear": rear,
-        "size": size,
-        "telemetry": {"event_count": event_count, "last_op": last_op},
-    }
+DEFAULT_CAPACITY = 5
+# Sentinel for "no element has been enqueued yet".
+EMPTY_REAR = -1
 
 
 def _reduce_circular_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> TelemetrySnapshot:
@@ -28,7 +24,7 @@ def _reduce_circular_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -
         nodes[rear] = {"id": event.payload["id"], "value": event.payload["value"]}
         size += 1
 
-    metadata.update(_telemetry_metadata(event.sequence, event.op, front, rear, size))
+    metadata.update(telemetry_metadata(event.sequence, event.op, front=front, rear=rear, size=size))
     return TelemetrySnapshot(
         sequence=event.sequence,
         structure=snapshot.structure,
@@ -38,20 +34,20 @@ def _reduce_circular_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -
 
 
 class CircularQueue(BaseTelemetryStructure):
-    def __init__(self, max_size: int = 5):
+    def __init__(self, max_size: int = DEFAULT_CAPACITY):
         self.max_size = max_size
         initial_nodes: List[Dict[str, Any]] = [{"id": "empty", "value": 0} for _ in range(max_size)]
         initial_metadata = {
             "max_size": max_size,
-            **_telemetry_metadata(0, None, front=0, rear=-1, size=0),
+            **telemetry_metadata(0, None, front=0, rear=EMPTY_REAR, size=0),
         }
         run = TelemetryRun(
-            structure="CIRCULAR_QUEUE",
+            structure=StructureType.CIRCULAR_QUEUE,
             reducer=_reduce_circular_queue,
             initial_nodes=initial_nodes,
             initial_metadata=initial_metadata,
         )
-        super().__init__("CIRCULAR_QUEUE", run)
+        super().__init__(run)
         self.front = self.metadata["front"]
         self.rear = self.metadata["rear"]
         self.size = self.metadata["size"]

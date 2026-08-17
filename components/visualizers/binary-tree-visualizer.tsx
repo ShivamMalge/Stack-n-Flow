@@ -13,6 +13,7 @@ import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { computeTreeLayout } from "@/lib/tree-layout"
 import CodePanel from "@/components/ui/code-panel"
+import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 
 const INSERT_CODE = [
   "def insert(value):",
@@ -132,11 +133,11 @@ export default function BinaryTreeVisualizer() {
   const handleInsert = () => {
     if (!inputValue || animating) return
 
-    const value = Number.parseInt(inputValue)
+    const value = parseBoundedInt(inputValue)
 
-    // Add validation to limit value to 500
-    if (value > 500) {
-      alert("Please enter a value not greater than 500")
+    // Reject empty, non-numeric, and out-of-range input
+    if (value === null) {
+      alert(MAX_INPUT_MESSAGE)
       return
     }
 

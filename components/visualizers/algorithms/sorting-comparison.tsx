@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Shuffle, Play, Pause, RotateCcw, SkipForward, SkipBack, Plus, X } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import { MOBILE_BREAKPOINT, SPEED_PRESETS } from "@/lib/constants"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -304,11 +305,6 @@ function BarChart({ bars }: { bars: BarItem[] }) {
     )
 }
 
-// ── Speed presets ───────────────────────────────────────────────────────────
-
-const SPEED_LABELS = ["0.5×", "1×", "2×", "3×", "5×"]
-const SPEED_MS = [1600, 800, 400, 267, 160]
-
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export default function SortingComparison() {
@@ -344,7 +340,7 @@ export default function SortingComparison() {
     // Auto-scroll active step into view (without scrolling the whole page)
     useEffect(() => {
         const elA = activeStepRefA.current
-        if (elA && elA.parentElement && window.innerWidth > 768) {
+        if (elA && elA.parentElement && window.innerWidth > MOBILE_BREAKPOINT) {
             const container = elA.parentElement
             const targetScroll = elA.offsetTop - (container.clientHeight / 2) + (elA.clientHeight / 2)
             container.scrollTo({ top: Math.max(0, targetScroll), behavior: "smooth" })
@@ -353,7 +349,7 @@ export default function SortingComparison() {
 
     useEffect(() => {
         const elB = activeStepRefB.current
-        if (elB && elB.parentElement && window.innerWidth > 768) {
+        if (elB && elB.parentElement && window.innerWidth > MOBILE_BREAKPOINT) {
             const container = elB.parentElement
             const targetScroll = elB.offsetTop - (container.clientHeight / 2) + (elB.clientHeight / 2)
             container.scrollTo({ top: Math.max(0, targetScroll), behavior: "smooth" })
@@ -416,7 +412,7 @@ export default function SortingComparison() {
 
     const handleStart = () => {
         if (!values.length) return
-        const speed = SPEED_MS[speedIdx]
+        const speed = SPEED_PRESETS[speedIdx].value
 
         const framesA = GENERATORS[algoA](values)
         const framesB = GENERATORS[algoB](values)
@@ -448,8 +444,8 @@ export default function SortingComparison() {
 
     const handleSpeedChange = (idx: number) => {
         setSpeedIdx(idx)
-        playerA.setSpeed(SPEED_MS[idx])
-        playerB.setSpeed(SPEED_MS[idx])
+        playerA.setSpeed(SPEED_PRESETS[idx].value)
+        playerB.setSpeed(SPEED_PRESETS[idx].value)
     }
 
     const progressA = playerA.totalFrames > 0 ? Math.round(((playerA.currentFrame + 1) / playerA.totalFrames) * 100) : 0
@@ -577,9 +573,9 @@ export default function SortingComparison() {
 
                             {/* Speed control inline */}
                             <div className="flex items-center gap-4 w-full sm:w-auto sm:ml-auto bg-muted/30 p-2 rounded-lg">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap min-w-[70px]">Speed: {SPEED_LABELS[speedIdx]}</span>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap min-w-[70px]">Speed: {SPEED_PRESETS[speedIdx].label}</span>
                                 <div className="flex-1 sm:w-32">
-                                    <Slider value={[speedIdx]} min={0} max={SPEED_MS.length - 1} step={1}
+                                    <Slider value={[speedIdx]} min={0} max={SPEED_PRESETS.length - 1} step={1}
                                         onValueChange={([v]) => handleSpeedChange(v)} disabled={isPlaying} />
                                 </div>
                             </div>
