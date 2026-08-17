@@ -36,7 +36,7 @@ describe("StackRenderer", () => {
 
 describe("StackVisualizer compatibility", () => {
   it("continues to render controlled nodes through the existing wrapper", () => {
-    render(React.createElement(StackVisualizer, { controlledNodes }));
+    render(<StackVisualizer controlledNodes={controlledNodes} />);
 
     expect(screen.getByText("30")).toBeInTheDocument();
     expect(screen.getByText("20")).toBeInTheDocument();

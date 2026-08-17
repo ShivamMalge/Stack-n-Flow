@@ -753,7 +753,6 @@ export default function BTreeVisualizer() {
     setScale(1)
     setPan({ x: 0, y: 0 })
     setNodePositions({})
-    setInputError(null)
   }
 
   // Replace the Visualization Panel section with this improved version
@@ -822,6 +821,8 @@ export default function BTreeVisualizer() {
                   </Button>
                 )}
               </div>
+
+              <InlineAlert message={inputError} className="mt-2" />
             </Tabs>
 
             {operationInfo && (

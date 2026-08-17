@@ -254,6 +254,8 @@ export default function DivideConquerVisualizer() {
                 </Button>
               </div>
 
+              <InlineAlert message={inputError} />
+
               <div className="flex space-x-2">
                 <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
                   <Shuffle className="mr-2 h-4 w-4" />

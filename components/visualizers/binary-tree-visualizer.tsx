@@ -469,7 +469,6 @@ export default function BinaryTreeVisualizer() {
   const handleReset = () => {
     setScale(1)
     setPan({ x: 0, y: 0 })
-    setInputError(null)
   }
 
   // Replace the Visualization Panel section with this improved version
@@ -507,6 +506,8 @@ export default function BinaryTreeVisualizer() {
                   </Button>
                 </div>
               )}
+
+              <InlineAlert message={inputError} className="mt-2" />
 
               {operation === "search" && (
                 <div className="flex space-x-2 mt-4">

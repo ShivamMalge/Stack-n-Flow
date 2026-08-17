@@ -37,7 +37,7 @@ describe("QueueRenderer", () => {
 
 describe("QueueVisualizer compatibility", () => {
   it("continues to render controlled nodes through the existing wrapper", () => {
-    render(React.createElement(QueueVisualizer, { controlledNodes }));
+    render(<QueueVisualizer controlledNodes={controlledNodes} />);
 
     expect(screen.getByText("10")).toBeInTheDocument();
     expect(screen.getByText("20")).toBeInTheDocument();

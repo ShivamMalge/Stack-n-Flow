@@ -487,7 +487,6 @@ export default function TreeVisualizer({
   const handleReset = () => {
     setScale(1)
     setPan({ x: 0, y: 0 })
-    setInputError(null)
   }
 
   // Update the SVG container to fill more space
@@ -529,6 +528,8 @@ export default function TreeVisualizer({
                   </Button>
                 </div>
               )}
+
+              <InlineAlert message={inputError} className="mt-2" />
 
               {operation === "search" && (
                 <div className="flex space-x-2 mt-4">

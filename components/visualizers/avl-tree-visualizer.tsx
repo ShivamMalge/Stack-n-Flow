@@ -552,7 +552,6 @@ export default function AVLTreeVisualizer({
   const handleReset = () => {
     setScale(1)
     setPan({ x: 0, y: 0 })
-    setInputError(null)
   }
 
   // Replace the Visualization Panel section with this improved version
@@ -602,6 +601,8 @@ export default function AVLTreeVisualizer({
                   </Button>
                 )}
               </div>
+
+              <InlineAlert message={inputError} className="mt-2" />
             </Tabs>
 
             {rotationInfo && (

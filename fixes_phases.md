@@ -85,19 +85,34 @@ Working tree (excluding `node_modules`/`.git`) is now 2.5 MB, down from ~6 MB.
 
 ---
 
-## Phase 3 — Web App Correctness Bugs (≈ 2–3 days)
+## Phase 3 — Web App Correctness Bugs ✅ COMPLETE (2026-08-17)
 
-- [ ] 🟠 **NaN bypasses validation in ~17 of 25 input handlers** — `Number.parseInt(x)` then `if (value > 500)`; `NaN > 500` is `false`, so NaN gets inserted as a node. Fixed by the shared `parsePositiveInt()` from Phase 2.
-- [ ] 🟠 **Un-cleaned timers throughout the visualizers** — 4-level nested `setTimeout` chains with no cleanup (`linked-list-visualizer.tsx:101-213`, stack, queue, array, circular/doubly variants) and `setInterval` reading stale closures (`linked-list:236-275`, `array:175`, `tree:128,240`, …). Switching tabs mid-animation leaks timers and setState-on-unmounted. Store handles in refs, clear in `useEffect` cleanup — or migrate to `useAnimationPlayer`, which already does this correctly.
-- [ ] 🟠 **setState during render** — `sorting-comparison.tsx:366-367` calls `setDescA/B` in the render body. Delete the redundant state; read `player.currentDescription` directly.
-- [ ] 🟠 **Wall-clock timers race the animation player** — `heap-visualizer.tsx:318,328`, `hash-table-visualizer.tsx:221`: `setTimeout(…, frames.length * speed + 200)` fires even if the user pauses/scrubs, clobbering the display. Reset on `player.isComplete` in an effect instead.
-- [ ] 🟠 **"Controlled" props silently no-op** — `linked-list/stack/queue-visualizer` read `controlledNodes || internalNodes` but every mutation writes internal state; with a controlled parent, all user actions do nothing. Also two different fallback idioms across 12 components (`||` vs `!== undefined`) — standardize on `??`. 
-- [ ] 🟡 **16 of 19 "Learn More" links dead-end** — `lib/learn-content.ts` has 4 entries; `app/learn/page.tsx` renders 19 cards → "Topic Not Found". Derive cards from `Object.keys(dataStructureInfo)` and mark the rest "Coming soon". (`binary-search` has content but no card.)
-- [ ] 🟡 **Theme toggle permanently broken on 5 of 8 pages** — root divs hardcode `className="… dark"` (`app/page.tsx:15`, about, learn ×2, visualize). Delete the literal; `layout.tsx` already sets `defaultTheme="dark" enableSystem`.
-- [ ] 🟡 **`/operations` is orphaned** (~3,700 lines reachable only by typing the URL; no navbar/footer/metadata on the page either). Decide: add it to the nav with page chrome, or delete the subtree.
-- [ ] 🟡 Smaller fixes: greedy coin remove deletes all coins of same value (`greedy-algorithm-visualizer.tsx:57-62` — filter by `id`); empty array input parses to `[0]` (`array-operations.tsx:26-37`); B-tree wipes state under React Strict Mode double-mount (`b-tree-visualizer.tsx:74,144-150`); stack mini-preview leaks full controls (`stack-visualizer.tsx:151` — missing `!mini` guard); queue lacks the `mini` prop entirely; `tree-visualizer.tsx` implements a BST but is labelled "General Tree".
-- [ ] 🟡 **Runtime deps in `devDependencies`** — `framer-motion`, `lucide-react`, `clsx`, `tailwind-merge` are imported by app code but declared dev-only; breaks any `npm ci --omit=dev` deploy. Move to `dependencies`.
-- [ ] ⚪ Accessibility: unassociated `<label>`s (b-tree, hash-table), raw `<img>` avatar → `next/image` with descriptive alt (`navbar.tsx:66,138`), blocking `alert()` in 10 files → inline `<Alert>` (component already exists), keyboard-inaccessible scrubber (`animation-controls.tsx:69-79`), index keys on reordering lists.
+**Verification:** `next build` succeeds, `tsc` clean on application code, 19 JS tests pass (5 new tests in `tests/components/visualizer-modes.test.tsx` lock in the mini/controlled behaviour).
+
+### Two extra bugs found while fixing the timers
+Neither was in the original audit; both were found by reading the code around the timer cleanup.
+- **Zooming the B-tree wiped it.** Its init effect depended on the memoised drag handlers, which are recreated whenever `scale` changes — so every zoom re-ran the effect, reset the tree to empty and cleared the animation timeout, leaving `animating` stuck. Split into a mount-only effect and a listener-cleanup effect.
+- **B-tree root splits produced duplicate node ids.** `createNode()` read its counter from state, so when one insert created two nodes both got the same id — duplicate React keys and colliding drag positions. The counter moved to a ref.
+
+### Deferred (deliberately, with reasons)
+- **Index keys on reordering lists** (`key={index}` in ~35 places). Real but cosmetic; touching sorting/merge animation keys risks visual regressions with no test coverage to catch them.
+- **`Number.parseInt` in tree search handlers** (~6 sites). They never had bounds, and `NaN` there simply reports "not found" — adding an error path would change behaviour rather than fix a defect.
+- **`/learn` content itself.** 16 topics now honestly say "Coming soon"; writing them is `features_phases.md` F3, not a bug fix.
+- **Merging the duplicate BST visualizers.** The "General Tree" tab was renamed to "Tree" because the component builds an ordered binary tree, not an n-ary one — but it still overlaps the separate Binary Search Tree tab. Deciding whether to merge them is a product call.
+
+### Original checklist
+
+- [x] 🟠 **NaN bypasses validation in ~17 of 25 input handlers** — `Number.parseInt(x)` then `if (value > 500)`; `NaN > 500` is `false`, so NaN gets inserted as a node. Fixed by the shared `parsePositiveInt()` from Phase 2.
+- [x] 🟠 **Un-cleaned timers throughout the visualizers** — 4-level nested `setTimeout` chains with no cleanup (`linked-list-visualizer.tsx:101-213`, stack, queue, array, circular/doubly variants) and `setInterval` reading stale closures (`linked-list:236-275`, `array:175`, `tree:128,240`, …). Switching tabs mid-animation leaks timers and setState-on-unmounted. Store handles in refs, clear in `useEffect` cleanup — or migrate to `useAnimationPlayer`, which already does this correctly.
+- [x] 🟠 **setState during render** — `sorting-comparison.tsx:366-367` calls `setDescA/B` in the render body. Delete the redundant state; read `player.currentDescription` directly.
+- [x] 🟠 **Wall-clock timers race the animation player** — `heap-visualizer.tsx:318,328`, `hash-table-visualizer.tsx:221`: `setTimeout(…, frames.length * speed + 200)` fires even if the user pauses/scrubs, clobbering the display. Reset on `player.isComplete` in an effect instead.
+- [x] 🟠 **"Controlled" props silently no-op** — `linked-list/stack/queue-visualizer` read `controlledNodes || internalNodes` but every mutation writes internal state; with a controlled parent, all user actions do nothing. Also two different fallback idioms across 12 components (`||` vs `!== undefined`) — standardize on `??`. 
+- [x] 🟡 **16 of 19 "Learn More" links dead-end** — `lib/learn-content.ts` has 4 entries; `app/learn/page.tsx` renders 19 cards → "Topic Not Found". Derive cards from `Object.keys(dataStructureInfo)` and mark the rest "Coming soon". (`binary-search` has content but no card.)
+- [x] 🟡 **Theme toggle permanently broken on 5 of 8 pages** — root divs hardcode `className="… dark"` (`app/page.tsx:15`, about, learn ×2, visualize). Delete the literal; `layout.tsx` already sets `defaultTheme="dark" enableSystem`.
+- [x] 🟡 **`/operations` is orphaned** (~3,700 lines reachable only by typing the URL; no navbar/footer/metadata on the page either). Decide: add it to the nav with page chrome, or delete the subtree.
+- [x] 🟡 Smaller fixes: greedy coin remove deletes all coins of same value (`greedy-algorithm-visualizer.tsx:57-62` — filter by `id`); empty array input parses to `[0]` (`array-operations.tsx:26-37`); B-tree wipes state under React Strict Mode double-mount (`b-tree-visualizer.tsx:74,144-150`); stack mini-preview leaks full controls (`stack-visualizer.tsx:151` — missing `!mini` guard); queue lacks the `mini` prop entirely; `tree-visualizer.tsx` implements a BST but is labelled "General Tree".
+- [x] 🟡 **Runtime deps in `devDependencies`** — `framer-motion`, `lucide-react`, `clsx`, `tailwind-merge` are imported by app code but declared dev-only; breaks any `npm ci --omit=dev` deploy. Move to `dependencies`.
+- [x] ⚪ Accessibility: unassociated `<label>`s (b-tree, hash-table), raw `<img>` avatar → `next/image` with descriptive alt (`navbar.tsx:66,138`), blocking `alert()` in 10 files → inline `<Alert>` (component already exists), keyboard-inaccessible scrubber (`animation-controls.tsx:69-79`), index keys on reordering lists.
 
 ---
 

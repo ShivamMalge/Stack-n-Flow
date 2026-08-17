@@ -500,7 +500,6 @@ export default function BinarySearchTreeVisualizer() {
   const handleReset = () => {
     setScale(1)
     setPan({ x: 0, y: 0 })
-    setInputError(null)
   }
 
   // Add this function to handle touch events:
@@ -605,6 +604,8 @@ export default function BinarySearchTreeVisualizer() {
                   </Button>
                 )}
               </div>
+
+              <InlineAlert message={inputError} className="mt-2" />
             </Tabs>
 
             <div className="mt-6 border-t pt-4">

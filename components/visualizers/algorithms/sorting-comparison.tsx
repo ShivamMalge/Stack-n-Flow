@@ -517,6 +517,8 @@ export default function SortingComparison() {
                                 </div>
                             </div>
 
+                            <InlineAlert message={inputError} />
+
                             {/* Current values display */}
                             {values.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-md min-h-[36px]">
