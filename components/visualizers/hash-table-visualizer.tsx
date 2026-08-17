@@ -253,9 +253,11 @@ export default function HashTableVisualizer({
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Operations Panel - Top on Mobile, Col 1 on Desktop */}
-            <div className="order-1 md:col-start-1 space-y-6">
+        // Code panel under the visualization on desktop: the highlighted line and
+        // the structure it describes read together, and the columns stay balanced.
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
+            {/* Operations Panel - Top on Mobile, Top-Left on Desktop */}
+            <div className="order-1 md:col-start-1 md:row-start-1 space-y-6">
                 <Card>
                     <CardHeader>
                         <CardTitle>Hash Table Operations</CardTitle>
@@ -320,8 +322,8 @@ export default function HashTableVisualizer({
                 </Card>
             </div>
 
-            {/* Visualization Panel - Order 2 on Mobile, Col 2 on Desktop */}
-            <div className="order-2 md:col-start-2 md:row-span-2">
+            {/* Visualization Panel - Order 2 on Mobile, Top-Right on Desktop */}
+            <div className="order-2 md:col-start-2 md:row-start-1">
                 <Card className="h-full">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base">Bucket Array (Chaining)</CardTitle>
@@ -368,8 +370,17 @@ export default function HashTableVisualizer({
                 </Card>
             </div>
 
-            {/* Code & Steps - Order 3 on Mobile, Col 1 on Desktop */}
-            <div className="order-3 md:col-start-1 space-y-4">
+            {/* Live Code Panel - Order 3 on Mobile, Directly Under the Visualization on Desktop */}
+            <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
+                <CodePanel
+                    code={player.currentSnapshot?.operation === "insert" ? INSERT_CODE : player.currentSnapshot?.operation === "delete" ? DELETE_CODE : SEARCH_CODE}
+                    activeLine={player.currentSnapshot?.activeLine ?? null}
+                    title={player.currentSnapshot?.operation === "insert" ? "def insert(key, value):" : player.currentSnapshot?.operation === "delete" ? "def delete(key):" : "def search(key):"}
+                />
+            </div>
+
+            {/* Controls & Steps - Order 4 on Mobile, Bottom-Left on Desktop */}
+            <div className="order-4 md:col-start-1 md:row-start-2 space-y-4">
                 <Card>
                     <CardContent className="pt-6 space-y-4">
                         {player.totalFrames > 0 && (
@@ -384,15 +395,6 @@ export default function HashTableVisualizer({
                         )}
 
                         {stepDesc && <p className="text-xs text-center bg-muted/40 p-2.5 rounded-md text-muted-foreground italic">&quot;{stepDesc}&quot;</p>}
-
-                        {/* Live Code Panel */}
-                        <div className="h-[250px]">
-                            <CodePanel
-                                code={player.currentSnapshot?.operation === "insert" ? INSERT_CODE : player.currentSnapshot?.operation === "delete" ? DELETE_CODE : SEARCH_CODE}
-                                activeLine={player.currentSnapshot?.activeLine ?? null}
-                                title={player.currentSnapshot?.operation === "insert" ? "def insert(key, value):" : player.currentSnapshot?.operation === "delete" ? "def delete(key):" : "def search(key):"}
-                            />
-                        </div>
 
                         {/* Steps */}
                         <div>

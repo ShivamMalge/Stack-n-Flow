@@ -259,10 +259,12 @@ export default function ArrayVisualizer({
   }
 
   return (
-    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
-      {/* Operations Panel - Order 1 on Mobile, Left on Desktop */}
+    // Code panel under the visualization on desktop: the highlighted line and
+    // the structure it describes read together, and the columns stay balanced.
+    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start"}>
+      {/* Operations Panel - Order 1 on Mobile, Top-Left on Desktop */}
       {!mini && (
-        <div className="order-1 md:col-start-1">
+        <div className="order-1 md:col-start-1 md:row-start-1">
           <Card>
             <CardHeader>
               <CardTitle>Array Operations</CardTitle>
@@ -371,8 +373,8 @@ export default function ArrayVisualizer({
         </div>
       )}
 
-      {/* Visualization Panel - Order 2 on Mobile, Right on Desktop */}
-      <div className={mini ? "w-full" : "order-2 md:col-start-2 md:row-span-3"}>
+      {/* Visualization Panel - Order 2 on Mobile, Top-Right on Desktop */}
+      <div className={mini ? "w-full" : "order-2 md:col-start-2 md:row-start-1"}>
         <Card className="h-full border-0 md:border md:shadow-sm">
           {!mini && (
             <CardHeader>
@@ -382,11 +384,11 @@ export default function ArrayVisualizer({
           )}
           <CardContent className={mini ? "p-0" : ""}>
             {/* Improved responsive array visualization */}
-            <div className="flex items-center justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[300px] md:h-[350px]">
+            <div className="flex flex-1 justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[300px] max-h-[60vh]">
               {array.length === 0 ? (
-                <div className="text-muted-foreground text-sm">Empty array</div>
+                <div className="m-auto text-muted-foreground text-sm">Empty array</div>
               ) : (
-                <div className="flex flex-wrap items-center justify-center gap-y-12 gap-x-2 px-4 max-w-full">
+                <div className="m-auto flex flex-wrap items-center justify-center gap-y-12 gap-x-2 px-4 max-w-full">
                   {array.map((item, index) => (
                     <div key={item.id} className="flex flex-col items-center group">
                       <div
@@ -412,9 +414,9 @@ export default function ArrayVisualizer({
         </Card>
       </div>
 
-      {/* Code Panel - Order 3 on Mobile, Left on Desktop */}
+      {/* Code Panel - Order 3 on Mobile, Directly Under the Visualization on Desktop */}
       {!mini && (
-        <div className="order-3 md:col-start-1 h-[280px]">
+        <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
           <CodePanel
             code={activeCode}
             activeLine={activeLine}
@@ -423,9 +425,9 @@ export default function ArrayVisualizer({
         </div>
       )}
 
-      {/* Learning Panel - Order 4 on Mobile, Left on Desktop */}
+      {/* Learning Panel - Order 4 on Mobile, Bottom-Left on Desktop */}
       {!mini && (
-        <div className="order-4 md:col-start-1">
+        <div className="order-4 md:col-start-1 md:row-start-2">
           <Card>
             <CardHeader>
               <CardTitle>Learning</CardTitle>

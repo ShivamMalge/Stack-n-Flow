@@ -473,9 +473,11 @@ export default function BinaryTreeVisualizer() {
 
   // Replace the Visualization Panel section with this improved version
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel - Top on Mobile, Left on Desktop */}
-      <div className="order-1 md:col-start-1">
+    // Code panel under the visualization on desktop: the highlighted line and
+    // the structure it describes read together, and the columns stay balanced.
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
+      {/* Operations Panel - Top on Mobile, Top-Left on Desktop */}
+      <div className="order-1 md:col-start-1 md:row-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Binary Tree Operations</CardTitle>
@@ -580,8 +582,8 @@ export default function BinaryTreeVisualizer() {
         </Card>
       </div>
 
-      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-span-3">
+      {/* Visualization Panel - Second on Mobile, Top-Right on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-start-1">
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
@@ -641,8 +643,8 @@ export default function BinaryTreeVisualizer() {
         </Card>
       </div>
 
-      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
-      <div className="order-3 md:col-start-1 h-[280px]">
+      {/* Live Code Panel - Third on Mobile, Directly Under the Visualization on Desktop */}
+      <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
         <CodePanel
           code={activeCode}
           activeLine={activeLine}
@@ -650,8 +652,8 @@ export default function BinaryTreeVisualizer() {
         />
       </div>
 
-      {/* Learning Panel - Last on Mobile, Left on Desktop */}
-      <div className="order-4 md:col-start-1">
+      {/* Learning Panel - Last on Mobile, Bottom-Left on Desktop */}
+      <div className="order-4 md:col-start-1 md:row-start-2">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>

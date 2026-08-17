@@ -550,9 +550,11 @@ export default function BinarySearchTreeVisualizer() {
 
   // Replace the Visualization Panel section with this improved version
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel */}
-      <div className="space-y-6">
+    // Code panel under the visualization on desktop: the highlighted line and
+    // the structure it describes read together, and the columns stay balanced.
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
+      {/* Operations Panel - First on Mobile, Top-Left on Desktop */}
+      <div className="order-1 md:col-start-1 md:row-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Binary Search Tree Operations</CardTitle>
@@ -670,16 +672,19 @@ export default function BinarySearchTreeVisualizer() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Live Code Panel */}
-        <div className="h-[280px]">
-          <CodePanel
-            code={activeCode}
-            activeLine={activeLine}
-            title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "BST Algorithm"}
-          />
-        </div>
+      {/* Live Code Panel - Second on Mobile, Directly Under the Visualization on Desktop */}
+      <div className="order-2 md:col-start-2 md:row-start-2 h-[280px]">
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "BST Algorithm"}
+        />
+      </div>
 
+      {/* Learning Panel - Third on Mobile, Bottom-Left on Desktop */}
+      <div className="order-3 md:col-start-1 md:row-start-2">
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -706,64 +711,66 @@ export default function BinarySearchTreeVisualizer() {
         </Card>
       </div>
 
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the binary search tree</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 overflow-hidden">
-          {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
+      {/* Visualization Panel - Last on Mobile, Top-Right on Desktop */}
+      <div className="order-4 md:col-start-2 md:row-start-1">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the binary search tree</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-hidden">
+            {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
 
-          <div className="flex flex-wrap gap-2 mb-2 px-6">
-            <Button size="sm" variant="outline" onClick={handleZoomIn}>
-              <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleZoomOut}>
-              <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanLeft}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanRight}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleReset}>
-              Reset View
-            </Button>
-          </div>
-
-          <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-              {root ? (
-                <div className="w-full h-full flex items-center justify-center overflow-auto">
-                  <svg
-                    ref={svgRef}
-                    width={svgW}
-                    height={svgH}
-                    viewBox={`0 0 ${svgW} ${svgH}`}
-                    style={{
-                      transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
-                      transformOrigin: "center",
-                      transition: "transform 0.2s ease",
-                      touchAction: "none",
-                    }}
-                    className="max-w-none"
-                  >
-                    <g>{renderTree(root)}</g>
-                  </svg>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Empty tree</div>
-              )}
+            <div className="flex flex-wrap gap-2 mb-2 px-6">
+              <Button size="sm" variant="outline" onClick={handleZoomIn}>
+                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleZoomOut}>
+                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanLeft}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanRight}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleReset}>
+                Reset View
+              </Button>
             </div>
-          </div>
 
-          <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
-            Drag nodes to reposition. Use zoom/pan controls to navigate.
-          </div>
-        </CardContent>
-      </Card>
+            <div className="relative w-full h-[350px] md:h-[450px] overflow-auto border-t" style={{ overscrollBehavior: "contain" }}>
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                {root ? (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto">
+                    <svg
+                      ref={svgRef}
+                      width={svgW}
+                      height={svgH}
+                      viewBox={`0 0 ${svgW} ${svgH}`}
+                      style={{
+                        transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+                        transformOrigin: "center",
+                        transition: "transform 0.2s ease",
+                        touchAction: "none",
+                      }}
+                      className="max-w-none"
+                    >
+                      <g>{renderTree(root)}</g>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Empty tree</div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
+              Drag nodes to reposition. Use zoom/pan controls to navigate.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

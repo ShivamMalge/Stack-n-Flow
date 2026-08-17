@@ -385,7 +385,7 @@ export default function HeapVisualizer({
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr] gap-6">
 
             {/* ── LEFT: Controls + Array + Info ── */}
-            <div className="order-1 md:col-start-1 space-y-4">
+            <div className="order-1 md:col-start-1 md:row-start-1 space-y-4">
 
                 {/* Operations Card */}
                 <Card>
@@ -502,8 +502,10 @@ export default function HeapVisualizer({
                 </Card>
             </div>
 
-            {/* ── RIGHT: Tree Visualization + Code Panel ── */}
-            <div className="order-2 md:col-start-2 md:row-span-3 flex flex-col gap-6 h-full">
+            {/* ── RIGHT: Tree Visualization with the Code Panel directly under it ── */}
+            {/* One row only: the column stretches to the left column's height and the
+                tree card absorbs the slack, so neither side is left half empty. */}
+            <div className="order-2 md:col-start-2 md:row-start-1 flex flex-col gap-6 h-full">
                 {/* Tree Visualization Card */}
                 <Card className="flex-1 flex flex-col min-h-[400px]">
                     <CardHeader className="pb-2">
