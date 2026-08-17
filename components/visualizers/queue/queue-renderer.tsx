@@ -23,17 +23,19 @@ export default function QueueRenderer({
   searchResult = null,
 }: QueueRendererProps) {
   return (
-    <Card className="h-full">
-      <CardHeader>
+    <Card className="flex flex-col h-full">
+      <CardHeader className="shrink-0">
         <CardTitle>Visualization</CardTitle>
         <CardDescription>Visual representation of the queue</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[250px] md:h-[300px]">
+      <CardContent className="flex flex-col flex-1 min-h-0 pb-4">
+        {/* Grows to fill the card rather than a fixed height, so a long queue
+            uses the available space instead of scrolling inside an empty panel. */}
+        <div className="flex flex-1 min-h-[250px] justify-center overflow-auto py-10 bg-muted/5 border-t">
           {items.length === 0 ? (
-            <div className="text-muted-foreground text-sm">Empty queue</div>
+            <div className="m-auto text-muted-foreground text-sm">Empty queue</div>
           ) : (
-            <div className="flex flex-wrap items-center justify-center gap-y-10 gap-x-2 px-4 max-w-full">
+            <div className="m-auto flex flex-wrap items-center justify-center gap-y-10 gap-x-2 px-4 max-w-full">
               <div className="flex flex-col items-center mr-2">
                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Front</span>
                 <ArrowRight className="h-4 w-4 text-primary" />

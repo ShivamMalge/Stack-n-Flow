@@ -151,10 +151,13 @@ export default function StackVisualizer({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Operations Panel - Top on Mobile, Left on Desktop */}
+    // The code panel sits under the visualization on desktop so the highlighted
+    // line and the structure it describes are read together, and so the taller
+    // left-hand column no longer leaves the right one half empty.
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
+      {/* Operations — first on mobile, top-left on desktop */}
       {!mini && !isControlled && (
-        <div className="order-1 md:col-start-1">
+        <div className="order-1 md:col-start-1 md:row-start-1">
           <StackController
             inputValue={inputValue}
             animating={animating}
@@ -167,14 +170,14 @@ export default function StackVisualizer({
         </div>
       )}
 
-      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-span-3">
+      {/* Visualization — second on mobile, top-right on desktop */}
+      <div className="order-2 md:col-start-2 md:row-start-1">
         <StackRenderer items={stack} mini={mini} searchResult={searchResult} />
       </div>
 
-      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
+      {/* Live code — third on mobile, directly under the visualization */}
       {!mini && (
-        <div className="order-3 md:col-start-1 h-[250px]">
+        <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
           <CodePanel
             code={activeCode}
             activeLine={activeLine}
@@ -183,9 +186,9 @@ export default function StackVisualizer({
         </div>
       )}
 
-      {/* Learning Panel - Last on Mobile, Left on Desktop */}
+      {/* Learning — last on mobile, bottom-left on desktop */}
       {!mini && (
-        <div className="order-4 md:col-start-1">
+        <div className="order-4 md:col-start-1 md:row-start-2">
           <StackDocs />
         </div>
       )}

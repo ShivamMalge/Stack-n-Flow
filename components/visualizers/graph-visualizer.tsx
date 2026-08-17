@@ -314,9 +314,11 @@ export default function GraphVisualizer({
   const visibleStep = player.currentFrame
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    // Code panel under the visualization on desktop, so the highlighted line
+    // and the graph it describes are visible together.
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {/* Operations Panel - Top on Mobile, Left on Desktop */}
-      <div className="order-1 md:col-start-1">
+      <div className="order-1 md:col-start-1 md:row-start-1">
         <Card>
           <CardHeader>
             <CardTitle>Graph Operations</CardTitle>
@@ -446,7 +448,7 @@ export default function GraphVisualizer({
       </div>
 
       {/* Visualization Panel - Second on Mobile, Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-span-3">
+      <div className="order-2 md:col-start-2 md:row-start-1">
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
@@ -513,8 +515,8 @@ export default function GraphVisualizer({
         </Card>
       </div>
 
-      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
-      <div className="order-3 md:col-start-1 h-[280px]">
+      {/* Live code — third on mobile, directly under the visualization */}
+      <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
         <CodePanel
           code={activeCode}
           activeLine={activeLine}

@@ -137,10 +137,12 @@ export default function QueueVisualizer({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    // Code panel under the visualization on desktop: the highlighted line and
+    // the structure it describes read together, and the columns stay balanced.
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {/* Operations Panel - Top on Mobile, Left on Desktop */}
       {!mini && !isControlled && (
-        <div className="order-1 md:col-start-1">
+        <div className="order-1 md:col-start-1 md:row-start-1">
           <QueueController
             inputValue={inputValue}
             animating={animating}
@@ -154,13 +156,13 @@ export default function QueueVisualizer({
       )}
 
       {/* Visualization Panel - Second on Mobile, Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-span-3">
+      <div className="order-2 md:col-start-2 md:row-start-1">
         <QueueRenderer items={queue} searchResult={searchResult} />
       </div>
 
       {/* Live Code Panel - Third on Mobile, Left on Desktop */}
       {!mini && (
-        <div className="order-3 md:col-start-1 h-[250px]">
+        <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
           <CodePanel
             code={activeCode}
             activeLine={activeLine}
@@ -171,7 +173,7 @@ export default function QueueVisualizer({
 
       {/* Learning Panel - Last on Mobile, Left on Desktop */}
       {!mini && (
-        <div className="order-4 md:col-start-1">
+        <div className="order-4 md:col-start-1 md:row-start-2">
           <QueueDocs />
         </div>
       )}

@@ -165,7 +165,45 @@ The telemetry core and bridge are healthy; the distribution path is broken end-t
 
 ---
 
-## Phase 6 — Feature Roadmap (post-hardening)
+## Phase 6 — UI & Layout (added 2026-08-17, after visual review)
+
+> **Scope note.** Phases 0–5 came from *reading* the code: security holes, state races, uncleaned
+> timers, hardcoding, packaging. **No one had opened the running app and looked at it.** Layout,
+> spacing, and visual-flow defects are invisible to that kind of audit, so none of the items below
+> were in the original plan. Expect more of them — this phase should be treated as open until
+> someone has clicked through every visualizer tab at both desktop and mobile widths.
+
+### Done in the first visual pass
+- [x] 🟠 **Stack overflowed its panel while the panel sat half empty.** The scroll area was pinned to
+      `md:h-[300px]` inside a card that stretched much taller, so ~5 items started scrolling with a
+      large blank area below, and `items-center` clipped the "TOP" marker once content overflowed.
+      The area now grows with `flex-1` and centres via `m-auto`, which does not clip on overflow.
+      Same fix applied to the queue renderer.
+- [x] 🟠 **Live code panel moved under the visualization** in the right-hand column across all
+      visualizers. Previously the left column carried controls + code + docs while the right column
+      held only the visualization, so the right column ran out of content early. Reading the
+      highlighted line next to the structure it describes was the user's stated goal.
+- [x] 🟡 **Footer was taller than some page content.** Three stacked columns with a five-item
+      vertical nav list and a four-item vertical social list. Rebuilt as two compact rows.
+
+### Still open — needs a proper click-through
+- [ ] 🟠 **Audit every visualizer at desktop and mobile widths.** The three fixed above were found
+      from two screenshots; 15 visualizers have never been reviewed visually. Look specifically for:
+      fixed heights that fight their container, content overflowing SVG viewBoxes, panels that stay
+      empty, and controls that wrap badly under ~400 px.
+- [ ] 🟡 **Tree visualizers with deep trees.** SVG canvases use fixed dimensions; a tree past a few
+      levels likely overflows or clips. Zoom/pan exists but should not be the only recourse.
+- [ ] 🟡 **Consistent panel heights.** Code panels are variously `h-[250px]` and `h-[280px]`;
+      standardise, ideally in `lib/constants.ts`.
+- [ ] 🟡 **Light theme pass.** The theme toggle only started working in Phase 3, so light mode has
+      effectively never been reviewed. Several visualizers still use fixed dark palettes
+      (`bg-slate-950` in the code panel, `#0d1117` in multi-language-code).
+- [ ] ⚪ **Index keys on reordering lists** (deferred from Phase 3) — likely to show up as janky
+      sorting animations.
+
+---
+
+## Phase 7 — Feature Roadmap (post-hardening)
 
 Highest-leverage additions, roughly in order of demo value per effort:
 

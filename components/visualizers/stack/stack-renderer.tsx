@@ -25,19 +25,26 @@ export default function StackRenderer({
   searchResult = null,
 }: StackRendererProps) {
   return (
-    <Card className="h-full border-0 md:border md:shadow-sm">
+    <Card className="flex flex-col h-full border-0 md:border md:shadow-sm">
       {!mini && (
-        <CardHeader>
+        <CardHeader className="shrink-0">
           <CardTitle>Visualization</CardTitle>
           <CardDescription>Visual representation of the stack</CardDescription>
         </CardHeader>
       )}
-      <CardContent className={mini ? "p-0" : ""}>
-        <div className="flex items-center justify-center overflow-auto py-8 bg-muted/5 border-t min-h-[250px] md:h-[300px]">
+      <CardContent className={`flex flex-col flex-1 min-h-0 ${mini ? "p-0" : "pb-4"}`}>
+        {/*
+          Grows to fill the card instead of a fixed height: the panel is taller
+          than the plate area, so a fixed height made the stack scroll while the
+          space below it stayed empty. `m-auto` on the inner column centres small
+          stacks without clipping the top of tall ones the way `items-center`
+          does once the content overflows.
+        */}
+        <div className="flex flex-1 min-h-[250px] justify-center overflow-auto pt-10 pb-6 bg-muted/5 border-t">
           {items.length === 0 ? (
-            <div className="text-muted-foreground text-sm">Empty stack</div>
+            <div className="m-auto text-muted-foreground text-sm">Empty stack</div>
           ) : (
-            <div className="flex flex-col items-center space-y-2 w-full max-w-[280px] md:max-w-xs px-4">
+            <div className="m-auto flex flex-col items-center space-y-2 w-full max-w-[280px] md:max-w-xs px-4">
               {items.map((item, index) => (
                 <div key={item.id} className="relative w-full">
                   {index === 0 && (
@@ -66,7 +73,7 @@ export default function StackRenderer({
           )}
         </div>
         {searchResult && (
-          <div className="mt-4 p-2 rounded text-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+          <div className="shrink-0 mt-4 p-2 rounded text-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
             {searchResult}
           </div>
         )}
