@@ -10,6 +10,63 @@ interface CodePanelProps {
     title?: string
 }
 
+const KEYWORDS = new Set([
+    "def", "function", "if", "elif", "else", "while", "for",
+    "return", "const", "let", "var", "in", "from", "to",
+])
+
+const SPECIAL_VALUES = new Set(["true", "false", "null", "None"])
+
+// Comment to end of line | identifier | integer. Everything else falls through
+// as plain text, so the whole line is always reproduced exactly.
+const TOKEN_PATTERN = /(\/\/.*)|([A-Za-z_][A-Za-z0-9_]*)|(\d+)/g
+
+interface Token {
+    text: string
+    className?: string
+}
+
+/**
+ * Splits a line into highlight tokens. Rendering these as React elements keeps
+ * the code panel safe for caller-supplied strings — the previous implementation
+ * built an HTML string and injected it with dangerouslySetInnerHTML, which would
+ * execute markup embedded in the code it was asked to display.
+ */
+function tokenizeLine(line: string): Token[] {
+    const tokens: Token[] = []
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+
+    TOKEN_PATTERN.lastIndex = 0
+    while ((match = TOKEN_PATTERN.exec(line)) !== null) {
+        const [text, comment, word, digits] = match
+
+        if (match.index > lastIndex) {
+            tokens.push({ text: line.slice(lastIndex, match.index) })
+        }
+
+        if (comment) {
+            tokens.push({ text, className: "text-muted-foreground" })
+        } else if (word && KEYWORDS.has(word)) {
+            tokens.push({ text, className: "text-purple-400" })
+        } else if (word && SPECIAL_VALUES.has(word)) {
+            tokens.push({ text, className: "text-orange-400" })
+        } else if (digits) {
+            tokens.push({ text, className: "text-yellow-400" })
+        } else {
+            tokens.push({ text })
+        }
+
+        lastIndex = match.index + text.length
+    }
+
+    if (lastIndex < line.length) {
+        tokens.push({ text: line.slice(lastIndex) })
+    }
+
+    return tokens
+}
+
 export default function CodePanel({ code, activeLine, title = "Pseudocode" }: CodePanelProps) {
     const lineRefs = useRef<(HTMLDivElement | null)[]>([])
 
@@ -29,45 +86,6 @@ export default function CodePanel({ code, activeLine, title = "Pseudocode" }: Co
             }
         }
     }, [activeLine])
-
-    const formatLine = (line: string) => {
-        // Use unique markers to prevent double-highlighting
-        // Process strings/comments first, then keywords, then numbers
-
-        let formatted = line;
-
-        // 1. Comments
-        const comments: string[] = [];
-        formatted = formatted.replace(/(\/\/.*)/g, (match) => {
-            comments.push(match);
-            return `__COMMENT_${comments.length - 1}__`;
-        });
-
-        // 2. Keywords
-        const keywords = ["def", "function", "if", "elif", "else", "while", "for", "return", "const", "let", "var", "in", "from", "to"];
-        keywords.forEach(kw => {
-            const regex = new RegExp(`\\b${kw}\\b`, 'g');
-            formatted = formatted.replace(regex, `<span class="text-purple-400">${kw}</span>`);
-        });
-
-        // 3. Spacial values
-        const special = ["true", "false", "null", "None"];
-        special.forEach(val => {
-            const regex = new RegExp(`\\b${val}\\b`, 'g');
-            formatted = formatted.replace(regex, `<span class="text-orange-400">${val}</span>`);
-        });
-
-        // 4. Numbers (only if not preceded by =" or other tag characters to avoid breaking HTML)
-        // This is a simple fix to avoid highlighting numbers that are part of previously added <span> classes
-        formatted = formatted.replace(/(?<![="])\b(\d+)\b/g, '<span class="text-yellow-400">$1</span>');
-
-        // 5. Restore comments
-        comments.forEach((comment, idx) => {
-            formatted = formatted.replace(`__COMMENT_${idx}__`, `<span class="text-muted-foreground">${comment}</span>`);
-        });
-
-        return formatted;
-    }
 
     return (
         <Card className="flex flex-col h-full bg-slate-950 border-slate-800 shadow-xl overflow-hidden">
@@ -100,8 +118,13 @@ export default function CodePanel({ code, activeLine, title = "Pseudocode" }: Co
                                         whitespace-pre transition-colors duration-200
                                         ${activeLine === idx ? "text-white" : "text-slate-300"}
                                     `}
-                                    dangerouslySetInnerHTML={{ __html: formatLine(line) }}
-                                />
+                                >
+                                    {tokenizeLine(line).map((token, tokenIdx) => (
+                                        <span key={tokenIdx} className={token.className}>
+                                            {token.text}
+                                        </span>
+                                    ))}
+                                </span>
                             </div>
                         ))}
                     </div>

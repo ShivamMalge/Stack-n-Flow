@@ -4,12 +4,13 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 import { defineConfig } from "prisma/config";
 
+// No `datasource` override here: prisma/schema.prisma already declares
+// `url = env("DATABASE_URL")`, and dotenv above has loaded .env.local into the
+// environment. Overriding it eagerly would make `prisma generate` — which needs
+// only the schema — fail whenever DATABASE_URL is unset.
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-  },
-  datasource: {
-    url: process.env["DATABASE_URL"] as string,
   },
 });

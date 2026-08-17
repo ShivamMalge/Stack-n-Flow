@@ -2,20 +2,22 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import prisma from "@/lib/prisma"
+import { env } from "@/lib/env"
+import { ONBOARDING_ROUTE, SIGN_IN_ROUTE } from "@/lib/routes"
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma) as any,
     providers: [
         GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
         }),
     ],
     session: {
         strategy: "jwt",
     },
     callbacks: {
-        async jwt({ token, user, trigger, session }) {
+        async jwt({ token, user, trigger }) {
             // Intial sign in
             if (user) {
                 token.id = user.id
@@ -23,10 +25,19 @@ export const authOptions: NextAuthOptions = {
                 token.onboardingCompleted = user.onboardingCompleted
             }
 
-            // If we manually update the session (e.g. after onboarding)
-            if (trigger === "update" && session) {
-                token.role = session.role
-                token.onboardingCompleted = session.onboardingCompleted
+            // On a manual session update (e.g. after onboarding) the client sends an
+            // arbitrary payload, so it is never trusted here — a caller could otherwise
+            // grant itself any role. Re-read the authoritative values from the database.
+            if (trigger === "update" && token.id) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: token.id as string },
+                    select: { role: true, onboardingCompleted: true },
+                })
+
+                if (dbUser) {
+                    token.role = dbUser.role
+                    token.onboardingCompleted = dbUser.onboardingCompleted
+                }
             }
 
             return token
@@ -41,8 +52,8 @@ export const authOptions: NextAuthOptions = {
         },
     },
     pages: {
-        signIn: "/login",
-        newUser: "/onboarding",
+        signIn: SIGN_IN_ROUTE,
+        newUser: ONBOARDING_ROUTE,
     },
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: env.NEXTAUTH_SECRET,
 }

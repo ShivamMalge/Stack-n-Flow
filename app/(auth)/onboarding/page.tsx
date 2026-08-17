@@ -55,8 +55,9 @@ export default function OnboardingPage() {
             return
         }
 
-        // Force NextAuth to update the token with the new status
-        await update({ role: data.role, onboardingCompleted: true })
+        // Refresh the token. No payload is passed: the server re-reads the role and
+        // onboarding status from the database and ignores anything sent from here.
+        await update()
 
         // Redirect to the dashboard
         router.push("/")

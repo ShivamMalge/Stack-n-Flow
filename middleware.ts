@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware"
 import { NextResponse } from "next/server"
+import { ONBOARDING_ROUTE, SIGN_IN_ROUTE, isPublicRoute } from "@/lib/routes"
 
 export default withAuth(
     function middleware(req) {
@@ -10,33 +11,33 @@ export default withAuth(
         // (configured via the `pages` option below)
 
         // If the user logs in but has not completed onboarding, lock them to the onboarding page
-        if (token && !token.onboardingCompleted && !path.startsWith("/onboarding")) {
-            return NextResponse.redirect(new URL("/onboarding", req.url))
+        if (token && !token.onboardingCompleted && !path.startsWith(ONBOARDING_ROUTE)) {
+            return NextResponse.redirect(new URL(ONBOARDING_ROUTE, req.url))
         }
 
         // If they have completed onboarding, don't let them go back to the onboarding page
-        if (token && token.onboardingCompleted && path.startsWith("/onboarding")) {
+        if (token && token.onboardingCompleted && path.startsWith(ONBOARDING_ROUTE)) {
             return NextResponse.redirect(new URL("/", req.url))
         }
     },
     {
         callbacks: {
-            // Return true only if the user has a valid token (is logged in)
-            // If false, withAuth auto-redirects to the signIn page
-            authorized: ({ token }) => !!token,
+            // Deny by default: a route is private unless it is listed in PUBLIC_ROUTES.
+            // If false, withAuth auto-redirects to the signIn page.
+            authorized: ({ token, req }) =>
+                isPublicRoute(req.nextUrl.pathname) || !!token,
         },
         pages: {
-            signIn: "/login",
+            signIn: SIGN_IN_ROUTE,
         },
     }
 )
 
 export const config = {
-    // Protect ALL feature routes — unauthenticated users are redirected to /login
+    // Run on everything except the auth API, Next internals, and static files.
+    // Public pages still pass through here so signed-in users with incomplete
+    // onboarding are redirected consistently; the allowlist lives in lib/routes.ts.
     matcher: [
-        "/visualize/:path*",
-        "/learn/:path*",
-        "/operations/:path*",
-        "/onboarding",
+        "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
     ],
 }
