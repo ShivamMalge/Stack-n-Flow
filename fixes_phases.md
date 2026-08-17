@@ -47,29 +47,41 @@ Working tree (excluding `node_modules`/`.git`) is now 2.5 MB, down from ~6 MB.
 
 ---
 
-## Phase 2 — De-hardcoding (≈ 1–2 days)
+## Phase 2 — De-hardcoding ✅ COMPLETE (2026-08-17)
+
+**New shared modules:** `lib/constants.ts`, `lib/site-config.ts`, `lib/config/institutions.ts`, `components/social-links.tsx`, `pratyaksha/core/structures.py`, `pratyaksha/core/base.py`.
+
+**Verification:** 16 Python tests pass, 14 JS tests pass, `next build` succeeds, `tsc` clean on application code. Confirmed by grep that no `1AT`/Atria literal survives outside `lib/config/institutions.ts`, no social URL outside `lib/site-config.ts`, no `"not greater than 500"` string anywhere, and no `structure="..."` literal in the Python package.
+
+### Behaviour changes worth knowing
+- **`parseBoundedInt`'s default lower bound is `-500`, not `1`.** A subagent's first pass defaulted to `1`, which silently made negative keys un-insertable in a BST — a real capability regression. The default now mirrors the upper bound; call sites needing a positive count (array sizes, element counts) pass `{ min: 1 }` explicitly.
+- **One speed ladder replaced two.** `sorting-comparison`'s 5× (160 ms) preset is gone; the shared ladder tops out at 3× (267 ms).
+- **Two tracking parameters dropped** from the social URLs (Instagram `igsh=` per-share token, LinkedIn `originalSubdomain=` redirect artefact).
+- **Search handlers still use raw `Number.parseInt`** in the five tree visualizers (~6 sites). They never had a bound check, and `NaN` there simply reports "not found", so tightening them would add an error path that did not exist. Left for Phase 3.
+- **B-tree order input kept its `Math.max/min` clamp** rather than `parseBoundedInt`: routing it through the helper would turn "clamp 7 down to 5" into "reject and reset".
+- **`anywidget`, `traitlets` and `pytest` were installed locally** to verify the Python refactor — the suite had never actually been executed before. Phase 5 should pin these in `[project.optional-dependencies]`.
 
 ### Web (TypeScript)
 
-- [ ] 🟠 **Institution rules baked into JSX** — `app/(auth)/onboarding/page.tsx:73-76,83,167,174-187`: `"atria institute of technology"`, the `1AT` USN prefix (repeated 5×), `maxLength={7}`, and the year/branch whitelist string. Extract `lib/config/institutions.ts` (name → USN prefix, format regex, length); the form derives everything from it. The current code special-cases one college and will silently rot in 2026.
-- [ ] 🟠 **`500` input limit copy-pasted in 10 files** with inconsistent bounds elsewhere (999 in heap/sorting, 20/15/8 in dp). Create `lib/constants.ts`:
+- [x] 🟠 **Institution rules baked into JSX** — `app/(auth)/onboarding/page.tsx:73-76,83,167,174-187`: `"atria institute of technology"`, the `1AT` USN prefix (repeated 5×), `maxLength={7}`, and the year/branch whitelist string. Extract `lib/config/institutions.ts` (name → USN prefix, format regex, length); the form derives everything from it. The current code special-cases one college and will silently rot in 2026.
+- [x] 🟠 **`500` input limit copy-pasted in 10 files** with inconsistent bounds elsewhere (999 in heap/sorting, 20/15/8 in dp). Create `lib/constants.ts`:
   ```ts
   export const MAX_INPUT_VALUE = 500
   export const SPEED_PRESETS = [1600, 800, 533, 400, 267]
   export const MOBILE_BREAKPOINT = 768
   ```
   and a shared `parsePositiveInt(raw, max)` helper — this also fixes the NaN-bypass bug (Phase 3, B4) in one change.
-- [ ] 🟡 **Two divergent speed ladders** — `components/ui/animation-controls.tsx:30-36` vs `sorting-comparison.tsx:309-310`. Unify on the shared `SPEED_PRESETS`.
-- [ ] 🟡 **Duplicated personal/social links** — identical 4-link block in `components/footer.tsx:51-78` and `app/about/page.tsx:71-98` (incl. an Instagram `igsh=` tracking token — strip it). Extract `lib/site-config.ts` + a `<SocialLinks/>` component. Author name also hardcoded twice in `app/about/page.tsx:23,57`.
-- [ ] 🟡 **Raw hex colors bypassing the theme** — `heap-visualizer.tsx:162-175,224-247` (12 dark-only hex values, invisible in light mode), `multi-language-code.tsx:71`. Move to CSS variables in `globals.css`.
-- [ ] 🟡 **Hardcoded sample graph + random pixel coords** — `graph-visualizer.tsx:100-122`. Extract a `SAMPLE_GRAPH` constant and compute layout (a `lib/tree-layout.ts` precedent already exists).
-- [ ] ⚪ Named constants for: hash multiplier `31` + `TABLE_SIZE` (`hash-table-visualizer.tsx:47,62`), pathfinding grid `15×25` + wall density `0.28`, B-tree order bounds `2..5`, seed datasets in linked-list/stack/dp visualizers, `nextId` starting at `4` (collides with seed ids 101–104 — start at `1`).
+- [x] 🟡 **Two divergent speed ladders** — `components/ui/animation-controls.tsx:30-36` vs `sorting-comparison.tsx:309-310`. Unify on the shared `SPEED_PRESETS`.
+- [x] 🟡 **Duplicated personal/social links** — identical 4-link block in `components/footer.tsx:51-78` and `app/about/page.tsx:71-98` (incl. an Instagram `igsh=` tracking token — strip it). Extract `lib/site-config.ts` + a `<SocialLinks/>` component. Author name also hardcoded twice in `app/about/page.tsx:23,57`.
+- [x] 🟡 **Raw hex colors bypassing the theme** — `heap-visualizer.tsx:162-175,224-247` (12 dark-only hex values, invisible in light mode), `multi-language-code.tsx:71`. Move to CSS variables in `globals.css`.
+- [x] 🟡 **Hardcoded sample graph + random pixel coords** — `graph-visualizer.tsx:100-122`. Extract a `SAMPLE_GRAPH` constant and compute layout (a `lib/tree-layout.ts` precedent already exists).
+- [x] ⚪ Named constants for: hash multiplier `31` + `TABLE_SIZE` (`hash-table-visualizer.tsx:47,62`), pathfinding grid `15×25` + wall density `0.28`, B-tree order bounds `2..5`, seed datasets in linked-list/stack/dp visualizers, `nextId` starting at `4` (collides with seed ids 101–104 — start at `1`).
 
 ### Python (Pratyaksha)
 
-- [ ] 🟠 **Structure-name literals duplicated across the language boundary** — 14 magic strings hand-written in every constructor **twice** (e.g. `structures/stack.py:47` and `:52`), again in `src/bridge/registry.tsx:22-35` and `pratyaksha-bridge.tsx`. Add a `StructureType` StrEnum in `pratyaksha/core/`, derive `structure_type` from `run.structure` in the base class, and generate the TS union from it.
-- [ ] 🟡 **`_telemetry_metadata` copy-pasted 8×** with 4 signatures across `pratyaksha/structures/*` — replace with one `telemetry_metadata(event_count, last_op, **extra)` in `core/telemetry.py`. Also merge the ~90%-identical `structures/base.py` and `algorithms/base.py` into one `BaseTelemetryObject` (fixes `event_history()` missing on algorithms).
-- [ ] ⚪ Named constants: uuid truncation `[:8]` (collision risk), hash `31`, bucket `10`, capacity `5`, `front=0/rear=-1` sentinels. Add `__version__` to `pratyaksha/__init__.py` (version currently stated in 3 places, readable in none).
+- [x] 🟠 **Structure-name literals duplicated across the language boundary** — 14 magic strings hand-written in every constructor **twice** (e.g. `structures/stack.py:47` and `:52`), again in `src/bridge/registry.tsx:22-35` and `pratyaksha-bridge.tsx`. Add a `StructureType` StrEnum in `pratyaksha/core/`, derive `structure_type` from `run.structure` in the base class, and generate the TS union from it.
+- [x] 🟡 **`_telemetry_metadata` copy-pasted 8×** with 4 signatures across `pratyaksha/structures/*` — replace with one `telemetry_metadata(event_count, last_op, **extra)` in `core/telemetry.py`. Also merge the ~90%-identical `structures/base.py` and `algorithms/base.py` into one `BaseTelemetryObject` (fixes `event_history()` missing on algorithms).
+- [x] ⚪ Named constants: uuid truncation `[:8]` (collision risk), hash `31`, bucket `10`, capacity `5`, `front=0/rear=-1` sentinels. Add `__version__` to `pratyaksha/__init__.py` (version currently stated in 3 places, readable in none).
 
 ---
 
