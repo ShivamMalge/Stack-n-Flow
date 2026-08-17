@@ -40,7 +40,7 @@ export default function StackRenderer({
           stacks without clipping the top of tall ones the way `items-center`
           does once the content overflows.
         */}
-        <div className="flex flex-1 min-h-[250px] justify-center overflow-auto pt-10 pb-6 bg-muted/5 border-t">
+        <div className="flex flex-1 min-h-[250px] max-h-[60vh] justify-center overflow-auto pt-10 pb-6 bg-muted/5 border-t">
           {items.length === 0 ? (
             <div className="m-auto text-muted-foreground text-sm">Empty stack</div>
           ) : (

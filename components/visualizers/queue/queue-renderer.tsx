@@ -31,7 +31,7 @@ export default function QueueRenderer({
       <CardContent className="flex flex-col flex-1 min-h-0 pb-4">
         {/* Grows to fill the card rather than a fixed height, so a long queue
             uses the available space instead of scrolling inside an empty panel. */}
-        <div className="flex flex-1 min-h-[250px] justify-center overflow-auto py-10 bg-muted/5 border-t">
+        <div className="flex flex-1 min-h-[250px] max-h-[60vh] justify-center overflow-auto py-10 bg-muted/5 border-t">
           {items.length === 0 ? (
             <div className="m-auto text-muted-foreground text-sm">Empty queue</div>
           ) : (
