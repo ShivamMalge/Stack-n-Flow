@@ -26,24 +26,24 @@ Working tree (excluding `node_modules`/`.git`) is now 2.5 MB, down from ~6 MB.
 
 ---
 
-## Phase 1 — Security (≈ 1 day, highest priority code changes)
+## Phase 1 — Security ✅ COMPLETE (2026-08-17)
 
-- [ ] 🔴 **Privilege escalation via `useSession().update()`** — `lib/auth.ts:26-30`. The JWT callback copies `role` and `onboardingCompleted` straight from a client-supplied payload. Any logged-in user can run `update({ role: "PROFESSOR", onboardingCompleted: true })` from the browser console and mint a forged token, bypassing onboarding (`middleware.ts:13`).
-  **Fix:** on `trigger === "update"`, ignore the payload and re-read from the DB:
-  ```ts
-  const dbUser = await prisma.user.findUnique({
-      where: { id: token.id as string },
-      select: { role: true, onboardingCompleted: true },
-  })
-  if (dbUser) { token.role = dbUser.role; token.onboardingCompleted = dbUser.onboardingCompleted }
-  ```
-  Then in `app/(auth)/onboarding/page.tsx:59-63`, call `update()` with no arguments.
-- [ ] 🔴 **XSS-prone renderer** — `components/ui/code-panel.tsx:103`: `dangerouslySetInnerHTML` fed by `formatLine()` (`:33-70`), which does regex substitution with **no HTML escaping**. Safe today only because all inputs are code literals; the Pratyaksha bridge is designed to pipe Python-supplied strings into these components. **Fix:** escape `& < > " '` before formatting, or render token arrays with `<span>`s and drop `innerHTML` entirely.
-- [ ] 🟠 **Fail-fast env validation.** `lib/auth.ts:10-11,47` uses `process.env.X!`; `prisma.config.ts` casts `as string`. Missing vars boot the app with `undefined` credentials and fail opaquely. Add a zod-validated `lib/env.ts` that throws at startup for `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `DATABASE_URL`.
-- [ ] 🟡 **Security headers.** `next.config.ts` is empty — no CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`. Add a `headers()` block; a CSP is real defense-in-depth given the `innerHTML` usage above. Also add `images.remotePatterns` for `lh3.googleusercontent.com` (needed by Phase 3's `next/image` fix).
-- [ ] 🟡 **Middleware allowlist-by-omission** — `middleware.ts:34-42` protects only 4 route prefixes; any future route is public by default. Prefer a deny-by-default matcher that excludes `/login`, `/api/auth`, `/_next`, and static assets. Also dedupe `pages.signIn` (defined in both `middleware.ts:29` and `lib/auth.ts:44`).
-- [ ] 🟡 **USN validation** — `lib/validations/onboarding.ts:7` accepts any 4–20 char string for a `@unique` DB column. Add a `.regex()` so users can't squat arbitrary USNs.
-- [ ] ⚪ **Re-enable lint rules** — `eslint.config.mjs:15-19` turns off `no-explicit-any` and `no-unused-vars` repo-wide; this is why dead code and 14× `as any` survived. Re-enable as `warn` with an `_` ignore pattern.
+- [x] 🔴 **Privilege escalation via `useSession().update()`** — `lib/auth.ts`. The JWT callback now ignores the client payload on `trigger === "update"` and re-reads `role` / `onboardingCompleted` from the database; `app/(auth)/onboarding/page.tsx` calls `update()` with no arguments.
+- [x] 🔴 **XSS-prone renderer** — `components/ui/code-panel.tsx`. `formatLine()` + `dangerouslySetInnerHTML` replaced with a `tokenizeLine()` function emitting React elements, so displayed text can never be parsed as markup. The old number-highlighting `(?<![="])` lookbehind hack — which existed only to avoid corrupting the generated HTML — is gone. Locked in by `tests/components/code-panel.test.tsx`.
+- [x] 🟠 **Fail-fast env validation** — new `lib/env.ts` (zod) with `SKIP_ENV_VALIDATION=1` escape hatch for secret-less builds, plus a documented `.env.example` (gitignore exception added). `lib/auth.ts` consumes `env` instead of `process.env.X!`.
+- [x] 🟡 **Security headers** — `next.config.ts` now sets CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and `images.remotePatterns` for `lh3.googleusercontent.com`.
+- [x] 🟡 **Middleware is deny-by-default** — runs on everything except the auth API and static assets; public pages come from an explicit `PUBLIC_ROUTES` allowlist in the new `lib/routes.ts`, which also dedupes the `signIn` path. Verified `/`, `/login`, `/about` stay public and an unknown route requires a session.
+- [x] 🟡 **USN validation** — now `/^[A-Z0-9]{4,20}$/` with trim + uppercase normalisation.
+- [x] ⚪ **Re-enabled lint rules** — `no-explicit-any` and `no-unused-vars` as `warn` with `^_` ignore patterns.
+
+**Also fixed in passing:** `prisma.config.ts` overrode `datasource.url` eagerly, which broke `prisma generate` (it needs only the schema) whenever `DATABASE_URL` was unset. The override was redundant — `schema.prisma` already declares `env("DATABASE_URL")` — so it was removed.
+
+**Verification:** `npx tsc --noEmit` — no application-code errors (pre-existing test-file errors remain: vitest globals aren't in `tsconfig.json`, worth fixing in Phase 5). `next build` succeeds, 10 routes. `npx vitest run` — 14 passed.
+
+### Known limitations / follow-ups
+- **CSP still allows `'unsafe-inline'` and `'unsafe-eval'` in `script-src`**, required by the Next.js runtime's inline bootstrap. A nonce-based policy needs middleware-generated nonces.
+- **Logged-in users with incomplete onboarding are now redirected to `/onboarding` from `/` and `/about` too**, since middleware runs on public pages. This matches the original "lock them to onboarding" intent but is a behaviour change.
+- **131 Dependabot alerts** (3 critical, 65 high) were reported on the default branch at push time. Some should clear now that the legacy duplicate tree and its stale lockfile are gone; re-check and fold any remainder into a dependency-bump pass.
 
 ---
 
