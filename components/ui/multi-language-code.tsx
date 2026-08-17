@@ -68,7 +68,9 @@ export function MultiLanguageCode({
                 </DropdownMenu>
             </div>
 
-            <div className="bg-[#0d1117] text-[#c9d1d9] p-4 overflow-x-auto text-sm font-mono leading-relaxed max-h-[400px]">
+            {/* Matches the dark surface CodePanel uses, via theme tokens rather
+                than the GitHub-dark hex values that were inlined here. */}
+            <div className="bg-slate-950 text-slate-300 p-4 overflow-x-auto text-sm font-mono leading-relaxed max-h-[400px]">
                 <pre className="m-0">
                     <code className="block whitespace-pre">{currentImpl.code}</code>
                 </pre>
