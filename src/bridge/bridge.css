@@ -1,0 +1,29 @@
+/* Stylesheet for the notebook widget.
+ *
+ * anywidget injects this into the host document, so it must not restyle the
+ * notebook around it. Differences from app/globals.css:
+ *   - Tailwind Preflight is disabled (see tailwind.bridge.config.ts), so the
+ *     global element resets are not emitted.
+ *   - The default border-colour rule is scoped to the widget container instead
+ *     of matching every element on the page.
+ *   - There is no `body` rule, so the notebook keeps its own background.
+ */
+
+@import "../../app/theme-tokens.css";
+
+/* `base` is required for @layer base to work; with preflight disabled it emits
+   no global element resets. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .pratyaksha-container,
+  .pratyaksha-container * {
+    @apply border-border;
+  }
+
+  .pratyaksha-container {
+    @apply bg-background text-foreground;
+  }
+}

@@ -49,7 +49,9 @@ export default function StackVisualizer({
   const [inputValue, setInputValue] = useState("")
   const [animating, setAnimating] = useState(false)
   // Derived from the current contents so ids cannot collide with preset data.
-  const nextId = stack.reduce((max, item) => Math.max(max, item.id), 0) + 1
+  // Ids may arrive from Python as strings, which never collide with the
+  // numeric ids generated here, so they are skipped when finding the max.
+  const nextId = stack.reduce((max, item) => (typeof item.id === "number" ? Math.max(max, item.id) : max), 0) + 1
   // Update the search (peek) function to show search results
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [activeCode, setActiveCode] = useState<string[]>([])

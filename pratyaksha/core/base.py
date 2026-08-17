@@ -50,5 +50,13 @@ class BaseTelemetryObject:
     def event_history(self) -> List[TelemetryEvent]:
         return list(self._run.events)
 
-    def _repr_html_(self):
-        return self.widget._repr_html_()
+    def _repr_mimebundle_(self, **kwargs):
+        """Renders as the underlying widget in a notebook.
+
+        This delegated to ``widget._repr_html_()`` previously, which anywidget
+        does not define — ipywidgets uses the mimebundle protocol. IPython also
+        prefers ``_repr_html_`` when a class defines it, so its mere presence
+        suppressed widget rendering. A static HTML string cannot carry the comm
+        channel that live updates travel over, either.
+        """
+        return self.widget._repr_mimebundle_(**kwargs)

@@ -111,3 +111,22 @@ class RemainingTelemetryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_hash_table_updates_on_repeated_non_string_key():
+    """Keys are stored as strings, so lookups must normalise before comparing.
+
+    Entries were written with str(key) but compared against the raw value, so
+    insert(5, ...) twice compared "5" == 5 and appended a duplicate instead of
+    updating. Existing tests used only string keys, which hid it.
+    """
+    table = HashTable()
+    table.insert(5, "first")
+    table.insert(5, "second")
+
+    ops = [event.op for event in table.event_history()]
+    entries = [entry for bucket in table.nodes for entry in bucket]
+
+    assert ops == ["insert", "update"]
+    assert len(entries) == 1
+    assert entries[0]["value"] == "second"

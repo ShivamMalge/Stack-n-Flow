@@ -5,8 +5,47 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pratyaksha"
 version = "0.1.0"
-description = "A Python visualization library driven by React and anywidget"
-dependencies = [
-    "anywidget",
-    "traitlets",
+description = "Python-driven data structure and algorithm visualisation for Jupyter notebooks"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Shivam Malge" }]
+keywords = ["visualization", "data-structures", "algorithms", "jupyter", "anywidget", "education"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: Jupyter",
+    "Topic :: Education",
+    "Topic :: Scientific/Engineering :: Visualization",
 ]
+dependencies = [
+    # anywidget 0.9 is the first release with the stable ESM/CSS attribute contract
+    # this package relies on.
+    "anywidget>=0.9",
+    "traitlets>=5.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/ShivamMalge/Stack-n-Flow"
+Repository = "https://github.com/ShivamMalge/Stack-n-Flow"
+Issues = "https://github.com/ShivamMalge/Stack-n-Flow/issues"
+
+# Without this, setuptools auto-discovery sees the top-level src/ directory,
+# takes the src-layout branch, and builds a wheel containing only an empty
+# `bridge` package — no pratyaksha modules at all.
+[tool.setuptools.packages.find]
+include = ["pratyaksha*"]
+
+# The built widget bundle must travel with the package; widget.py reads it at
+# import time.
+[tool.setuptools.package-data]
+pratyaksha = ["static/*", "py.typed"]

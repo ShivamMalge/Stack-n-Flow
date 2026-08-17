@@ -25,10 +25,11 @@ This path contains the current Python widget and data structure wrappers.
 ### Widget Bridge
 
 - `src/bridge/`
-- `dist/`
+- `pratyaksha/static/`
 
 `src/bridge/` is the source of the notebook bridge.
-`dist/` contains generated assets consumed by the Python widget.
+`pratyaksha/static/` contains generated assets consumed by the Python widget. They live inside
+the package so they resolve identically from a source checkout and after `pip install`.
 
 ## Legacy or Non-Core Paths
 

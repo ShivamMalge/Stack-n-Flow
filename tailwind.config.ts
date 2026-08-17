@@ -6,6 +6,8 @@ export default {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    // The widget bridge, so classes used only there are still emitted.
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
   	extend: {

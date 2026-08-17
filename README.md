@@ -13,7 +13,7 @@ Current intent:
 The repo currently contains multiple concerns:
 
 - `app/`, `components/`, `hooks/`, `lib/`, `public/`: the existing Next.js application
-- `src/bridge/`, `dist/`: the Pratyaksha widget bridge and built frontend assets
+- `src/bridge/`: the Pratyaksha widget bridge source; built assets go to `pratyaksha/static/`
 - `pratyaksha/`: the Python package
 - `prisma/`, `middleware.ts`, auth pages: existing app-specific product concerns
 
@@ -29,7 +29,7 @@ Use these paths for active development:
 - Web app: `app/`, `components/`, `hooks/`, `lib/`, `public/`
 - Python package: `pratyaksha/`
 - Widget bridge source: `src/bridge/`
-- Built widget assets: `dist/`
+- Built widget assets: `pratyaksha/static/` (inside the Python package, so they ship with `pip install`)
 
 Treat these as legacy or out-of-scope for the Pratyaksha core:
 

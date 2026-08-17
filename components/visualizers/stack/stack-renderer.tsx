@@ -4,8 +4,10 @@ import { ArrowUp } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export type StackRendererItem = {
-  id: number
-  value: number
+  // Widened from number: Python generates 8-char UUID string ids and can send
+  // non-numeric values (the Colab demo enqueues strings).
+  id: string | number
+  value: string | number
   highlighted?: boolean
   isNew?: boolean
   isPopping?: boolean

@@ -11,6 +11,16 @@ HASH_MULTIPLIER = 31
 DEFAULT_TABLE_SIZE = 10
 
 
+def _normalize_key(key: Any) -> str:
+    """Bucket entries store keys as strings, so lookups must normalise too.
+
+    Entries were written with ``str(key)`` but compared against the raw value,
+    so ``insert(5, ...)`` twice compared ``"5" == 5`` and appended a duplicate
+    instead of updating.
+    """
+    return str(key)
+
+
 def _hash(key: Any, size: int) -> int:
     h = 0
     for char in str(key):
@@ -23,12 +33,12 @@ def _reduce_hash_table(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Te
     metadata = dict(snapshot.metadata)
     size = metadata["size"]
 
-    key = event.payload["key"]
+    key = _normalize_key(event.payload["key"])
     bucket_index = _hash(key, size)
     bucket = nodes[bucket_index]
 
     if event.op == "insert":
-        bucket.append({"key": str(key), "value": str(event.payload["value"]), "state": "default"})
+        bucket.append({"key": key, "value": str(event.payload["value"]), "state": "default"})
     elif event.op == "update":
         for entry in bucket:
             if entry["key"] == key:
@@ -56,6 +66,7 @@ class HashTable(BaseTelemetryStructure):
         super().__init__(run)
 
     def insert(self, key: Any, value: Any):
+        key = _normalize_key(key)
         bucket_index = _hash(key, self.size)
         bucket: List[Dict[str, Any]] = self.nodes[bucket_index]
         if any(entry["key"] == key for entry in bucket):

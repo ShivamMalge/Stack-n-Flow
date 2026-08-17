@@ -1,83 +1,114 @@
-# Phase 1 Documentation - Pratyaksha Visualization Library
+# Pratyaksha — Notebook Visualisation Library
 
-Phase 1 focused on laying the foundation for **Pratyaksha**, transforming the "Stack-n-Flow" visualization component library into a reusable Python-driven visualization engine.
+Pratyaksha drives the Stack'n'Flow React visualizers from Python, so a notebook cell like
 
-## Core Accomplishments
+```python
+from pratyaksha import Stack
 
-### 1. Architectural Foundation
-- **Anywidget Integration**: Created the `VisualizerWidget` using `anywidget` to synchronize state between Python logic and React rendering.
-- **Telemetry Layer**: Developed a synchronization mechanism where Python sends high-level state (nodes, edges, metadata) and React handles animations using Framer Motion.
-- **Bundling Infrastructure**: Set up a bundling pipeline using `tsup` to package React components and Tailwind CSS into standalone assets (`pratyaksha-bridge.mjs` and `pratyaksha.css`).
+s = Stack()
+s.push(10)
+s.push(20)
+s          # renders an interactive stack
+```
 
-### 2. Hybrid Visualization Bridge
-- Implemented a `VisualizerRouter` in React that dynamically switches between different data structure visualizers based on the `structure` trait sent from Python.
-- Supported structures in Phase 1:
-  - **Linear**: Stack, Queue, Array, Linked List, Circular Linked List, Doubly Linked List, Circular Queue.
-  - **Trees**: Binary Tree, AVL Tree, Heap.
-  - **Graphs**: Node-Edge based graph visualization.
-  - **Others**: Hash Table (Bucket-based).
+displays a live widget backed by the same components the web app uses.
 
-### 3. Python Library Layer
-- **Data Structure Wrappers**: Created an object-oriented Python API for all supported structures.
-- **Controlled State**: Standardized the React components to accept "controlled" props, allowing Python to be the source of truth for the data.
-- **Algorithm Drivers**: Established patterns for visualizing algorithms like Binary Search and Quick Sort by sending incremental state updates.
+## Install
 
-## Troubleshooting (Antigravity IDE)
+```bash
+pip install git+https://github.com/ShivamMalge/Stack-n-Flow.git@v0.1.0
+```
 
-If you see red squiggles or "Could not find import" errors in the Antigravity IDE, follow these steps:
+From a source checkout you must build the widget bundle first, because the Python
+package reads it at import time:
 
-1. **Install Dependencies**: Run the following command in your terminal to ensure the basic requirements are available to the linter:
-   ```bash
-   pip install anywidget traitlets
-   ```
+```bash
+npm install
+npm run build-lib        # writes pratyaksha/static/
+pip install -e .
+```
 
-2. **Editable Install**: To help the linter resolve the `pratyaksha` package locally, run:
-   ```bash
-   pip install -e .
-   ```
+If the bundle is missing, importing the package raises a `RuntimeError` naming the
+expected path and the command to run — it does not fail silently.
 
-3. **Restart IDE**: Antigravity's linter (Pyre2) may cache old environment states. Restarting the IDE will force a re-scan of the installed packages.
+## What actually works today
 
-4. **Verify Environment**: Run the import sanity check:
-   ```bash
-   python scripts/smoke_check.py
-   ```
-   This only confirms the package imports and that basic operations run. It says nothing about
-   whether notebook visualizations render — run `pytest tests/python` for real coverage.
+| Capability | Status |
+|---|---|
+| `pip install` ships the package and its assets | ✅ verified from a clean virtualenv |
+| Widget renders in a notebook via the ipywidgets mimebundle | ✅ |
+| Python → React state sync (`structure`, `nodes`, `metadata`) | ✅ |
+| Stack and Queue as dedicated presentational renderers | ✅ |
+| 12 further structures render through the app's interactive components | ⚠️ see limitations |
+| `export_trace()` replay data | ✅ produced; no replay UI yet |
+| Algorithm drivers (`BinarySearch`, `QuickSort`) | ⚠️ stubs — see limitations |
 
-## Technical Details
+### Supported structures
 
-### State Synchronization
-The library uses three main traitlets for communication:
-- `structure`: (String) Identifies which visualizer to load.
-- `nodes`: (List/Dict) The primary data content.
-- `metadata`: (Dict) Auxiliary information (e.g., current front/rear indices, edge lists, or animation states).
+- **Linear**: Stack, Queue, Array, Linked List, Circular Linked List, Doubly Linked List, Circular Queue
+- **Trees**: Binary Tree, AVL Tree, Heap
+- **Graphs**: node/edge graph
+- **Other**: Hash Table (separate chaining)
 
-### Directory Structure
-- `pratyaksha/`: The Python package containing the widget and structure definitions.
-- `src/pratyaksha/`: The React bridge source code.
-- `dist/`: Bundled assets consumed by the Python widget.
-- `components/visualizers/`: The core React visualization components adapted for controlled state.
+## Known limitations
 
-## Bug Fixes and Stability Improvements
+These are real and worth stating plainly rather than discovering later:
 
-As part of the final Phase 1 polish, several key issues were addressed:
+- **Only Stack and Queue are true renderers.** The other twelve entries in the bridge
+  registry mount the full interactive web components, so a notebook shows input boxes and
+  buttons whose state is overwritten by Python on the next update. Extracting the
+  remaining renderers is P2 in `pratyaksha_phases.md`.
+- **There are no animations.** Earlier documentation claimed Framer Motion drove
+  transitions; nothing in the codebase imports it. Notebook visuals are static re-renders
+  between states.
+- **`QuickSort` does not sort and `BinarySearch` does not search.** Both hold an initial
+  array; `QuickSort`'s reducer is the identity function and `BinarySearch` only stores a
+  result string the caller computed. Real stepwise drivers are P3.
+- **No playback controls** in the widget yet.
 
-### 1. Environmental Setup
-- **Dependency Installation**: Identified and installed missing Python dependencies (`anywidget`, `traitlets`) in the local environment to ensure the widget and synchronization logic function correctly.
-- **Node.js Integration**: Resolved path issues during the bundling process by explicitly pointing to the Node.js installation directory for background build commands.
+## Architecture
 
-### 2. Python Code Quality
-- **Class Member Consistency**: Standardized the `nodes` attribute across all data structure wrappers. Resolved "inconsistent override" lint errors by ensuring that `BaseStructure` handles attribute initialization and synchronization gracefully via `getattr`.
-- **Initialization Order**: Refactored subclass constructors to define structure-specific attributes (like `edges` for Graphs or `nodes` for HashTables) *before* calling `super().__init__`, ensuring that the initial synchronization (`_sync`) has access to the correct data.
-- **Import Resolution**: Switched from absolute to relative imports within the `pratyaksha` package to improve portability and resolve IDE namespace issues.
+### State synchronisation
 
-### 3. Visualizer Robustness
-- **Controlled Props**: Verified that all visualizers correctly fallback to internal state if controlled props are not provided, while prioritizing the Python-driven state when active.
-- **State Sanitization**: Fixed variable renaming bugs in `CircularQueueVisualizer` and `QuickSortVisualizer` that were causing runtime errors during animation.
+Three traitlets carry state from Python to React:
 
-## Summary of Phase 1 Deliverables
-- [x] Functional `VisualizerWidget` with cross-language state sync.
-- [x] Robust Python API for 12+ data structures and key algorithms.
-- [x] High-performance React bundling pipeline.
-- [x] Comprehensive documentation and usage examples.
+- `structure` — which visualizer to mount, one of `StructureType`
+- `nodes` — the primary data
+- `metadata` — auxiliary state (edges, heap node states, queue front/rear, search results)
+
+Structure names are defined once in `pratyaksha/core/structures.py` and must match the keys
+in `src/bridge/registry.tsx`.
+
+### Telemetry core
+
+`pratyaksha/core/telemetry.py` is an event-sourced core: every operation emits a
+`TelemetryEvent`, a reducer folds it into an immutable `TelemetrySnapshot`, and the full
+history is retained. `export_trace()` returns the events and snapshots as JSON-ready data,
+which is what a future replay feature will consume.
+
+### Layout
+
+- `pratyaksha/` — the Python package
+  - `core/` — telemetry, shared base class, structure enum
+  - `structures/`, `algorithms/` — the public API
+  - `static/` — built widget assets, shipped as package data
+- `src/bridge/` — React bridge source (router + registry + stylesheet)
+- `components/visualizers/` — the React components, shared with the web app
+
+### Styling
+
+The widget stylesheet is built with `tailwind.bridge.config.ts`, which disables Tailwind
+Preflight and scopes the base rules to `.pratyaksha-container`. This matters because
+anywidget injects the CSS into the host document: the web app's stylesheet would otherwise
+reset margins and repaint the background of the whole notebook. Design tokens live in
+`app/theme-tokens.css` and are shared by both builds.
+
+## Verification
+
+```bash
+npm run verify:web       # Next.js build
+npm run verify:bridge    # widget bundle + stylesheet
+npm test                 # React/bridge tests
+pytest tests/python      # telemetry tests
+python scripts/smoke_check.py   # import sanity check only, not a gate
+```
