@@ -32,12 +32,6 @@ This path contains the current Python widget and data structure wrappers.
 
 ## Legacy or Non-Core Paths
 
-### Legacy Duplicate Tree
-
-- `Stack-n-Flow-main/`
-
-This is a duplicate copy of the older application tree. It should not be used as the source for current refactor work.
-
 ### App-Specific Product Concerns
 
 - `prisma/`
@@ -56,4 +50,4 @@ For architecture evolution work, prefer:
 2. `src/bridge/` for widget bridge changes
 3. `pratyaksha/` for Python-side state and widget logic
 
-Do not plan new work against `Stack-n-Flow-main/`.
+The legacy duplicate tree `Stack-n-Flow-main/` was removed in Phase 0; it remains in git history only.

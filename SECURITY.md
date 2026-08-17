@@ -2,20 +2,20 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+This project is pre-1.0 and under active development. Only the latest commit on
+`main` receives fixes.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| main    | :white_check_mark: |
+| < 0.1   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Please report security issues privately by opening a
+[GitHub security advisory](https://github.com/ShivamMalge/Stack-n-Flow/security/advisories/new)
+rather than a public issue.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Include the affected file or route, reproduction steps, and the impact you
+observed. Expect an initial response within 7 days. Accepted reports are fixed on
+`main` and credited in the commit unless you prefer otherwise.

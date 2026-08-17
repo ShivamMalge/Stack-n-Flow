@@ -16,7 +16,6 @@ The repo currently contains multiple concerns:
 - `src/bridge/`, `dist/`: the Pratyaksha widget bridge and built frontend assets
 - `pratyaksha/`: the Python package
 - `prisma/`, `middleware.ts`, auth pages: existing app-specific product concerns
-- `Stack-n-Flow-main/`: legacy duplicate tree, not authoritative for new work
 
 Phase 0 establishes repository boundaries and the authoritative paths for future work. See:
 
@@ -34,7 +33,6 @@ Use these paths for active development:
 
 Treat these as legacy or out-of-scope for the Pratyaksha core:
 
-- `Stack-n-Flow-main/`
 - `prisma/`
 - `middleware.ts`
 - auth and onboarding pages under `app/`
@@ -48,11 +46,14 @@ npm run verify:web
 npm run verify:bridge
 ```
 
-Python smoke verification is still environment-dependent because the local machine must provide a Python runtime:
+Python tests (requires a local Python runtime with `anywidget` and `traitlets` installed):
 
 ```bash
-python test_pratyaksha.py
+pytest tests/python
 ```
+
+`scripts/smoke_check.py` is an import-only sanity check, not a verification gate — it does not
+exercise the widget or notebook render path.
 
 ## Near-Term Execution Order
 

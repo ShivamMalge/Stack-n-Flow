@@ -1,6 +1,4 @@
 import type React from "react";
-import StackVisualizer from "../../components/visualizers/stack-visualizer";
-import QueueVisualizer from "../../components/visualizers/queue-visualizer";
 import ArrayVisualizer from "../../components/visualizers/array-visualizer";
 import TreeVisualizer from "../../components/visualizers/tree-visualizer";
 import LinkedListVisualizer from "../../components/visualizers/linked-list-visualizer";

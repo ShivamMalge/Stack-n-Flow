@@ -38,11 +38,12 @@ If you see red squiggles or "Could not find import" errors in the Antigravity ID
 
 3. **Restart IDE**: Antigravity's linter (Pyre2) may cache old environment states. Restarting the IDE will force a re-scan of the installed packages.
 
-4. **Verify Environment**: Run the provided verification script:
+4. **Verify Environment**: Run the import sanity check:
    ```bash
-   python test_pratyaksha.py
+   python scripts/smoke_check.py
    ```
-   If this script prints `SUCCESS`, the library is fully functional despite any remaining IDE visual artifacts.
+   This only confirms the package imports and that basic operations run. It says nothing about
+   whether notebook visualizations render — run `pytest tests/python` for real coverage.
 
 ## Technical Details
 

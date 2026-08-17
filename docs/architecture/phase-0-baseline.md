@@ -37,11 +37,11 @@ Repository/package restructuring is postponed until after:
 - one telemetry flow is proven
 - one notebook flow is proven
 
-### 4. Legacy Paths Are Documented, Not Deleted
+### 4. Legacy Paths Are Documented, Then Removed
 
-`Stack-n-Flow-main/` is treated as legacy and excluded from active architecture work.
-
-No destructive cleanup is performed in Phase 0.
+`Stack-n-Flow-main/` was treated as legacy and excluded from active architecture work.
+Once the repository was placed under version control, the duplicate tree was deleted from the
+working tree; it remains recoverable from git history.
 
 ## Verification Commands
 
@@ -52,11 +52,13 @@ npm run verify:web
 npm run verify:bridge
 ```
 
-Python smoke check when Python is available:
+Python tests when Python is available:
 
 ```bash
-python test_pratyaksha.py
+pytest tests/python
 ```
+
+`scripts/smoke_check.py` only confirms that imports work; it is not a verification gate.
 
 ## Phase 1 Entry Criteria
 

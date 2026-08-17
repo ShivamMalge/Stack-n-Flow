@@ -5,11 +5,10 @@ export default defineConfig({
   format: ["esm"],
   dts: false,
   splitting: false,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
   minify: true,
-  external: ["react", "react-dom"], // anywidget usually provides these or we bundle them
-  noExternal: [/(.*)/], // Bundle everything else
+  noExternal: [/(.*)/], // Bundle everything, including React — the widget loads standalone
   outDir: "dist",
   esbuildOptions(options) {
     options.alias = {
