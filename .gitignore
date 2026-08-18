@@ -60,3 +60,11 @@ env/
 # dist/ holds the widget bundle consumed by pratyaksha/widget.py, so it is tracked,
 # but sourcemaps are debug-only and must never be committed.
 *.map
+
+# Course material. The BCS401 files are verbatim extracts from Levitin,
+# "Introduction to the Design and Analysis of Algorithms", and the BCS304
+# notes carry a third-party watermark — none of it is ours to redistribute
+# from a public repository. Kept locally as a reference for lib/config/syllabus.ts.
+BCS304-module-*.pdf
+BCS401-module-*.pdf
+*.pdf
