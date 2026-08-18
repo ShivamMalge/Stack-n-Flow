@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, ArrowRight, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const INSERT_FRONT_CODE = [
   "def insert_front(value):",
@@ -266,11 +267,8 @@ export default function DoublyLinkedListVisualizer({
   }
 
   return (
-    // Code panel under the visualization on desktop: the highlighted line and
-    // the structure it describes read together, and the columns stay balanced.
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel - Top on Mobile, Top-Left on Desktop */}
-      <div className="order-1 md:col-start-1 md:row-start-1">
+    <VisualizerLayout
+      controls={
         <Card>
           <CardHeader>
             <CardTitle>Doubly Linked List Operations</CardTitle>
@@ -376,10 +374,8 @@ export default function DoublyLinkedListVisualizer({
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Visualization Panel - Second on Mobile, Top-Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-start-1">
+      }
+      visualization={
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
@@ -420,10 +416,8 @@ export default function DoublyLinkedListVisualizer({
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Live Code Panel - Third on Mobile, Directly Under the Visualization on Desktop */}
-      <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
+      }
+      code={
         <CodePanel
           code={activeCode}
           activeLine={activeLine}
@@ -435,10 +429,8 @@ export default function DoublyLinkedListVisualizer({
                     activeCode === SEARCH_CODE ? "Search Algorithm" : "Doubly Linked List Algorithm"
           }
         />
-      </div>
-
-      {/* Learning Panel - Last on Mobile, Bottom-Left on Desktop */}
-      <div className="order-4 md:col-start-1 md:row-start-2">
+      }
+      docs={
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -468,8 +460,8 @@ export default function DoublyLinkedListVisualizer({
             </ul>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      }
+    />
   )
 }
 

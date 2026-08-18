@@ -16,6 +16,7 @@ import CodePanel from "@/components/ui/code-panel"
 import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const INSERT_CODE = [
   "def insert(value):",
@@ -486,11 +487,8 @@ export default function BinaryTreeVisualizer() {
 
   // Replace the Visualization Panel section with this improved version
   return (
-    // Code panel under the visualization on desktop: the highlighted line and
-    // the structure it describes read together, and the columns stay balanced.
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel - Top on Mobile, Top-Left on Desktop */}
-      <div className="order-1 md:col-start-1 md:row-start-1">
+    <VisualizerLayout
+      controls={
         <Card>
           <CardHeader>
             <CardTitle>Binary Tree Operations</CardTitle>
@@ -593,10 +591,8 @@ export default function BinaryTreeVisualizer() {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Visualization Panel - Second on Mobile, Top-Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-start-1">
+      }
+      visualization={
         <Card className="flex flex-col h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
@@ -665,19 +661,15 @@ export default function BinaryTreeVisualizer() {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Live Code Panel - Third on Mobile, Directly Under the Visualization on Desktop */}
-      <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
+      }
+      code={
         <CodePanel
           code={activeCode}
           activeLine={activeLine}
           title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "Traversal Algorithm"}
         />
-      </div>
-
-      {/* Learning Panel - Last on Mobile, Bottom-Left on Desktop */}
-      <div className="order-4 md:col-start-1 md:row-start-2">
+      }
+      docs={
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -703,8 +695,8 @@ export default function BinaryTreeVisualizer() {
             </p>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      }
+    />
   )
 }
 

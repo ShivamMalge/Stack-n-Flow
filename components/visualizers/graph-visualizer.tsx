@@ -11,6 +11,7 @@ import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import CodePanel from "@/components/ui/code-panel"
 import { resolveState, STATE_SHAPE, STATE_SWATCH } from "@/lib/visualizer-states"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const BFS_CODE = [
   "def bfs(graph, start):",
@@ -354,11 +355,8 @@ export default function GraphVisualizer({
   const visibleStep = player.currentFrame
 
   return (
-    // Code panel under the visualization on desktop, so the highlighted line
-    // and the graph it describes are visible together.
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel - Top on Mobile, Left on Desktop */}
-      <div className="order-1 md:col-start-1 md:row-start-1">
+    <VisualizerLayout
+      controls={
         <Card>
           <CardHeader>
             <CardTitle>Graph Operations</CardTitle>
@@ -485,10 +483,8 @@ export default function GraphVisualizer({
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-start-1">
+      }
+      visualization={
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
@@ -561,16 +557,14 @@ export default function GraphVisualizer({
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Live code — third on mobile, directly under the visualization */}
-      <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
+      }
+      code={
         <CodePanel
           code={activeCode}
           activeLine={activeLine}
           title={activeCode === BFS_CODE ? "BFS Algorithm" : activeCode === DFS_CODE ? "DFS Algorithm" : "Graph Algorithm"}
         />
-      </div>
-    </div>
+      }
+    />
   )
 }

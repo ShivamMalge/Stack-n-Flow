@@ -4,6 +4,24 @@ import { ArrowRight, BookOpen, Code, LineChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import { VISUALIZERS, shortNameOf, visualizerHref } from "@/lib/visualizer-catalog"
+
+/** The ten shown on the landing page, in the catalog's own order. */
+const FEATURED_SLUGS = [
+  "linked-list",
+  "stack",
+  "queue",
+  "binary-tree",
+  "binary-search-tree",
+  "avl-tree",
+  "b-tree",
+  "graph",
+  "heap",
+  "hash-table",
+]
+const FEATURED_VISUALIZERS = FEATURED_SLUGS.map(
+  (slug) => VISUALIZERS.find((v) => v.slug === slug)!,
+)
 
 export const metadata: Metadata = {
   title: "Stack'n'Flow | Home",
@@ -93,13 +111,13 @@ export default function Home() {
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {["Linked List", "Stack", "Queue", "Binary Tree", "BST", "AVL Tree", "B-Tree", "Graph", "Heap", "Hash Table"].map((ds) => (
+              {FEATURED_VISUALIZERS.map((ds) => (
                 <Link
-                  key={ds}
-                  href={`/visualize?ds=${ds.toLowerCase().replace(/ /g, "-").replace("bst", "binary-search-tree")}`}
+                  key={ds.slug}
+                  href={visualizerHref(ds.slug)}
                   className="bg-card hover:bg-card/80 border rounded-lg p-4 text-center transition-colors"
                 >
-                  <h3 className="font-medium">{ds}</h3>
+                  <h3 className="font-medium">{shortNameOf(ds)}</h3>
                 </Link>
               ))}
             </div>

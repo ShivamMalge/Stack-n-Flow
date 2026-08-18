@@ -5,6 +5,7 @@ import CodePanel from "@/components/ui/code-panel"
 import QueueRenderer, { type QueueRendererItem } from "@/components/visualizers/queue/queue-renderer"
 import QueueController from "@/components/visualizers/queue/queue-controller"
 import QueueDocs from "@/components/visualizers/queue/queue-docs"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const ENQUEUE_CODE = [
   "def enqueue(value):",
@@ -137,12 +138,10 @@ export default function QueueVisualizer({
   }
 
   return (
-    // Code panel under the visualization on desktop: the highlighted line and
-    // the structure it describes read together, and the columns stay balanced.
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel - Top on Mobile, Left on Desktop */}
-      {!mini && !isControlled && (
-        <div className="order-1 md:col-start-1 md:row-start-1">
+    <VisualizerLayout
+      mini={mini}
+      controls={
+        !isControlled ? (
           <QueueController
             inputValue={inputValue}
             animating={animating}
@@ -152,32 +151,17 @@ export default function QueueVisualizer({
             onDequeue={handleDequeue}
             onPeek={handlePeek}
           />
-        </div>
-      )}
-
-      {/* Visualization Panel - Second on Mobile, Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-start-1">
-        <QueueRenderer items={queue} searchResult={searchResult} />
-      </div>
-
-      {/* Live Code Panel - Third on Mobile, Left on Desktop */}
-      {!mini && (
-        <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
-          <CodePanel
-            code={activeCode}
-            activeLine={activeLine}
-            title={activeCode === ENQUEUE_CODE ? "Enqueue Algorithm" : activeCode === DEQUEUE_CODE ? "Dequeue Algorithm" : "Peek Algorithm"}
-          />
-        </div>
-      )}
-
-      {/* Learning Panel - Last on Mobile, Left on Desktop */}
-      {!mini && (
-        <div className="order-4 md:col-start-1 md:row-start-2">
-          <QueueDocs />
-        </div>
-      )}
-    </div>
+        ) : undefined
+      }
+      visualization={<QueueRenderer items={queue} searchResult={searchResult} />}
+      code={
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === ENQUEUE_CODE ? "Enqueue Algorithm" : activeCode === DEQUEUE_CODE ? "Dequeue Algorithm" : "Peek Algorithm"}
+        />
+      }
+      docs={<QueueDocs />}
+    />
   )
 }
-

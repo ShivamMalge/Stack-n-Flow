@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const INSERT_CODE = [
   "def insert(value, index):",
@@ -260,122 +261,116 @@ export default function ArrayVisualizer({
   }
 
   return (
-    // Code panel under the visualization on desktop: the highlighted line and
-    // the structure it describes read together, and the columns stay balanced.
-    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start"}>
-      {/* Operations Panel - Order 1 on Mobile, Top-Left on Desktop */}
-      {!mini && (
-        <div className="order-1 md:col-start-1 md:row-start-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Array Operations</CardTitle>
-              <CardDescription>Insert, delete, or search for values in the array</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={operation} onValueChange={setOperation}>
-                <div className="overflow-x-auto pb-2">
-                  <TabsList className="inline-flex min-w-full md:grid md:grid-cols-3 mb-4">
-                    <TabsTrigger value="insert" className="whitespace-nowrap text-xs md:text-sm">
-                      Insert
-                    </TabsTrigger>
-                    <TabsTrigger value="delete" className="whitespace-nowrap text-xs md:text-sm">
-                      Delete
-                    </TabsTrigger>
-                    <TabsTrigger value="search" className="whitespace-nowrap text-xs md:text-sm">
-                      Search
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
+    <VisualizerLayout
+      mini={mini}
+      controls={
+        <Card>
+          <CardHeader>
+            <CardTitle>Array Operations</CardTitle>
+            <CardDescription>Insert, delete, or search for values in the array</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={operation} onValueChange={setOperation}>
+              <div className="overflow-x-auto pb-2">
+                <TabsList className="inline-flex min-w-full md:grid md:grid-cols-3 mb-4">
+                  <TabsTrigger value="insert" className="whitespace-nowrap text-xs md:text-sm">
+                    Insert
+                  </TabsTrigger>
+                  <TabsTrigger value="delete" className="whitespace-nowrap text-xs md:text-sm">
+                    Delete
+                  </TabsTrigger>
+                  <TabsTrigger value="search" className="whitespace-nowrap text-xs md:text-sm">
+                    Search
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-                {operation === "insert" && (
-                  <div className="space-y-4 mt-4">
-                    <div className="flex space-x-2">
-                      <Input
-                        type="number"
-                        placeholder="Enter a value"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleInsert()}
-                        disabled={animating}
-                      />
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <Input
-                        type="number"
-                        placeholder="Enter index"
-                        value={indexValue}
-                        onChange={(e) => setIndexValue(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleInsert()}
-                        disabled={animating}
-                      />
-
-                      <Button onClick={handleInsert} disabled={animating}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Insert
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {operation === "delete" && (
-                  <div className="space-y-4 mt-4">
-                    <div className="flex space-x-2">
-                      <Input
-                        type="number"
-                        placeholder="Enter index"
-                        value={indexValue}
-                        onChange={(e) => setIndexValue(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleDelete()}
-                        disabled={animating}
-                      />
-
-                      <Button onClick={handleDelete} disabled={animating} variant="destructive">
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {operation === "search" && (
-                  <div className="flex space-x-2 mt-4">
+              {operation === "insert" && (
+                <div className="space-y-4 mt-4">
+                  <div className="flex space-x-2">
                     <Input
                       type="number"
                       placeholder="Enter a value"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      onKeyDown={(e) => e.key === "Enter" && handleInsert()}
+                      disabled={animating}
+                    />
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <Input
+                      type="number"
+                      placeholder="Enter index"
+                      value={indexValue}
+                      onChange={(e) => setIndexValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleInsert()}
                       disabled={animating}
                     />
 
-                    <Button onClick={handleSearch} disabled={animating} variant="secondary">
-                      <Search className="mr-2 h-4 w-4" />
-                      Search
+                    <Button onClick={handleInsert} disabled={animating}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Insert
                     </Button>
                   </div>
-                )}
-              </Tabs>
-
-              {searchResult && (
-                <div
-                  className={`mt-4 p-2 rounded text-center ${searchResult.includes("found at index")
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                    : searchResult === "Invalid index"
-                      ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                    }`}
-                >
-                  {searchResult}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
-      {/* Visualization Panel - Order 2 on Mobile, Top-Right on Desktop */}
-      <div className={mini ? "w-full" : "order-2 md:col-start-2 md:row-start-1"}>
+              {operation === "delete" && (
+                <div className="space-y-4 mt-4">
+                  <div className="flex space-x-2">
+                    <Input
+                      type="number"
+                      placeholder="Enter index"
+                      value={indexValue}
+                      onChange={(e) => setIndexValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleDelete()}
+                      disabled={animating}
+                    />
+
+                    <Button onClick={handleDelete} disabled={animating} variant="destructive">
+                      <Trash className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {operation === "search" && (
+                <div className="flex space-x-2 mt-4">
+                  <Input
+                    type="number"
+                    placeholder="Enter a value"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    disabled={animating}
+                  />
+
+                  <Button onClick={handleSearch} disabled={animating} variant="secondary">
+                    <Search className="mr-2 h-4 w-4" />
+                    Search
+                  </Button>
+                </div>
+              )}
+            </Tabs>
+
+            {searchResult && (
+              <div
+                className={`mt-4 p-2 rounded text-center ${searchResult.includes("found at index")
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                  : searchResult === "Invalid index"
+                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
+                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                  }`}
+              >
+                {searchResult}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      }
+      visualization={
         <Card className="h-full border-0 md:border md:shadow-sm">
           {!mini && (
             <CardHeader>
@@ -413,54 +408,46 @@ export default function ArrayVisualizer({
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Code Panel - Order 3 on Mobile, Directly Under the Visualization on Desktop */}
-      {!mini && (
-        <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
-          <CodePanel
-            code={activeCode}
-            activeLine={activeLine}
-            title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Linear Search" : "Algorithm Pseudocode"}
-          />
-        </div>
-      )}
-
-      {/* Learning Panel - Order 4 on Mobile, Bottom-Left on Desktop */}
-      {!mini && (
-        <div className="order-4 md:col-start-1 md:row-start-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Learning</CardTitle>
-              <CardDescription>Understanding Arrays</CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm">
-              <p className="mb-2">
-                An <strong>Array</strong> is a linear data structure that stores elements of the same type in contiguous
-                memory locations.
-              </p>
-              <p className="mb-2">
-                <strong>Time Complexity:</strong>
-              </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Access: O(1)</li>
-                <li>Search: O(n) for linear search, O(log n) for binary search on sorted arrays</li>
-                <li>Insertion: O(n) in worst case (need to shift elements)</li>
-                <li>Deletion: O(n) in worst case (need to shift elements)</li>
-              </ul>
-              <p className="mt-2">
-                <strong>Advantages:</strong>
-              </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Random access in constant time</li>
-                <li>Good cache locality</li>
-                <li>Memory efficient (no pointers needed)</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+      }
+      code={
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Linear Search" : "Algorithm Pseudocode"}
+        />
+      }
+      docs={
+        <Card>
+          <CardHeader>
+            <CardTitle>Learning</CardTitle>
+            <CardDescription>Understanding Arrays</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p className="mb-2">
+              An <strong>Array</strong> is a linear data structure that stores elements of the same type in contiguous
+              memory locations.
+            </p>
+            <p className="mb-2">
+              <strong>Time Complexity:</strong>
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Access: O(1)</li>
+              <li>Search: O(n) for linear search, O(log n) for binary search on sorted arrays</li>
+              <li>Insertion: O(n) in worst case (need to shift elements)</li>
+              <li>Deletion: O(n) in worst case (need to shift elements)</li>
+            </ul>
+            <p className="mt-2">
+              <strong>Advantages:</strong>
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Random access in constant time</li>
+              <li>Good cache locality</li>
+              <li>Memory efficient (no pointers needed)</li>
+            </ul>
+          </CardContent>
+        </Card>
+      }
+    />
   )
 }
 

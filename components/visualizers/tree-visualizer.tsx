@@ -12,6 +12,7 @@ import { useMobile } from "@/hooks/use-mobile"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import InlineAlert from "@/components/ui/inline-alert"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 type TreeNode = {
   id: number
@@ -503,165 +504,165 @@ export default function TreeVisualizer({
     setPan({ x: 0, y: 0 })
   }
 
-  // Update the SVG container to fill more space
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel */}
-      <div className="space-y-6">
-        <Card>
+    <VisualizerLayout
+      controls={
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Binary Search Tree Operations</CardTitle>
+              <CardDescription>Insert, search, or traverse the binary search tree</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={operation} onValueChange={setOperation}>
+                <div className="overflow-x-auto pb-2">
+                  <TabsList className="inline-flex min-w-full md:grid md:grid-cols-2 mb-4">
+                    <TabsTrigger value="insert" className="whitespace-nowrap text-xs md:text-sm">
+                      Insert
+                    </TabsTrigger>
+                    <TabsTrigger value="search" className="whitespace-nowrap text-xs md:text-sm">
+                      Search
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                {operation === "insert" && (
+                  <div className="flex space-x-2 mt-4">
+                    <Input
+                      type="number"
+                      placeholder="Enter a value"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      disabled={animating}
+                    />
+
+                    <Button onClick={handleInsert} disabled={animating}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Insert
+                    </Button>
+                  </div>
+                )}
+
+                <InlineAlert message={inputError} className="mt-2" />
+
+                {operation === "search" && (
+                  <div className="flex space-x-2 mt-4">
+                    <Input
+                      type="number"
+                      placeholder="Enter a value"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      disabled={animating}
+                    />
+
+                    <Button onClick={handleSearch} disabled={animating} variant="secondary">
+                      <Search className="mr-2 h-4 w-4" />
+                      Search
+                    </Button>
+                  </div>
+                )}
+              </Tabs>
+
+              <div className="mt-6 border-t pt-4">
+                <h4 className="text-sm font-medium mb-2">Tree Traversal</h4>
+                <div className="flex space-x-2 items-center">
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={traversalType}
+                    onChange={(e) => setTraversalType(e.target.value)}
+                    disabled={animating}
+                  >
+                    <option value="inorder">In-order</option>
+                    <option value="preorder">Pre-order</option>
+                    <option value="postorder">Post-order</option>
+                  </select>
+
+                  <Button onClick={handleTraversal} disabled={animating || !root} variant="outline">
+                    Traverse
+                  </Button>
+                </div>
+
+                {traversalPath.length > 0 && (
+                  <div className="mt-2 text-sm overflow-x-auto">
+                    <span className="font-medium">Path:</span> {traversalPath.join(" → ")}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+      visualization={
+        <Card className="flex flex-col h-full">
           <CardHeader>
-            <CardTitle>Binary Search Tree Operations</CardTitle>
-            <CardDescription>Insert, search, or traverse the binary search tree</CardDescription>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the binary search tree</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs value={operation} onValueChange={setOperation}>
-              <div className="overflow-x-auto pb-2">
-                <TabsList className="inline-flex min-w-full md:grid md:grid-cols-2 mb-4">
-                  <TabsTrigger value="insert" className="whitespace-nowrap text-xs md:text-sm">
-                    Insert
-                  </TabsTrigger>
-                  <TabsTrigger value="search" className="whitespace-nowrap text-xs md:text-sm">
-                    Search
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+          <CardContent className="flex flex-col flex-1 min-h-0">
+            {searchResult && <div className="mb-4 text-sm text-muted-foreground">{searchResult}</div>}
 
-              {operation === "insert" && (
-                <div className="flex space-x-2 mt-4">
-                  <Input
-                    type="number"
-                    placeholder="Enter a value"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    disabled={animating}
-                  />
+            <div className="flex flex-wrap gap-2 mb-2">
+              <Button size="sm" variant="outline" onClick={handleZoomIn}>
+                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleZoomOut}>
+                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanLeft}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanRight}>
+                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanUp}>
+                <MoveVertical className="h-4 w-4 mr-1" /> Pan Up
+              </Button>
+              <Button size="sm" variant="outline" onClick={handlePanDown}>
+                <MoveVertical className="h-4 w-4 mr-1" /> Pan Down
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleReset}>
+                Reset View
+              </Button>
+            </div>
 
-                  <Button onClick={handleInsert} disabled={animating}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Insert
-                  </Button>
-                </div>
-              )}
-
-              <InlineAlert message={inputError} className="mt-2" />
-
-              {operation === "search" && (
-                <div className="flex space-x-2 mt-4">
-                  <Input
-                    type="number"
-                    placeholder="Enter a value"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    disabled={animating}
-                  />
-
-                  <Button onClick={handleSearch} disabled={animating} variant="secondary">
-                    <Search className="mr-2 h-4 w-4" />
-                    Search
-                  </Button>
-                </div>
-              )}
-            </Tabs>
-
-            <div className="mt-6 border-t pt-4">
-              <h4 className="text-sm font-medium mb-2">Tree Traversal</h4>
-              <div className="flex space-x-2 items-center">
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={traversalType}
-                  onChange={(e) => setTraversalType(e.target.value)}
-                  disabled={animating}
+            {/*
+              The plate is the scroller itself: the old `absolute inset-0` child
+              made the outer `overflow-auto` a dead scroller, and centring a
+              scrolling box with `items-center` spilled the overflow both ways, so
+              the leading half (the root node first) could never be reached
+              because scrollLeft/scrollTop cannot go negative. `m-auto` on the svg
+              centres it while it fits and scrolls from the true origin once it
+              does not.
+            */}
+            <div className="flex flex-1 min-h-[300px] max-h-[60vh] w-full overflow-auto border-t p-4" style={{ overscrollBehavior: "contain" }}>
+              {root ? (
+                <svg
+                  ref={svgRef}
+                  width="100%"
+                  height="100%"
+                  viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
+                  style={{
+                    transform: `scale(${scale})`,
+                    transformOrigin: "center",
+                    transition: "transform 0.2s ease",
+                    touchAction: "none",
+                  }}
+                  className="m-auto max-w-none"
                 >
-                  <option value="inorder">In-order</option>
-                  <option value="preorder">Pre-order</option>
-                  <option value="postorder">Post-order</option>
-                </select>
-
-                <Button onClick={handleTraversal} disabled={animating || !root} variant="outline">
-                  Traverse
-                </Button>
-              </div>
-
-              {traversalPath.length > 0 && (
-                <div className="mt-2 text-sm overflow-x-auto">
-                  <span className="font-medium">Path:</span> {traversalPath.join(" → ")}
-                </div>
+                  <g>{renderTree(root, 0, 0, 1)}</g>
+                </svg>
+              ) : (
+                <div className="m-auto text-muted-foreground text-sm">Empty tree</div>
               )}
+            </div>
+
+            <div className="px-6 py-3 text-xs md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
+              Drag nodes to reposition. Use zoom/pan controls to navigate larger trees.
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Visualization Panel */}
-      <Card className="flex flex-col h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the binary search tree</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col flex-1 min-h-0">
-          {searchResult && <div className="mb-4 text-sm text-muted-foreground">{searchResult}</div>}
-
-          <div className="flex flex-wrap gap-2 mb-2">
-            <Button size="sm" variant="outline" onClick={handleZoomIn}>
-              <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleZoomOut}>
-              <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanLeft}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanRight}>
-              <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanUp}>
-              <MoveVertical className="h-4 w-4 mr-1" /> Pan Up
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePanDown}>
-              <MoveVertical className="h-4 w-4 mr-1" /> Pan Down
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleReset}>
-              Reset View
-            </Button>
-          </div>
-
-          {/*
-            The plate is the scroller itself: the old `absolute inset-0` child
-            made the outer `overflow-auto` a dead scroller, and centring a
-            scrolling box with `items-center` spilled the overflow both ways, so
-            the leading half (the root node first) could never be reached
-            because scrollLeft/scrollTop cannot go negative. `m-auto` on the svg
-            centres it while it fits and scrolls from the true origin once it
-            does not.
-          */}
-          <div className="flex flex-1 min-h-[300px] max-h-[60vh] w-full overflow-auto border-t p-4" style={{ overscrollBehavior: "contain" }}>
-            {root ? (
-              <svg
-                ref={svgRef}
-                width="100%"
-                height="100%"
-                viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
-                style={{
-                  transform: `scale(${scale})`,
-                  transformOrigin: "center",
-                  transition: "transform 0.2s ease",
-                  touchAction: "none",
-                }}
-                className="m-auto max-w-none"
-              >
-                <g>{renderTree(root, 0, 0, 1)}</g>
-              </svg>
-            ) : (
-              <div className="m-auto text-muted-foreground text-sm">Empty tree</div>
-            )}
-          </div>
-
-          <div className="px-6 py-3 text-xs md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
-            Drag nodes to reposition. Use zoom/pan controls to navigate larger trees.
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      }
+    />
   )
 }
 

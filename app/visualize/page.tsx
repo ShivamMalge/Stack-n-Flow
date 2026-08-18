@@ -1,251 +1,89 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import Link from "next/link"
+import { redirect } from "next/navigation"
+import type { Metadata } from "next"
+import { ArrowRight } from "lucide-react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import LinkedListVisualizer from "@/components/visualizers/linked-list-visualizer"
-import DoublyLinkedListVisualizer from "@/components/visualizers/doubly-linked-list-visualizer"
-import CircularLinkedListVisualizer from "@/components/visualizers/circular-linked-list-visualizer"
-import StackVisualizer from "@/components/visualizers/stack-visualizer"
-import QueueVisualizer from "@/components/visualizers/queue-visualizer"
-import CircularQueueVisualizer from "@/components/visualizers/circular-queue-visualizer"
-import TreeVisualizer from "@/components/visualizers/tree-visualizer"
-import BinaryTreeVisualizer from "@/components/visualizers/binary-tree-visualizer"
-import BinarySearchTreeVisualizer from "@/components/visualizers/binary-search-tree-visualizer"
-import AVLTreeVisualizer from "@/components/visualizers/avl-tree-visualizer"
-import BTreeVisualizer from "@/components/visualizers/b-tree-visualizer"
-import GraphVisualizer from "@/components/visualizers/graph-visualizer"
-import ArrayVisualizer from "@/components/visualizers/array-visualizer"
-import BinarySearchVisualizer from "@/components/visualizers/algorithms/binary-search-visualizer"
-import QuickSortVisualizer from "@/components/visualizers/algorithms/quick-sort-visualizer"
-import GreedyAlgorithmVisualizer from "@/components/visualizers/algorithms/greedy-algorithm-visualizer"
-import DivideConquerVisualizer from "@/components/visualizers/algorithms/divide-conquer-visualizer"
-import SortingComparison from "@/components/visualizers/algorithms/sorting-comparison"
-import HeapVisualizer from "@/components/visualizers/heap-visualizer"
-import HashTableVisualizer from "@/components/visualizers/hash-table-visualizer"
-import HeapSortVisualizer from "@/components/visualizers/algorithms/heap-sort-visualizer"
-import PathfindingVisualizer from "@/components/visualizers/algorithms/pathfinding-visualizer"
-import DPVisualizer from "@/components/visualizers/algorithms/dp-visualizer"
+import {
+    CATEGORY_LABELS,
+    getVisualizer,
+    visualizersIn,
+    visualizerHref,
+    type VisualizerCategory,
+} from "@/lib/visualizer-catalog"
 
-export default function VisualizePage() {
-  const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState("linked-list")
-  const [activeCategory, setActiveCategory] = useState("data-structures")
-
-  useEffect(() => {
-    const dsParam = searchParams.get("ds")
-    if (dsParam) {
-      setActiveTab(dsParam)
-      setActiveCategory("data-structures")
-    }
-
-    const algoParam = searchParams.get("algo")
-    if (algoParam) {
-      setActiveTab(algoParam)
-      setActiveCategory("algorithms")
-    }
-  }, [searchParams])
-
-  return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto py-4 md:py-8 px-4">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 md:mb-6">Interactive Visualizer</h1>
-
-        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full mb-4 md:mb-6">
-          <TabsList className="grid grid-cols-2 w-full max-w-sm mx-auto md:mx-0">
-            <TabsTrigger value="data-structures">Data Structures</TabsTrigger>
-            <TabsTrigger value="algorithms">Algorithms</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {activeCategory === "data-structures" && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-              <TabsList className="inline-flex whitespace-nowrap mb-6 md:mb-8 bg-muted/50 p-1">
-                <TabsTrigger value="linked-list" className="whitespace-nowrap text-xs md:text-sm">
-                  Linked List
-                </TabsTrigger>
-                <TabsTrigger value="doubly-linked-list" className="whitespace-nowrap text-xs md:text-sm">
-                  Doubly Linked
-                </TabsTrigger>
-                <TabsTrigger value="circular-linked-list" className="whitespace-nowrap text-xs md:text-sm">
-                  Circular List
-                </TabsTrigger>
-                <TabsTrigger value="stack" className="whitespace-nowrap text-xs md:text-sm">
-                  Stack
-                </TabsTrigger>
-                <TabsTrigger value="queue" className="whitespace-nowrap text-xs md:text-sm">
-                  Queue
-                </TabsTrigger>
-                <TabsTrigger value="circular-queue" className="whitespace-nowrap text-xs md:text-sm">
-                  Circular Queue
-                </TabsTrigger>
-                {/* Labelled "General Tree" previously, but the component inserts by
-                    comparison, i.e. it builds an ordered binary tree, not an n-ary one. */}
-                <TabsTrigger value="tree" className="whitespace-nowrap text-xs md:text-sm">
-                  Tree
-                </TabsTrigger>
-                <TabsTrigger value="binary-tree" className="whitespace-nowrap text-xs md:text-sm">
-                  Binary Tree
-                </TabsTrigger>
-                <TabsTrigger value="binary-search-tree" className="whitespace-nowrap text-xs md:text-sm">
-                  BST
-                </TabsTrigger>
-                <TabsTrigger value="avl-tree" className="whitespace-nowrap text-xs md:text-sm">
-                  AVL Tree
-                </TabsTrigger>
-                <TabsTrigger value="b-tree" className="whitespace-nowrap text-xs md:text-sm">
-                  B-Tree
-                </TabsTrigger>
-                <TabsTrigger value="graph" className="whitespace-nowrap text-xs md:text-sm">
-                  Graph
-                </TabsTrigger>
-                <TabsTrigger value="array" className="whitespace-nowrap text-xs md:text-sm">
-                  Array
-                </TabsTrigger>
-                <TabsTrigger value="heap" className="whitespace-nowrap text-xs md:text-sm">
-                  Heap
-                </TabsTrigger>
-                <TabsTrigger value="hash-table" className="whitespace-nowrap text-xs md:text-sm">
-                  Hash Table
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="linked-list">
-              <LinkedListVisualizer />
-            </TabsContent>
-
-            <TabsContent value="doubly-linked-list">
-              <DoublyLinkedListVisualizer />
-            </TabsContent>
-
-            <TabsContent value="circular-linked-list">
-              <CircularLinkedListVisualizer />
-            </TabsContent>
-
-            <TabsContent value="stack">
-              <StackVisualizer />
-            </TabsContent>
-
-            <TabsContent value="queue">
-              <QueueVisualizer />
-            </TabsContent>
-
-            <TabsContent value="circular-queue">
-              <CircularQueueVisualizer />
-            </TabsContent>
-
-            <TabsContent value="tree">
-              <TreeVisualizer />
-            </TabsContent>
-
-            <TabsContent value="binary-tree">
-              <BinaryTreeVisualizer />
-            </TabsContent>
-
-            <TabsContent value="binary-search-tree">
-              <BinarySearchTreeVisualizer />
-            </TabsContent>
-
-            <TabsContent value="avl-tree">
-              <AVLTreeVisualizer />
-            </TabsContent>
-
-            <TabsContent value="b-tree">
-              <BTreeVisualizer />
-            </TabsContent>
-
-            <TabsContent value="graph">
-              <GraphVisualizer />
-            </TabsContent>
-
-            <TabsContent value="array">
-              <ArrayVisualizer />
-            </TabsContent>
-
-            <TabsContent value="heap">
-              <HeapVisualizer />
-            </TabsContent>
-
-            <TabsContent value="hash-table">
-              <HashTableVisualizer />
-            </TabsContent>
-          </Tabs>
-        )}
-
-        {activeCategory === "algorithms" && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-              <TabsList className="inline-flex whitespace-nowrap mb-6 md:mb-8 bg-muted/50 p-1">
-                <TabsTrigger value="binary-search" className="whitespace-nowrap text-xs md:text-sm">
-                  Binary Search
-                </TabsTrigger>
-                <TabsTrigger value="quick-sort" className="whitespace-nowrap text-xs md:text-sm">
-                  Quick Sort
-                </TabsTrigger>
-                <TabsTrigger value="greedy" className="whitespace-nowrap text-xs md:text-sm">
-                  Greedy Algorithm
-                </TabsTrigger>
-                <TabsTrigger value="divide-conquer" className="whitespace-nowrap text-xs md:text-sm">
-                  Divide & Conquer
-                </TabsTrigger>
-                <TabsTrigger value="sorting-comparison" className="whitespace-nowrap text-xs md:text-sm">
-                  ⚡ Sort Comparison
-                </TabsTrigger>
-                <TabsTrigger value="heap-sort" className="whitespace-nowrap text-xs md:text-sm">
-                  Heap Sort
-                </TabsTrigger>
-                <TabsTrigger value="pathfinding" className="whitespace-nowrap text-xs md:text-sm">
-                  🗺️ Pathfinding
-                </TabsTrigger>
-                <TabsTrigger value="dynamic-programming" className="whitespace-nowrap text-xs md:text-sm">
-                  Dynamic Programming
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="binary-search">
-              <BinarySearchVisualizer />
-            </TabsContent>
-
-            <TabsContent value="quick-sort">
-              <QuickSortVisualizer />
-            </TabsContent>
-
-            <TabsContent value="greedy">
-              <GreedyAlgorithmVisualizer />
-            </TabsContent>
-
-            <TabsContent value="divide-conquer">
-              <DivideConquerVisualizer />
-            </TabsContent>
-
-            <TabsContent value="sorting-comparison">
-              <SortingComparison />
-            </TabsContent>
-
-            <TabsContent value="heap-sort">
-              <HeapSortVisualizer />
-            </TabsContent>
-
-            <TabsContent value="pathfinding">
-              <PathfindingVisualizer />
-            </TabsContent>
-
-            <TabsContent value="dynamic-programming">
-              <DPVisualizer />
-            </TabsContent>
-          </Tabs>
-        )}
-      </main>
-
-      <Footer />
-    </div>
-  )
+export const metadata: Metadata = {
+    title: "Interactive Visualizer — Stack'n'Flow",
+    description: "Step through data structures and algorithms one operation at a time.",
 }
 
+const CATEGORIES: VisualizerCategory[] = ["data-structures", "algorithms"]
+
+function first(value: string | string[] | undefined): string | undefined {
+    return Array.isArray(value) ? value[0] : value
+}
+
+export default async function VisualizePage({
+    searchParams,
+}: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+    // Legacy deep links: /visualize?ds=stack and ?algo=quick-sort predate the
+    // per-visualizer routes and are still in the wild, so they redirect rather
+    // than 404.
+    const params = await searchParams
+    const legacy = first(params.ds) ?? first(params.algo)
+    if (legacy && getVisualizer(legacy)) {
+        redirect(visualizerHref(legacy))
+    }
+
+    return (
+        <div className="flex flex-col min-h-screen">
+            <Navbar />
+
+            <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+                <div className="max-w-2xl mb-10">
+                    <h1 className="text-2xl md:text-3xl font-bold mb-2">Interactive Visualizer</h1>
+                    <p className="text-muted-foreground">
+                        Pick a structure or an algorithm. Each one opens on its own page with the
+                        controls, the animation, and the code running side by side.
+                    </p>
+                </div>
+
+                {CATEGORIES.map((category) => (
+                    <section key={category} id={category} className="mb-12 scroll-mt-20">
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-3">
+                            {CATEGORY_LABELS[category]}
+                            <span className="text-xs font-normal text-muted-foreground">
+                                {visualizersIn(category).length} available
+                            </span>
+                        </h2>
+
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {visualizersIn(category).map((item) => (
+                                <Link
+                                    key={item.slug}
+                                    href={visualizerHref(item.slug)}
+                                    className="group flex items-start gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+                                >
+                                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                        <item.icon className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <h3 className="font-medium leading-tight">{item.name}</h3>
+                                            <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 transition-all group-hover:opacity-60 group-hover:translate-x-0" />
+                                        </div>
+                                        <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                ))}
+            </main>
+
+            <Footer />
+        </div>
+    )
+}

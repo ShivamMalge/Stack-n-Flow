@@ -1,13 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import CodePanel from "@/components/ui/code-panel"
 import StackRenderer, { type StackRendererItem } from "@/components/visualizers/stack/stack-renderer"
 import StackController from "@/components/visualizers/stack/stack-controller"
 import StackDocs from "@/components/visualizers/stack/stack-docs"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const PUSH_CODE = [
   "def push(value):",
@@ -151,13 +149,10 @@ export default function StackVisualizer({
   }
 
   return (
-    // The code panel sits under the visualization on desktop so the highlighted
-    // line and the structure it describes are read together, and so the taller
-    // left-hand column no longer leaves the right one half empty.
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations — first on mobile, top-left on desktop */}
-      {!mini && !isControlled && (
-        <div className="order-1 md:col-start-1 md:row-start-1">
+    <VisualizerLayout
+      mini={mini}
+      controls={
+        !isControlled ? (
           <StackController
             inputValue={inputValue}
             animating={animating}
@@ -167,32 +162,22 @@ export default function StackVisualizer({
             onPop={handlePop}
             onPeek={handlePeek}
           />
-        </div>
-      )}
-
-      {/* Visualization — second on mobile, top-right on desktop */}
-      <div className="order-2 md:col-start-2 md:row-start-1">
+        ) : undefined
+      }
+      visualization={
         <StackRenderer items={stack} mini={mini} searchResult={searchResult} />
-      </div>
-
-      {/* Live code — third on mobile, directly under the visualization */}
-      {!mini && (
-        <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
-          <CodePanel
-            code={activeCode}
-            activeLine={activeLine}
-            title={activeCode === PUSH_CODE ? "Push Algorithm" : activeCode === POP_CODE ? "Pop Algorithm" : "Peek Algorithm"}
-          />
-        </div>
-      )}
-
-      {/* Learning — last on mobile, bottom-left on desktop */}
-      {!mini && (
-        <div className="order-4 md:col-start-1 md:row-start-2">
-          <StackDocs />
-        </div>
-      )}
-    </div>
+      }
+      code={
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === PUSH_CODE ? "Push Algorithm" : activeCode === POP_CODE ? "Pop Algorithm" : "Peek Algorithm"}
+        />
+      }
+      docs={
+        <StackDocs />
+      }
+    />
   )
 }
 

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowRight, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const INSERT_FRONT_CODE = [
   "def insert_front(value):",
@@ -318,82 +319,76 @@ export default function LinkedListVisualizer({
   }
 
   return (
-    // Code panel under the visualization on desktop: the highlighted line and
-    // the structure it describes read together, and the columns stay balanced.
-    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start"}>
-      {/* Operations Panel - Top on Mobile, Top-Left on Desktop */}
-      {!mini && (
-        <div className="order-1 md:col-start-1 md:row-start-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Linked List Operations</CardTitle>
-              <CardDescription>Insert, delete, or search for values in the linked list</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={operation} onValueChange={setOperation}>
-                <div className="overflow-x-auto pb-2">
-                  <TabsList className="inline-flex min-w-full md:grid md:grid-cols-4 mb-4">
-                    <TabsTrigger value="insertFront" className="whitespace-nowrap text-xs md:text-sm">
-                      Insert Front
-                    </TabsTrigger>
-                    <TabsTrigger value="insert" className="whitespace-nowrap text-xs md:text-sm">
-                      Insert Rear
-                    </TabsTrigger>
-                    <TabsTrigger value="delete" className="whitespace-nowrap text-xs md:text-sm">
-                      Delete
-                    </TabsTrigger>
-                    <TabsTrigger value="search" className="whitespace-nowrap text-xs md:text-sm">
-                      Search
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
+    <VisualizerLayout
+      mini={mini}
+      controls={
+        <Card>
+          <CardHeader>
+            <CardTitle>Linked List Operations</CardTitle>
+            <CardDescription>Insert, delete, or search for values in the linked list</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={operation} onValueChange={setOperation}>
+              <div className="overflow-x-auto pb-2">
+                <TabsList className="inline-flex min-w-full md:grid md:grid-cols-4 mb-4">
+                  <TabsTrigger value="insertFront" className="whitespace-nowrap text-xs md:text-sm">
+                    Insert Front
+                  </TabsTrigger>
+                  <TabsTrigger value="insert" className="whitespace-nowrap text-xs md:text-sm">
+                    Insert Rear
+                  </TabsTrigger>
+                  <TabsTrigger value="delete" className="whitespace-nowrap text-xs md:text-sm">
+                    Delete
+                  </TabsTrigger>
+                  <TabsTrigger value="search" className="whitespace-nowrap text-xs md:text-sm">
+                    Search
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-                <div className="flex space-x-2 mt-4">
-                  <Input
-                    type="number"
-                    placeholder="Enter a value"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (operation === "insertFront" ? handleInsertFront() : operation === "insert" ? handleInsert() : operation === "delete" ? handleDelete() : handleSearch())}
-                    disabled={animating}
-                  />
+              <div className="flex space-x-2 mt-4">
+                <Input
+                  type="number"
+                  placeholder="Enter a value"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (operation === "insertFront" ? handleInsertFront() : operation === "insert" ? handleInsert() : operation === "delete" ? handleDelete() : handleSearch())}
+                  disabled={animating}
+                />
 
-                  {operation === "insertFront" && (
-                    <Button onClick={handleInsertFront} disabled={animating}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Insert
-                    </Button>
-                  )}
+                {operation === "insertFront" && (
+                  <Button onClick={handleInsertFront} disabled={animating}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Insert
+                  </Button>
+                )}
 
-                  {operation === "insert" && (
-                    <Button onClick={handleInsert} disabled={animating}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Insert
-                    </Button>
-                  )}
+                {operation === "insert" && (
+                  <Button onClick={handleInsert} disabled={animating}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Insert
+                  </Button>
+                )}
 
-                  {operation === "delete" && (
-                    <Button onClick={handleDelete} disabled={animating} variant="destructive">
-                      <Trash className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
-                  )}
+                {operation === "delete" && (
+                  <Button onClick={handleDelete} disabled={animating} variant="destructive">
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
 
-                  {operation === "search" && (
-                    <Button onClick={handleSearch} disabled={animating} variant="secondary">
-                      <Search className="mr-2 h-4 w-4" />
-                      Search
-                    </Button>
-                  )}
-                </div>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Visualization Panel - Second on Mobile, Top-Right on Desktop */}
-      <div className={mini ? "w-full" : "order-2 md:col-start-2 md:row-start-1"}>
+                {operation === "search" && (
+                  <Button onClick={handleSearch} disabled={animating} variant="secondary">
+                    <Search className="mr-2 h-4 w-4" />
+                    Search
+                  </Button>
+                )}
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
+      }
+      visualization={
         <Card className="h-full border-0 md:border md:shadow-sm">
           {!mini && (
             <CardHeader>
@@ -444,51 +439,43 @@ export default function LinkedListVisualizer({
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Live Code Panel - Third on Mobile, Directly Under the Visualization on Desktop */}
-      {!mini && (
-        <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
-          <CodePanel
-            code={activeCode}
-            activeLine={activeLine}
-            title={
-              activeCode === INSERT_FRONT_CODE ? "Insert Front" :
-                activeCode === INSERT_REAR_CODE ? "Insert Rear" :
-                  activeCode === DELETE_CODE ? "Delete Node" :
-                    activeCode === SEARCH_CODE ? "Search Node" : "Algorithm Logic"
-            }
-          />
-        </div>
-      )}
-
-      {/* Learning Panel - Last on Mobile, Bottom-Left on Desktop */}
-      {!mini && (
-        <div className="order-4 md:col-start-1 md:row-start-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Learning</CardTitle>
-              <CardDescription>Understanding Linked Lists</CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm">
-              <p className="mb-2">
-                A <strong>Linked List</strong> is a linear data structure where elements are stored in nodes. Each node
-                contains data and a reference to the next node.
-              </p>
-              <p className="mb-2">
-                <strong>Time Complexity:</strong>
-              </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Access: O(n)</li>
-                <li>Search: O(n)</li>
-                <li>Insertion: O(1) if position is known, O(n) otherwise</li>
-                <li>Deletion: O(1) if position is known, O(n) otherwise</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+      }
+      code={
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={
+            activeCode === INSERT_FRONT_CODE ? "Insert Front" :
+              activeCode === INSERT_REAR_CODE ? "Insert Rear" :
+                activeCode === DELETE_CODE ? "Delete Node" :
+                  activeCode === SEARCH_CODE ? "Search Node" : "Algorithm Logic"
+          }
+        />
+      }
+      docs={
+        <Card>
+          <CardHeader>
+            <CardTitle>Learning</CardTitle>
+            <CardDescription>Understanding Linked Lists</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p className="mb-2">
+              A <strong>Linked List</strong> is a linear data structure where elements are stored in nodes. Each node
+              contains data and a reference to the next node.
+            </p>
+            <p className="mb-2">
+              <strong>Time Complexity:</strong>
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Access: O(n)</li>
+              <li>Search: O(n)</li>
+              <li>Insertion: O(1) if position is known, O(n) otherwise</li>
+              <li>Deletion: O(1) if position is known, O(n) otherwise</li>
+            </ul>
+          </CardContent>
+        </Card>
+      }
+    />
   )
 }
 

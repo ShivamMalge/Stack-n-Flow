@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useSession, signIn, signOut } from "next-auth/react"
-import { Menu, X, LogOut, User } from "lucide-react"
+import { Menu, X, LogOut, User, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import {
@@ -17,19 +17,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  CATEGORY_LABELS,
+  shortNameOf,
+  visualizerHref,
+  visualizersIn,
+  type VisualizerCategory,
+} from "@/lib/visualizer-catalog"
+
+const VISUALIZER_MENU: VisualizerCategory[] = ["data-structures", "algorithms"]
 
 export default function Navbar() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [openSection, setOpenSection] = useState<VisualizerCategory | null>(null)
 
   const navItems = [
     { name: "Home", path: "/" },
     { name: "Learn", path: "/learn" },
-    { name: "Visualize", path: "/visualize" },
     { name: "Operations", path: "/operations" },
     { name: "About", path: "/about" },
   ]
+
+  // Visualize is a menu rather than a link: every structure has its own page,
+  // and listing them here is what freed the page body of its two tab strips.
+  const onVisualize = pathname.startsWith("/visualize")
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -43,7 +56,58 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => (
+          {navItems.slice(0, 2).map((item) => (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`text-sm font-medium transition-colors hover:text-primary ${pathname === item.path ? "text-foreground" : "text-muted-foreground"
+                }`}
+            >
+              {item.name}
+            </Link>
+          ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={`group flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm data-[state=open]:text-foreground ${onVisualize ? "text-foreground" : "text-muted-foreground"
+                }`}
+            >
+              Visualize
+              <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[34rem] p-3 max-h-[calc(100vh-6rem)] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                {VISUALIZER_MENU.map((category) => (
+                  <div key={category}>
+                    <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wider text-muted-foreground">
+                      {CATEGORY_LABELS[category]}
+                    </DropdownMenuLabel>
+                    <div className="mt-1 space-y-0.5">
+                      {visualizersIn(category).map((item) => (
+                        <DropdownMenuItem key={item.slug} asChild>
+                          <Link
+                            href={visualizerHref(item.slug)}
+                            className={`cursor-pointer ${pathname === visualizerHref(item.slug) ? "bg-accent" : ""}`}
+                          >
+                            <item.icon className="mr-2 h-4 w-4 shrink-0 opacity-70" />
+                            <span className="truncate">{shortNameOf(item)}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <DropdownMenuSeparator className="my-2" />
+              <DropdownMenuItem asChild>
+                <Link href="/visualize" className="cursor-pointer justify-center text-sm font-medium">
+                  Browse all visualizers
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {navItems.slice(2).map((item) => (
             <Link
               key={item.path}
               href={item.path}
@@ -112,8 +176,68 @@ export default function Navbar() {
           }`}
         onClick={() => setIsMenuOpen(false)}
       >
-        <nav className="flex flex-col p-4 w-full gap-2">
-          {navItems.map((item) => (
+        <nav className="flex flex-col p-4 w-full gap-2 max-h-[calc(100vh-4rem)] overflow-y-auto">
+          {navItems.slice(0, 2).map((item) => (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`w-full py-3 px-4 text-base font-medium rounded-md transition-colors hover:bg-muted ${pathname === item.path ? "text-foreground bg-muted" : "text-muted-foreground"
+                }`}
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsMenuOpen(false)
+              }}
+            >
+              {item.name}
+            </Link>
+          ))}
+
+          {VISUALIZER_MENU.map((category) => (
+            <div key={category} onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                aria-expanded={openSection === category}
+                onClick={() => setOpenSection(openSection === category ? null : category)}
+                className={`flex w-full items-center justify-between py-3 px-4 text-base font-medium rounded-md transition-colors hover:bg-muted ${onVisualize ? "text-foreground" : "text-muted-foreground"
+                  }`}
+              >
+                {CATEGORY_LABELS[category]}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${openSection === category ? "rotate-180" : ""}`}
+                />
+              </button>
+              {openSection === category && (
+                <div className="mt-1 mb-2 ml-4 border-l pl-2 flex flex-col">
+                  {visualizersIn(category).map((item) => (
+                    <Link
+                      key={item.slug}
+                      href={visualizerHref(item.slug)}
+                      className={`flex items-center gap-2 py-2.5 px-3 text-sm rounded-md transition-colors hover:bg-muted ${pathname === visualizerHref(item.slug) ? "text-foreground bg-muted" : "text-muted-foreground"
+                        }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0 opacity-70" />
+                      {shortNameOf(item)}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <Link
+            href="/visualize"
+            className={`w-full py-3 px-4 text-base font-medium rounded-md transition-colors hover:bg-muted ${pathname === "/visualize" ? "text-foreground bg-muted" : "text-muted-foreground"
+              }`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsMenuOpen(false)
+            }}
+          >
+            All visualizers
+          </Link>
+
+          {navItems.slice(2).map((item) => (
             <Link
               key={item.path}
               href={item.path}

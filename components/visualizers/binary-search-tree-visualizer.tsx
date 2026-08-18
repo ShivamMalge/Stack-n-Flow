@@ -16,6 +16,7 @@ import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPla
 import { computeTreeLayout } from "@/lib/tree-layout"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const SEARCH_CODE = [
   "def search(node, value):",
@@ -563,11 +564,8 @@ export default function BinarySearchTreeVisualizer() {
 
   // Replace the Visualization Panel section with this improved version
   return (
-    // Code panel under the visualization on desktop: the highlighted line and
-    // the structure it describes read together, and the columns stay balanced.
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel - First on Mobile, Top-Left on Desktop */}
-      <div className="order-1 md:col-start-1 md:row-start-1">
+    <VisualizerLayout
+      controls={
         <Card>
           <CardHeader>
             <CardTitle>Binary Search Tree Operations</CardTitle>
@@ -685,47 +683,8 @@ export default function BinarySearchTreeVisualizer() {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Live Code Panel - Last on Mobile, Directly Under the Visualization on Desktop */}
-      <div className="order-4 md:col-start-2 md:row-start-2 h-[280px]">
-        <CodePanel
-          code={activeCode}
-          activeLine={activeLine}
-          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "BST Algorithm"}
-        />
-      </div>
-
-      {/* Learning Panel - Third on Mobile, Bottom-Left on Desktop */}
-      <div className="order-3 md:col-start-1 md:row-start-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Learning</CardTitle>
-            <CardDescription>Understanding Binary Search Trees</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <p className="mb-2">
-              A <strong>Binary Search Tree (BST)</strong> is a binary tree where nodes are ordered: for each node, all
-              elements in the left subtree are less than the node, and all elements in the right subtree are greater.
-            </p>
-            <p className="mb-2">
-              <strong>Time Complexity:</strong>
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Search: O(log n) average, O(n) worst case</li>
-              <li>Insertion: O(log n) average, O(n) worst case</li>
-              <li>Deletion: O(log n) average, O(n) worst case</li>
-            </ul>
-            <p className="mt-2">
-              <strong>Applications:</strong> BSTs are used in many search applications where data is constantly being
-              modified. They provide moderate access/search times and moderate insertion/deletion times.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Visualization Panel - Second on Mobile, Top-Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-start-1">
+      }
+      visualization={
         <Card className="flex flex-col h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
@@ -794,8 +753,41 @@ export default function BinarySearchTreeVisualizer() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      }
+      code={
+        <CodePanel
+          code={activeCode}
+          activeLine={activeLine}
+          title={activeCode === INSERT_CODE ? "Insertion Algorithm" : activeCode === DELETE_CODE ? "Deletion Algorithm" : activeCode === SEARCH_CODE ? "Search Algorithm" : "BST Algorithm"}
+        />
+      }
+      docs={
+        <Card>
+          <CardHeader>
+            <CardTitle>Learning</CardTitle>
+            <CardDescription>Understanding Binary Search Trees</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p className="mb-2">
+              A <strong>Binary Search Tree (BST)</strong> is a binary tree where nodes are ordered: for each node, all
+              elements in the left subtree are less than the node, and all elements in the right subtree are greater.
+            </p>
+            <p className="mb-2">
+              <strong>Time Complexity:</strong>
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Search: O(log n) average, O(n) worst case</li>
+              <li>Insertion: O(log n) average, O(n) worst case</li>
+              <li>Deletion: O(log n) average, O(n) worst case</li>
+            </ul>
+            <p className="mt-2">
+              <strong>Applications:</strong> BSTs are used in many search applications where data is constantly being
+              modified. They provide moderate access/search times and moderate insertion/deletion times.
+            </p>
+          </CardContent>
+        </Card>
+      }
+    />
   )
 }
 

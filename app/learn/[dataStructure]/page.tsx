@@ -248,7 +248,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
                 {/* Full Visualization Link */}
                 <div className="mt-8 text-center pt-8 border-t">
                   <Button asChild size="lg" className="w-full sm:w-auto">
-                    <Link href={isAlgorithm ? `/visualize?algo=${dataStructure}` : `/visualize?ds=${dataStructure}`}>
+                    <Link href={`/visualize/${dataStructure}`}>
                       Open Full Interactive Visualizer
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash, Search, RotateCw } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
 const ENQUEUE_CODE = [
   "def enqueue(value):",
@@ -188,11 +189,8 @@ export default function CircularQueueVisualizer({
   }
 
   return (
-    // Code panel under the visualization on desktop: the highlighted line and
-    // the structure it describes read together, and the columns stay balanced.
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel - Top on Mobile, Top-Left on Desktop */}
-      <div className="order-1 md:col-start-1 md:row-start-1">
+    <VisualizerLayout
+      controls={
         <Card>
           <CardHeader>
             <CardTitle>Circular Queue Operations</CardTitle>
@@ -244,10 +242,8 @@ export default function CircularQueueVisualizer({
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Visualization Panel - Second on Mobile, Top-Right on Desktop */}
-      <div className="order-2 md:col-start-2 md:row-start-1">
+      }
+      visualization={
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Visualization</CardTitle>
@@ -322,19 +318,15 @@ export default function CircularQueueVisualizer({
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Live Code Panel - Third on Mobile, Directly Under the Visualization on Desktop */}
-      <div className="order-3 md:col-start-2 md:row-start-2 h-[280px]">
+      }
+      code={
         <CodePanel
           code={activeCode}
           activeLine={activeLine}
           title={activeCode === ENQUEUE_CODE ? "Enqueue Algorithm" : activeCode === DEQUEUE_CODE ? "Dequeue Algorithm" : "Peek Algorithm"}
         />
-      </div>
-
-      {/* Learning Panel - Last on Mobile, Bottom-Left on Desktop */}
-      <div className="order-4 md:col-start-1 md:row-start-2">
+      }
+      docs={
         <Card>
           <CardHeader>
             <CardTitle>Learning</CardTitle>
@@ -363,8 +355,8 @@ export default function CircularQueueVisualizer({
             </ul>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      }
+    />
   )
 }
 
