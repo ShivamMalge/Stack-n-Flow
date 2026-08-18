@@ -14,12 +14,22 @@
  * hard-codes VTU.
  */
 
+import type { OperationTab } from "@/lib/config/operations"
+
 export type Coverage = "full" | "partial" | "none"
 
 export interface SyllabusTopic {
     title: string
     /** Slug from the visualizer catalog, when something teaches this topic. */
     visualizer?: string
+    /**
+     * Tab id on /operations, for topics taught there instead of by a
+     * visualizer. The app has two teaching surfaces and an earlier draft of
+     * this file only knew about one, which understated coverage: postfix
+     * evaluation and the whole polynomial module live here, not in a
+     * visualizer.
+     */
+    operations?: OperationTab
     coverage: Coverage
     /** For `partial`, what is missing. For `none` on theory topics, why. */
     note?: string
@@ -57,13 +67,13 @@ const BCS304: Course = {
                 { title: "Arrays", visualizer: "array", coverage: "full" },
                 { title: "Dynamically allocated arrays", visualizer: "array", coverage: "partial", note: "No growth or reallocation animation." },
                 { title: "Structures and unions", coverage: "none" },
-                { title: "Polynomials", coverage: "none", note: "Array representation and addition are unbuilt." },
+                { title: "Polynomials", operations: "polynomial", coverage: "full", note: "Add, subtract, multiply, evaluate, derivative and degree, on the Operations page." },
                 { title: "Sparse matrices", coverage: "none", note: "Triple representation and transpose are unbuilt." },
                 { title: "Representation of multidimensional arrays", coverage: "none", note: "Row-major and column-major address calculation." },
                 { title: "Strings", coverage: "none" },
                 { title: "Stacks", visualizer: "stack", coverage: "full" },
                 { title: "Stacks using dynamic arrays", visualizer: "stack", coverage: "partial", note: "The visualizer grows without bound; it never shows the doubling-and-copy step that is the point of the topic." },
-                { title: "Evaluation and conversion of expressions", coverage: "none", note: "Infix to postfix and postfix evaluation — a guaranteed exam question with no visualizer." },
+                { title: "Evaluation and conversion of expressions", operations: "stack", coverage: "partial", note: "Postfix evaluation and parenthesis validation exist on the Operations page. Infix-to-postfix conversion does not, and it is the half exams ask for." },
             ],
         },
         {
@@ -84,7 +94,7 @@ const BCS304: Course = {
             number: 3,
             title: "Linked Lists (continued) and Trees",
             topics: [
-                { title: "Additional list operations (invert, concatenate)", visualizer: "linked-list", coverage: "partial", note: "Insert, delete and search only; inversion and concatenation are unbuilt." },
+                { title: "Additional list operations (invert, concatenate)", operations: "linkedList", coverage: "partial", note: "Inversion, loop detection, find-middle and nth-from-end are on the Operations page. Concatenation is unbuilt." },
                 { title: "Sparse matrices using linked lists", coverage: "none" },
                 { title: "Doubly linked lists", visualizer: "doubly-linked-list", coverage: "full" },
                 { title: "Trees: introduction and terminology", visualizer: "tree", coverage: "full" },
@@ -139,8 +149,8 @@ const BCS401: Course = {
                 { title: "Asymptotic notations and basic efficiency classes", coverage: "none", note: "A growth-rate plot would carry this well." },
                 { title: "Mathematical analysis of non-recursive algorithms", coverage: "none" },
                 { title: "Mathematical analysis of recursive algorithms", coverage: "none", note: "A recursion-tree and call-stack view; nothing in the app shows a call stack." },
-                { title: "Brute force: selection sort", coverage: "none", note: "Not among the algorithms the sorting comparison races." },
-                { title: "Brute force: bubble sort", coverage: "none", note: "Not among the algorithms the sorting comparison races." },
+                { title: "Brute force: selection sort", visualizer: "sorting-comparison", coverage: "full" },
+                { title: "Brute force: bubble sort", visualizer: "sorting-comparison", coverage: "full" },
                 { title: "Sequential search", coverage: "none" },
                 { title: "Brute-force string matching", coverage: "none" },
             ],
@@ -150,7 +160,7 @@ const BCS401: Course = {
             title: "Brute Force, Decrease-and-Conquer, Divide-and-Conquer",
             topics: [
                 { title: "Exhaustive search: travelling salesman, knapsack, assignment", coverage: "none" },
-                { title: "Decrease-and-conquer: insertion sort", coverage: "none" },
+                { title: "Decrease-and-conquer: insertion sort", visualizer: "sorting-comparison", coverage: "full" },
                 { title: "Topological sorting", coverage: "none", note: "The graph visualizer traverses but does not order, so it does not teach this." },
                 { title: "Divide-and-conquer: mergesort", visualizer: "divide-conquer", coverage: "full" },
                 { title: "Quicksort", visualizer: "quick-sort", coverage: "full" },
@@ -175,7 +185,7 @@ const BCS401: Course = {
             title: "Dynamic Programming and the Greedy Technique",
             topics: [
                 { title: "Three basic examples: coin-row, change-making, coin-collecting", visualizer: "dynamic-programming", coverage: "partial", note: "The DP table exists; these three specific problems are not among its presets." },
-                { title: "The knapsack problem and memory functions", coverage: "none", note: "Both the table and the memoised variant." },
+                { title: "The knapsack problem and memory functions", visualizer: "dynamic-programming", coverage: "partial", note: "The 0/1 knapsack table animates; the memoised variant does not." },
                 { title: "Warshall's algorithm (transitive closure)", coverage: "none" },
                 { title: "Floyd's algorithm (all-pairs shortest paths)", coverage: "none" },
                 { title: "Prim's algorithm (minimum spanning tree)", coverage: "none" },
@@ -229,6 +239,11 @@ export function courseCoverage(course: Course): CoverageStats {
 }
 
 /** Every topic without a full visualizer yet, in syllabus order — the build queue. */
+/** True when a topic points at any teaching surface. */
+export function hasSurface(topic: SyllabusTopic): boolean {
+    return Boolean(topic.visualizer || topic.operations)
+}
+
 export function uncoveredTopics(course: Course): { module: number; topic: SyllabusTopic }[] {
     return course.modules.flatMap((m) =>
         m.topics.filter((t) => t.coverage !== "full").map((topic) => ({ module: m.number, topic })),

@@ -10,6 +10,7 @@ import {
     type SyllabusTopic,
 } from "@/lib/config/syllabus"
 import { getVisualizer, visualizerHref } from "@/lib/visualizer-catalog"
+import { operationsHref } from "@/lib/config/operations"
 
 export const metadata: Metadata = {
     title: "Syllabus Coverage — Stack'n'Flow",
@@ -47,8 +48,20 @@ function CoverageBadge({ coverage }: { coverage: Coverage }) {
     )
 }
 
+/** Where a topic is taught: a visualizer page, or a tab on /operations. */
+function surfaceLink(topic: SyllabusTopic): { href: string; label: string } | null {
+    if (topic.visualizer) {
+        const entry = getVisualizer(topic.visualizer)
+        if (entry) return { href: visualizerHref(entry.slug), label: entry.shortName ?? entry.name }
+    }
+    if (topic.operations) {
+        return { href: operationsHref(topic.operations), label: "Operations" }
+    }
+    return null
+}
+
 function TopicRow({ topic }: { topic: SyllabusTopic }) {
-    const entry = topic.visualizer ? getVisualizer(topic.visualizer) : undefined
+    const link = surfaceLink(topic)
 
     return (
         <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -60,12 +73,12 @@ function TopicRow({ topic }: { topic: SyllabusTopic }) {
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-                {entry && (
+                {link && (
                     <Link
-                        href={visualizerHref(entry.slug)}
+                        href={link.href}
                         className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                     >
-                        {entry.shortName ?? entry.name}
+                        {link.label}
                         <ArrowRight className="h-3 w-3" aria-hidden="true" />
                     </Link>
                 )}

@@ -3,9 +3,11 @@ import {
     COURSES,
     courseCoverage,
     getCourse,
+    hasSurface,
     uncoveredTopics,
 } from "@/lib/config/syllabus"
 import { VISUALIZER_SLUGS } from "@/lib/visualizer-catalog"
+import { OPERATION_TABS } from "@/lib/config/operations"
 
 const allTopics = COURSES.flatMap((c) => c.modules.flatMap((m) => m.topics))
 
@@ -36,20 +38,32 @@ describe("syllabus config", () => {
         }
     })
 
-    it("never claims coverage without something to back it", () => {
+    it("only points at operations tabs that actually exist", () => {
+        const tabs = allTopics.map((t) => t.operations).filter(Boolean) as string[]
+        expect(tabs.length).toBeGreaterThan(0)
+        for (const tab of tabs) {
+            expect(OPERATION_TABS, `unknown operations tab: ${tab}`).toContain(tab)
+        }
+    })
+
+    // Coverage has to be backed by one of the two teaching surfaces. An early
+    // draft mapped only against the visualizer catalog and so marked postfix
+    // evaluation and the polynomial module as unbuilt when both already ship
+    // on /operations.
+    it("never claims coverage without a surface to back it", () => {
         for (const topic of allTopics) {
             if (topic.coverage === "full" || topic.coverage === "partial") {
-                expect(topic.visualizer, `"${topic.title}" claims ${topic.coverage} with no visualizer`)
-                    .toBeDefined()
+                expect(hasSurface(topic), `"${topic.title}" claims ${topic.coverage} with no surface`)
+                    .toBe(true)
             }
         }
     })
 
-    it("does not attach a visualizer to a topic it marks uncovered", () => {
+    it("does not attach a surface to a topic it marks uncovered", () => {
         for (const topic of allTopics) {
             if (topic.coverage === "none") {
-                expect(topic.visualizer, `"${topic.title}" is marked none but names a visualizer`)
-                    .toBeUndefined()
+                expect(hasSurface(topic), `"${topic.title}" is marked none but names a surface`)
+                    .toBe(false)
             }
         }
     })

@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { isOperationTab } from "@/lib/config/operations"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
@@ -13,7 +15,17 @@ import GraphOperations from "@/components/operations/graph-operations"
 import PolynomialOperations from "@/components/operations/polynomial-operations"
 
 export default function OperationsPage() {
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState("array")
+
+  // ?tab=stack opens straight at that set. Without this the page had no
+  // addressable state at all, so nothing could link into it.
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab && isOperationTab(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   return (
     <div className="flex flex-col min-h-screen">
