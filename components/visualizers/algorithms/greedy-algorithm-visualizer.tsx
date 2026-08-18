@@ -373,12 +373,12 @@ export default function GreedyAlgorithmVisualizer() {
                       key={`result-coin-${coin.value}-${index}`}
                       className="flex items-center justify-center w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-100 border-2 border-green-500 dark:bg-green-900 transition-all animate-in zoom-in-50 duration-300"
                     >
-                      <span className="text-[10px] md:text-sm font-bold">{coin.value}</span>
+                      <span className="text-xs md:text-sm font-bold">{coin.value}</span>
                     </div>
                   ))}
                 </div>
                 {result.coins.length > 0 && (
-                  <div className="mt-4 md:mt-6 text-[10px] md:text-xs text-center border-t pt-4 w-full">
+                  <div className="mt-4 md:mt-6 text-xs md:text-xs text-center border-t pt-4 w-full">
                     <span className="font-semibold text-muted-foreground uppercase tracking-wider">Distribution: </span>
                     <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-1">
                       {Object.entries(

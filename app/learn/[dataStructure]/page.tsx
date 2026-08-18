@@ -59,7 +59,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
                 <Icon className="h-8 w-8 text-primary" />
               </div>
               <div className="pt-2">
-                <h1 className="text-4xl font-bold mb-3 tracking-tight">{name}</h1>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 tracking-tight">{name}</h1>
                 <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">{description}</p>
               </div>
             </div>
@@ -77,7 +77,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
                 </div>
                 <h2 className="text-2xl font-semibold tracking-tight">Intuition</h2>
               </div>
-              <div className="prose dark:prose-invert max-w-none ml-10">
+              <div className="md:ml-10">
                 <p className="text-lg text-muted-foreground leading-relaxed">{content.intuition}</p>
               </div>
             </div>
@@ -90,7 +90,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
                 </div>
                 <h2 className="text-2xl font-semibold tracking-tight">Example Visualization</h2>
               </div>
-              <div className="ml-10">
+              <div className="md:ml-10">
                 <MiniVisualizerLoader dataStructure={dataStructure} />
               </div>
             </div>
@@ -104,7 +104,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">Algorithm Concept</h2>
                 </div>
-                <div className="ml-10 pl-6 border-l-2 border-muted">
+                <div className="md:ml-10 pl-6 border-l-2 border-muted">
                   <ol className="space-y-4 text-muted-foreground relative">
                     {content.algorithmSteps.map((step, idx) => (
                       <li key={idx} className="relative">
@@ -127,7 +127,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
                 </div>
                 <h2 className="text-2xl font-semibold tracking-tight">Code Implementation</h2>
               </div>
-              <div className="ml-10">
+              <div className="md:ml-10">
                 <MultiLanguageCode implementations={content.implementations} />
               </div>
             </div>
@@ -143,7 +143,7 @@ export default async function DataStructurePage({ params }: { params: Promise<{ 
                 <h2 className="text-2xl font-semibold tracking-tight">Deep Dive Details</h2>
               </div>
 
-              <div className="ml-10 grid gap-6">
+              <div className="md:ml-10 grid gap-6">
                 {content.types && content.types.length > 0 && (
                   <Card>
                     <CardHeader>

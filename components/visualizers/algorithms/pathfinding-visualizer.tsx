@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import { STATE_BAR, STATE_FILL, swatchFor } from "@/lib/visualizer-states"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -173,15 +174,27 @@ function generateAStar(grid: Cell[][], startR: number, startC: number, endR: num
 
 // ── Cell colors ─────────────────────────────────────────────────────────────
 
+// The frontier and the traced route have no equivalent in the shared vocabulary:
+// one is queue membership and the other is the algorithm output, neither of them
+// a state the search put a cell in. They keep their own colours, as do the
+// wall/start/end cells, which are terrain rather than algorithm states.
+const FRONTIER_CELL = "bg-blue-300 dark:bg-blue-600"
+const PATH_CELL = "bg-yellow-300 dark:bg-yellow-400"
+
 function cellClass(cell: Cell) {
     if (cell.type === "wall") return "bg-foreground/80"
     if (cell.type === "start") return "bg-green-500"
     if (cell.type === "end") return "bg-red-500"
     switch (cell.state) {
-        case "current": return "bg-yellow-400 dark:bg-yellow-500"
-        case "open": return "bg-blue-300 dark:bg-blue-600"
-        case "closed": return "bg-blue-100 dark:bg-blue-900/60"
-        case "path": return "bg-yellow-300 dark:bg-yellow-400"
+        // The search head is a single cell, so it takes the saturated bar fill;
+        // the closed set is a whole region, so it takes the pale box fill. It
+        // used to be blue, where the graph visualiser draws visited green.
+        case "current": return STATE_BAR.comparing
+        // Fill only: the grid draws its own hairline border, and STATE_BOX
+        // would add a second border colour on top of it.
+        case "closed": return STATE_FILL.visited
+        case "open": return FRONTIER_CELL
+        case "path": return PATH_CELL
         default: return "bg-muted/30 hover:bg-muted/60"
     }
 }
@@ -381,14 +394,17 @@ export default function PathfindingVisualizer() {
                     <CardHeader className="pb-2"><CardTitle className="text-sm">Legend</CardTitle></CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                            {([["bg-green-500", "Start"], ["bg-red-500", "End"], ["bg-foreground/80", "Wall"], ["bg-yellow-400 dark:bg-yellow-500", "Current"], ["bg-blue-300 dark:bg-blue-600", "Open (frontier)"], ["bg-blue-100 dark:bg-blue-900/60", "Closed (visited)"], ["bg-yellow-300 dark:bg-yellow-400", "Shortest Path"]] as const).map(([cls, label]) => (
+                            {/* Swatches for the two shared states come from the shared
+                                map, so the legend cannot drift from the cells it
+                                describes; terrain and the frontier/path keep theirs. */}
+                            {([["bg-green-500", "Start"], ["bg-red-500", "End"], ["bg-foreground/80", "Wall"], [swatchFor("comparing", "bar"), "Current"], [FRONTIER_CELL, "Open (frontier)"], [STATE_FILL.visited, "Closed (visited)"], [PATH_CELL, "Shortest Path"]] as const).map(([cls, label]) => (
                                 <div key={label} className="flex items-center gap-2">
                                     <div className={`w-4 h-4 rounded-sm ${cls} border border-border/50`} />
                                     <span className="text-muted-foreground">{label}</span>
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-3 text-[10px] text-muted-foreground space-y-1">
+                        <div className="mt-3 text-xs text-muted-foreground space-y-1">
                             <p><strong>Dijkstra:</strong> guarantees shortest path, explores all directions uniformly</p>
                             <p><strong>A*:</strong> uses Manhattan heuristic to guide search toward goal, faster in practice</p>
                         </div>

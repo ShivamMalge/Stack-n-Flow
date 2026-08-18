@@ -8,6 +8,9 @@ export default {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     // The widget bridge, so classes used only there are still emitted.
     "./src/**/*.{js,ts,jsx,tsx}",
+    // Shared class maps such as lib/visualizer-states.ts. Without this every
+    // class named only there is purged, and the elements using it render unstyled.
+    "./lib/**/*.{js,ts}",
   ],
   theme: {
   	extend: {

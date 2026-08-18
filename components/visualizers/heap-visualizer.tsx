@@ -443,7 +443,7 @@ export default function HeapVisualizer({
                         {/* Steps panel */}
                         <div>
                             <h3 className="text-sm font-medium mb-1">Algorithm Steps:</h3>
-                            <div className="bg-muted/30 rounded-md p-2 h-28 overflow-y-auto">
+                            <div className="bg-muted/30 rounded-md p-2 h-40 overflow-y-auto">
                                 {steps.length > 0 ? (
                                     <ol className="pl-4 list-decimal space-y-0.5">
                                         {steps.map((s, i) => (
@@ -470,7 +470,7 @@ export default function HeapVisualizer({
                         ) : (
                             <HeapArrayView heap={displayHeap} states={displayStates} />
                         )}
-                        <p className="text-[10px] text-muted-foreground text-center">
+                        <p className="text-xs text-muted-foreground text-center">
                             parent(i) = ⌊(i−1)/2⌋ &nbsp;·&nbsp; left(i) = 2i+1 &nbsp;·&nbsp; right(i) = 2i+2
                         </p>
                     </CardContent>
@@ -479,7 +479,7 @@ export default function HeapVisualizer({
                 {/* Stats + Legend */}
                 <Card>
                     <CardContent className="pt-4">
-                        <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1 mb-3">
+                        <div className="text-xs text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1 mb-3">
                             <div>Root: <span className="font-mono font-bold text-foreground">{displayHeap[0] ?? "—"}</span></div>
                             <div>Size: <span className="font-mono font-bold text-foreground">{displayHeap.length}</span></div>
                             <div>Insert: <span className="font-mono">O(log n)</span></div>
@@ -487,7 +487,7 @@ export default function HeapVisualizer({
                             <div>Build: <span className="font-mono">O(n)</span></div>
                             <div>Peek: <span className="font-mono">O(1)</span></div>
                         </div>
-                        <div className="flex flex-wrap gap-2 text-[10px]">
+                        <div className="flex flex-wrap gap-2 text-xs">
                             {([
                                 ["bg-blue-500/30 border-blue-500", "Comparing"],
                                 ["bg-yellow-500/30 border-yellow-500", "Swapping"],

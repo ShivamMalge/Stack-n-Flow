@@ -283,12 +283,12 @@ export default function HashTableVisualizer({
                         {operation === "insert" && (
                             <div className="space-y-3">
                                 <div>
-                                    <label htmlFor="ht-key" className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Identifier (Key)</label>
+                                    <label htmlFor="ht-key" className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Identifier (Key)</label>
                                     <Input id="ht-key" placeholder="e.g. 'name' or 'id'" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
                                 </div>
                                 <div>
-                                    <label htmlFor="ht-value" className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Data (Value)</label>
+                                    <label htmlFor="ht-value" className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Data (Value)</label>
                                     <Input id="ht-value" placeholder="e.g. 'John' or '123'" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
                                 </div>
@@ -301,7 +301,7 @@ export default function HashTableVisualizer({
                         {(operation === "search" || operation === "delete") && (
                             <div className="space-y-3">
                                 <div>
-                                    <label htmlFor="ht-search" className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Key to find</label>
+                                    <label htmlFor="ht-search" className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Key to find</label>
                                     <Input id="ht-search" placeholder="Enter the key" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && (operation === "search" ? handleSearch() : handleDelete())}
                                         disabled={player.isPlaying} />
@@ -336,7 +336,7 @@ export default function HashTableVisualizer({
                                     className={`flex items-start md:items-center gap-2 p-1.5 rounded-md border transition-all duration-300 ${i === hl ? "ring-2 ring-blue-500 bg-blue-500/10 border-blue-500" : "border-transparent bg-muted/5"}`}>
                                     {/* Index */}
                                     <div className="w-8 shrink-0 text-right pt-1 md:pt-0">
-                                        <span className="text-[10px] font-mono font-bold text-muted-foreground">[{i}]</span>
+                                        <span className="text-xs font-mono font-bold text-muted-foreground">[{i}]</span>
                                     </div>
                                     {/* Bucket cell */}
                                     <div className="w-8 h-8 shrink-0 border border-border bg-card shadow-sm rounded flex items-center justify-center">
@@ -346,7 +346,7 @@ export default function HashTableVisualizer({
                                     <div className="flex gap-1.5 flex-wrap min-w-0">
                                         {bucket.map((entry, j) => (
                                             <div key={j}
-                                                className={`flex items-center gap-1.5 border rounded-md shadow-sm px-2.5 py-1 text-[10px] md:text-xs transition-all duration-200 whitespace-nowrap ${ENTRY_BG[entry.state]}`}>
+                                                className={`flex items-center gap-1.5 border rounded-md shadow-sm px-2.5 py-1 text-xs md:text-xs transition-all duration-200 whitespace-nowrap ${ENTRY_BG[entry.state]}`}>
                                                 <span className="font-semibold">{entry.key}</span>
                                                 <span className="text-muted-foreground opacity-30">:</span>
                                                 <span className="truncate max-w-[80px] md:max-w-[120px]">{entry.value}</span>
@@ -358,7 +358,7 @@ export default function HashTableVisualizer({
                         </div>
 
                         {/* Legend */}
-                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t text-[10px]">
+                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t text-xs">
                             {([["bg-yellow-500/30 border-yellow-500", "Checking"], ["bg-green-500/30 border-green-500", "Success"], ["bg-orange-500/30 border-orange-500", "Collision"], ["bg-red-500/30 border-red-500", "Deleted"]] as const).map(([cls, lbl]) => (
                                 <div key={lbl} className="flex items-center gap-1.5">
                                     <div className={`w-3 h-3 rounded-sm border ${cls}`} />
@@ -402,7 +402,7 @@ export default function HashTableVisualizer({
                                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                                 Execution Trace
                             </h3>
-                            <div className="bg-muted/30 rounded-md p-3 h-28 overflow-y-auto border border-border/50">
+                            <div className="bg-muted/30 rounded-md p-3 h-40 overflow-y-auto border border-border/50">
                                 {steps.length > 0 ? (
                                     <ol className="pl-4 list-decimal space-y-1">
                                         {steps.map((s, i) => (
@@ -414,7 +414,7 @@ export default function HashTableVisualizer({
                         </div>
 
                         {/* Complexity */}
-                        <div className="text-[10px] text-muted-foreground border-t pt-2.5 grid grid-cols-2 gap-y-1.5">
+                        <div className="text-xs text-muted-foreground border-t pt-2.5 grid grid-cols-2 gap-y-1.5">
                             <div className="flex justify-between pr-4"><span>Average Case:</span> <span className="font-mono text-primary font-bold">O(1)</span></div>
                             <div className="flex justify-between"><span>Space Complexity:</span> <span className="font-mono text-primary font-bold">O(n)</span></div>
                             <div className="col-span-2 flex justify-between border-t border-dashed pt-1.5 mt-1">

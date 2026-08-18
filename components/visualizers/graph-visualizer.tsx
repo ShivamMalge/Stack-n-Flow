@@ -10,6 +10,7 @@ import { Plus } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import CodePanel from "@/components/ui/code-panel"
+import { resolveState, STATE_SHAPE, STATE_SWATCH } from "@/lib/visualizer-states"
 
 const BFS_CODE = [
   "def bfs(graph, start):",
@@ -86,23 +87,44 @@ const SAMPLE_GRAPH: { nodes: GraphNode[]; edges: Edge[] } = {
   ],
 }
 
+/** Centre-to-centre spacing for placed nodes: the diameter plus breathing room. */
+const NODE_SPACING = NODE_RADIUS * 2 + 16
+
 /**
- * Places a new node on a ring inside the canvas. Positions used to be random,
- * which let nodes overlap or land outside the viewBox entirely.
+ * Places a new node on a lattice inside the canvas.
+ *
+ * Two earlier attempts failed: random coordinates let nodes land outside the
+ * viewBox, and a single ellipse put successive golden-angle nodes ~26px apart on
+ * its narrow side — an overlap for 40px nodes by the ninth addition. A spiral was
+ * no better, because 500x300 simply cannot hold twenty 40px nodes on a curve.
+ * A lattice can: it guarantees NODE_SPACING between neighbours and degrades by
+ * wrapping rather than by piling up.
  */
 function nextNodePosition(index: number): { x: number; y: number } {
-  const angle = index * GOLDEN_ANGLE
-  const radiusX = (CANVAS_WIDTH - NODE_MARGIN * 2) / 2
-  const radiusY = (CANVAS_HEIGHT - NODE_MARGIN * 2) / 2
+  const columns = Math.max(1, Math.floor((CANVAS_WIDTH - NODE_RADIUS * 2) / NODE_SPACING) + 1)
+  const rows = Math.max(1, Math.floor((CANVAS_HEIGHT - NODE_RADIUS * 2) / NODE_SPACING) + 1)
+
+  // Wrap once every slot is used; the clamp keeps even that on canvas.
+  const slot = index % (columns * rows)
+  const column = slot % columns
+  const row = Math.floor(slot / columns)
+
+  const usedWidth = (columns - 1) * NODE_SPACING
+  const usedHeight = (rows - 1) * NODE_SPACING
 
   return {
-    x: CANVAS_WIDTH / 2 + Math.cos(angle) * radiusX * 0.75,
-    y: CANVAS_HEIGHT / 2 + Math.sin(angle) * radiusY * 0.75,
+    x: clamp(
+      (CANVAS_WIDTH - usedWidth) / 2 + column * NODE_SPACING,
+      NODE_RADIUS,
+      CANVAS_WIDTH - NODE_RADIUS
+    ),
+    y: clamp(
+      (CANVAS_HEIGHT - usedHeight) / 2 + row * NODE_SPACING,
+      NODE_RADIUS,
+      CANVAS_HEIGHT - NODE_RADIUS
+    ),
   }
 }
-
-/** ~137.5°, spreads successive points evenly around a circle. */
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 
 type GraphFrame = {
   nodes: GraphNode[]
@@ -443,7 +465,7 @@ export default function GraphVisualizer({
             {/* Steps panel */}
             <div className="mt-4">
               <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
-              <div className="bg-muted/30 rounded-md p-3 h-[160px] overflow-y-auto">
+              <div className="bg-muted/30 rounded-md p-3 h-40 overflow-y-auto">
                 {steps.length > 0 ? (
                   <ol className="space-y-1 pl-5 list-decimal">
                     {steps.map((step, i) => (
@@ -501,10 +523,12 @@ export default function GraphVisualizer({
                   >
                     <circle r={NODE_RADIUS} className={`
                       transition-all duration-300 ease-in-out
-                      ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : ""}
-                      ${node.visited && !node.highlighted ? "fill-green-100 stroke-green-500 dark:fill-green-900" : ""}
-                      ${!node.highlighted && !node.visited ? "fill-card stroke-primary" : ""}
-                      ${node.isNew ? "stroke-green-500 stroke-[3]" : "stroke-[2]"}
+                      ${node.isNew || node.id === selectedNode ? "" : "stroke-[2]"}
+                      ${STATE_SHAPE[resolveState({
+                        comparing: node.highlighted,
+                        inserted: node.isNew,
+                        visited: node.visited,
+                      })]}
                       ${node.id === selectedNode ? "stroke-blue-500 stroke-[3]" : ""}
                     `} />
                     <text textAnchor="middle" dominantBaseline="middle" className="text-sm font-medium fill-current select-none pointer-events-none">
@@ -519,11 +543,14 @@ export default function GraphVisualizer({
               <p className="text-center text-xs md:text-sm font-medium text-primary mt-2 px-4 py-2 bg-muted/30 border-t">{player.currentDescription}</p>
             )}
             {/* Legend */}
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 p-4 text-[10px] md:text-xs border-t">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 p-4 text-xs md:text-xs border-t">
               {[
-                ["fill-card border border-primary", "Unvisited"],
-                ["bg-yellow-200 dark:bg-yellow-900 border border-yellow-500", "Current"],
-                ["bg-green-100 dark:bg-green-900 border border-green-500", "Visited"],
+                // Swatches come from the shared map so the legend cannot drift
+                // from the nodes it describes. "fill-card" here was a bug: that
+                // is an SVG utility and did nothing to a div.
+                [STATE_SWATCH.default, "Unvisited"],
+                [STATE_SWATCH.comparing, "Current"],
+                [STATE_SWATCH.visited, "Visited"],
                 ["bg-card border-2 border-blue-500", "Start Node"],
               ].map(([cls, label]) => (
                 <div key={label} className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-border bg-background">

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { resolveState, STATE_BOX } from "@/lib/visualizer-states"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -313,13 +314,13 @@ export default function CircularLinkedListVisualizer({
                           className={`
                             flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full border-2 shadow-sm
                             transition-all duration-500 ease-in-out
-                            ${node.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
-                            ${node.isNew ? "scale-110 border-green-500" : ""}
-                            ${node.isDeleting ? "scale-75 opacity-50 border-red-500" : ""}
+                            ${STATE_BOX[resolveState({ removed: node.isDeleting, comparing: node.highlighted, inserted: node.isNew })]}
+                            ${node.isNew ? "scale-110" : ""}
+                            ${node.isDeleting ? "scale-75 opacity-50" : ""}
                           `}
                         >
                           <div className="text-base md:text-lg font-bold">{node.value}</div>
-                          <div className="text-[10px] text-muted-foreground">id: {node.id}</div>
+                          <div className="text-xs text-muted-foreground">id: {node.id}</div>
                         </div>
 
                         {index < nodes.length - 1 && (
@@ -348,7 +349,7 @@ export default function CircularLinkedListVisualizer({
                         </div>
 
                         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                          <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">Back to head</span>
+                          <span className="text-xs font-bold text-primary/60 uppercase tracking-widest mb-1">Back to head</span>
                           <ArrowRight className="h-3 w-3 text-primary/60 transform -rotate-90 animate-bounce" />
                         </div>
                       </div>

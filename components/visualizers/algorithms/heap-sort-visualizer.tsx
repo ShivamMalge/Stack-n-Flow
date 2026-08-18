@@ -9,6 +9,7 @@ import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import CodePanel from "@/components/ui/code-panel"
 import { MAX_INPUT_VALUE, parseBoundedInt } from "@/lib/constants"
+import { STATE_BAR, STATE_LABEL, swatchFor, type VisualizerState } from "@/lib/visualizer-states"
 
 const HEAP_SORT_CODE = [
     "function heapSort(arr):",
@@ -113,13 +114,26 @@ function generateHeapSort(values: number[]): AnimationFrame<HSSFrame>[] {
 const BAR_MAX_PCT = 90
 const BAR_MAX_PCT_DENSE = 65
 
-const BAR_COLORS: Record<BarState, string> = {
-    default: "bg-primary/50",
-    heap: "bg-blue-400 dark:bg-blue-500",
-    comparing: "bg-yellow-400 dark:bg-yellow-400",
-    swapping: "bg-orange-400 dark:bg-orange-400",
-    sorted: "bg-green-400 dark:bg-green-500",
-    root: "bg-purple-500 dark:bg-purple-400",
+// "heap" has no equivalent in the shared vocabulary: it marks the slice of the
+// array the heap still owns, which is structure rather than a state the
+// algorithm put an element in, so it keeps its own colour.
+const IN_HEAP_BAR = "bg-blue-400 dark:bg-blue-500"
+
+// The remaining local states, mapped onto the shared vocabulary. This file used
+// to draw comparing yellow and swapping orange, inverting what the other sorters
+// meant by those hues; the shared map settles it.
+const BAR_STATE: Record<Exclude<BarState, "heap">, VisualizerState> = {
+    default: "default",
+    comparing: "comparing",
+    swapping: "swapping",
+    // A bar outside the heap is in its final position — the shared word is `visited`.
+    sorted: "visited",
+    // The root is the element each extraction pivots the heap around.
+    root: "pivot",
+}
+
+function barClass(state: BarState): string {
+    return state === "heap" ? IN_HEAP_BAR : STATE_BAR[BAR_STATE[state]]
 }
 
 export default function HeapSortVisualizer() {
@@ -244,7 +258,7 @@ export default function HeapSortVisualizer() {
                     </div>
 
                     {/* Complexity */}
-                    <div className="text-[10px] text-muted-foreground border-t pt-2 grid grid-cols-2 gap-x-4">
+                    <div className="text-xs text-muted-foreground border-t pt-2 grid grid-cols-2 gap-x-4">
                         <div>Best: <span className="font-mono">O(n log n)</span></div>
                         <div>Space: <span className="font-mono">O(1)</span></div>
                         <div>Avg: <span className="font-mono">O(n log n)</span></div>
@@ -272,17 +286,25 @@ export default function HeapSortVisualizer() {
                                         maxWidth: displayBars.length > 20 ? "12px" : "24px",
                                         minWidth: "2px"
                                     }}
-                                    className={`rounded-t transition-all duration-150 ${BAR_COLORS[bar.state]}`} />
+                                    className={`rounded-t transition-all duration-150 ${barClass(bar.state)}`} />
                             )
                         })}
                     </div>
 
                     {/* Legend */}
-                    <div className="flex flex-wrap gap-3 justify-center text-[10px]">
-                        {([["bg-blue-400", "In Heap"], ["bg-yellow-400", "Comparing"], ["bg-orange-400", "Swapping"], ["bg-purple-500", "Root (Max)"], ["bg-green-400", "Sorted"]] as const).map(([c, l]) => (
-                            <div key={l} className="flex items-center gap-1.5">
-                                <div className={`w-3 h-3 rounded-sm ${c}`} />
-                                <span className="text-muted-foreground">{l}</span>
+                    {/* Swatches and wording come from the shared maps, so the legend
+                        cannot drift from the bars it describes. "In Heap" is the one
+                        entry with no shared state behind it; "Root (Max)" and
+                        "Sorted" are the domain words for `pivot` and `visited`. */}
+                    <div className="flex flex-wrap gap-3 justify-center text-xs">
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-3 h-3 rounded-sm ${IN_HEAP_BAR}`} />
+                            <span className="text-muted-foreground">In Heap</span>
+                        </div>
+                        {([["comparing", STATE_LABEL.comparing], ["swapping", STATE_LABEL.swapping], ["pivot", "Root (Max)"], ["visited", "Sorted"]] as const).map(([state, label]) => (
+                            <div key={label} className="flex items-center gap-1.5">
+                                <div className={`w-3 h-3 rounded-sm ${swatchFor(state, "bar")}`} />
+                                <span className="text-muted-foreground">{label}</span>
                             </div>
                         ))}
                     </div>

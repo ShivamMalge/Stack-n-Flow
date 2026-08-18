@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowUp } from "lucide-react"
+import { resolveState, STATE_BOX } from "@/lib/visualizer-states"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export type StackRendererItem = {
@@ -50,7 +51,7 @@ export default function StackRenderer({
                   {index === 0 && (
                     <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
                       <ArrowUp className="h-4 w-4 text-muted-foreground animate-bounce" />
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                         Top
                       </span>
                     </div>
@@ -59,8 +60,8 @@ export default function StackRenderer({
                     className={`
                       flex items-center justify-center h-10 md:h-12 w-full border-2 rounded-md shadow-sm
                       transition-all duration-500 ease-in-out
-                      ${item.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
-                      ${item.isNew ? "scale-105 border-green-500" : ""}
+                      ${STATE_BOX[resolveState({ comparing: item.highlighted, inserted: item.isNew })]}
+                      ${item.isNew ? "scale-105" : ""}
                       ${item.isPopping ? "translate-x-full opacity-0 rotate-12" : ""}
                     `}
                   >

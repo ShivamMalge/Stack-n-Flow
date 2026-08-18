@@ -263,7 +263,7 @@ export default function CircularQueueVisualizer({
                   <div className="flex flex-col items-center">
                     <div className="flex items-center gap-2 mb-6">
                       <RotateCw className="h-5 w-5 text-primary/60" />
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Fixed Size Array ({maxSize})</span>
+                      <span className="text-xs uppercase font-bold text-muted-foreground tracking-widest">Fixed Size Array ({maxSize})</span>
                     </div>
 
                     <div className="flex flex-wrap justify-center gap-y-14 gap-x-2 md:gap-x-4">
@@ -310,7 +310,7 @@ export default function CircularQueueVisualizer({
                               )}
 
                               <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2">
-                                <div className="text-[10px] font-mono text-muted-foreground opacity-50">[{index}]</div>
+                                <div className="text-xs font-mono text-muted-foreground opacity-50">[{index}]</div>
                               </div>
                             </div>
                           )

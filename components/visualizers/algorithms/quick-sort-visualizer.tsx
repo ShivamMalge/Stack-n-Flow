@@ -9,6 +9,7 @@ import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
+import { STATE_BAR, STATE_LABEL, swatchFor } from "@/lib/visualizer-states"
 
 type ArrayItem = {
   id: number
@@ -384,22 +385,24 @@ export default function QuickSortVisualizer({
               array.map((item, index) => {
                 const height = Math.min(item.value * 2 + 20, MAX_BAR_HEIGHT)
 
+                // Local flags mapped onto the shared vocabulary: highlighted →
+                // comparing (it was blue here, amber everywhere else), isSwapping →
+                // swapping, isPivot → pivot, and isSorted → visited, since a bar in
+                // its final position is one the algorithm is finished with. One
+                // class is emitted instead of a stack, so the winner is intent
+                // rather than whichever colour Tailwind happened to emit last.
                 return (
                   <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center flex-1 max-w-[40px] mx-0.5">
                     <div
                       style={{ height: `${height}px` }}
                       className={`
                         w-full max-h-full rounded-t-sm md:rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
-                        ${item.isPivot ? "bg-purple-500 dark:bg-purple-600" : ""}
-                        ${item.highlighted ? "bg-blue-400 dark:bg-blue-500" : ""}
-                        ${item.isSorted ? "bg-green-400 dark:bg-green-500" : ""}
-                        ${item.isSwapping ? "bg-yellow-400 dark:bg-yellow-500" : ""}
-                        ${!item.isPivot && !item.highlighted && !item.isSorted && !item.isSwapping ? "bg-primary/70" : ""}
+                        ${STATE_BAR[item.isSwapping ? "swapping" : item.isPivot ? "pivot" : item.highlighted ? "comparing" : item.isSorted ? "visited" : "default"]}
                       `}
                     >
-                      <span className="text-[10px] md:text-xs font-medium text-white">{item.value}</span>
+                      <span className="text-xs font-medium text-white">{item.value}</span>
                     </div>
-                    <div className="mt-2 text-[10px] md:text-xs">{index}</div>
+                    <div className="mt-2 text-xs">{index}</div>
                   </div>
                 )
               })
@@ -413,23 +416,16 @@ export default function QuickSortVisualizer({
             </div>
           )}
 
+          {/* Swatches and wording come from the shared maps, so the legend cannot
+              drift from the bars it describes. "Sorted" is the domain word for
+              `visited` here. */}
           <div className="flex flex-wrap justify-center mt-4 gap-x-4 gap-y-2">
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-purple-500 dark:bg-purple-600 rounded-sm mr-2"></div>
-              <span className="text-xs">Pivot</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-blue-400 dark:bg-blue-500 rounded-sm mr-2"></div>
-              <span className="text-xs">Comparing</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-yellow-400 dark:bg-yellow-500 rounded-sm mr-2"></div>
-              <span className="text-xs">Swapping</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-green-400 dark:bg-green-500 rounded-sm mr-2"></div>
-              <span className="text-xs">Sorted</span>
-            </div>
+            {([["pivot", STATE_LABEL.pivot], ["comparing", STATE_LABEL.comparing], ["swapping", STATE_LABEL.swapping], ["visited", "Sorted"]] as const).map(([state, label]) => (
+              <div key={label} className="flex items-center">
+                <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "bar")}`}></div>
+                <span className="text-xs">{label}</span>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

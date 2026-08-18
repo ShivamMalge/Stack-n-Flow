@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowRight } from "lucide-react"
+import { resolveState, STATE_BOX } from "@/lib/visualizer-states"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export type QueueRendererItem = {
@@ -37,7 +38,7 @@ export default function QueueRenderer({
           ) : (
             <div className="m-auto flex flex-wrap items-center justify-center gap-y-10 gap-x-2 px-4 max-w-full">
               <div className="flex flex-col items-center mr-2">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground">Front</span>
+                <span className="text-xs uppercase font-bold text-muted-foreground">Front</span>
                 <ArrowRight className="h-4 w-4 text-primary" />
               </div>
 
@@ -47,13 +48,13 @@ export default function QueueRenderer({
                     className={`
                       flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-md border-2 shadow-sm
                       transition-all duration-500 ease-in-out
-                      ${item.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : "bg-card border-primary"}
-                      ${item.isNew ? "scale-105 border-green-500" : ""}
+                      ${STATE_BOX[resolveState({ comparing: item.highlighted, inserted: item.isNew })]}
+                      ${item.isNew ? "scale-105" : ""}
                       ${item.isDequeuing ? "-translate-y-full opacity-0" : ""}
                     `}
                   >
                     <div className="text-base md:text-lg font-bold">{item.value}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">id: {item.id}</div>
+                    <div className="text-xs text-muted-foreground font-mono truncate max-w-full px-1">id: {item.id}</div>
                   </div>
 
                   {index < items.length - 1 && (
@@ -65,7 +66,7 @@ export default function QueueRenderer({
               ))}
 
               <div className="flex flex-col items-center ml-2">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground">Rear</span>
+                <span className="text-xs uppercase font-bold text-muted-foreground">Rear</span>
                 <ArrowRight className="h-4 w-4 text-primary rotate-180" />
               </div>
             </div>

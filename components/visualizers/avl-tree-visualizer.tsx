@@ -11,6 +11,7 @@ import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "luc
 import { useMobile } from "@/hooks/use-mobile"
 import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
+import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { computeTreeLayout } from "@/lib/tree-layout"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
@@ -385,11 +386,13 @@ export default function AVLTreeVisualizer({
         {node.right && (() => { const c = getChildCoords(node.right!); return <line x1={drawX} y1={drawY + NODE_R} x2={c.x} y2={c.y - NODE_R} stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5" /> })()}
         <circle cx={drawX} cy={drawY} r={NODE_R}
           className={`transition-all duration-300 ease-in-out cursor-grab active:cursor-grabbing stroke-[1.5]
-            ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : "fill-card stroke-primary"}
-            ${node.isNew ? "stroke-green-500 stroke-[2]" : ""}
-            ${node.isDeleting ? "fill-red-200 stroke-red-500 dark:fill-red-900" : ""}
-            ${node.isRotating ? "fill-blue-200 stroke-blue-500 dark:fill-blue-900" : ""}
-            ${Math.abs(balanceFactor) > 1 ? "fill-orange-200 stroke-orange-500 dark:fill-orange-900" : ""}`}
+            ${STATE_SHAPE[resolveState({
+              removed: node.isDeleting,
+              swapping: node.isRotating,
+              comparing: node.highlighted,
+              inserted: node.isNew,
+              warning: Math.abs(balanceFactor) > 1,
+            })]}`}
           onMouseDown={(e) => handleNodeDrag(e, node.id, drawX, drawY)}
           onTouchStart={(e) => handleNodeTouchStart(e, node.id, drawX, drawY)}
         />
@@ -669,8 +672,8 @@ export default function AVLTreeVisualizer({
               )}
 
               <div className="mt-4">
-                <h3 className="text-sm font-medium mb-1">Steps:</h3>
-                <div className="bg-muted/30 rounded-md p-2 h-28 overflow-y-auto">
+                <h3 className="text-sm font-medium mb-1">Algorithm Steps:</h3>
+                <div className="bg-muted/30 rounded-md p-2 h-40 overflow-y-auto">
                   {steps.length > 0 ? (
                     <ol className="pl-4 list-decimal space-y-0.5">
                       {steps.map((s, i) => (
@@ -754,7 +757,7 @@ export default function AVLTreeVisualizer({
               )}
             </div>
 
-            <div className="flex flex-wrap justify-center mt-4 gap-3 text-[10px] md:text-xs px-6 border-t pt-4">
+            <div className="flex flex-wrap justify-center mt-4 gap-3 text-xs md:text-xs px-6 border-t pt-4">
               <div className="flex items-center bg-background px-2 py-0.5 rounded border">
                 <div className="w-2.5 h-2.5 bg-card border border-primary rounded-full mr-1.5"></div>
                 <span>Balanced</span>
@@ -773,7 +776,7 @@ export default function AVLTreeVisualizer({
               </div>
             </div>
 
-            <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 mt-2">
+            <div className="px-6 py-3 text-xs md:text-xs text-center text-muted-foreground bg-muted/5 mt-2">
               Drag nodes to reposition. Balance factors shown inside nodes.
             </div>
           </CardContent>

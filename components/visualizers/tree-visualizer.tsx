@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
+import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import InlineAlert from "@/components/ui/inline-alert"
 
 type TreeNode = {
@@ -355,9 +356,12 @@ export default function TreeVisualizer({
           r={nodeSize / 2}
           className={`
           transition-all duration-500 ease-in-out cursor-move
-          ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : "fill-card stroke-primary"}
-          ${node.isNew ? "stroke-green-500 stroke-[3]" : "stroke-[2]"}
-          ${node.isDeleting ? "fill-red-200 stroke-red-500 dark:fill-red-900" : ""}
+          ${node.isNew ? "" : "stroke-[2]"}
+          ${STATE_SHAPE[resolveState({
+            removed: node.isDeleting,
+            comparing: node.highlighted,
+            inserted: node.isNew,
+          })]}
         `}
           onMouseDown={(e) => handleNodeDrag(e, node.id, x, y)}
           onTouchStart={(e) => handleNodeTouchStart(e, node.id, x, y)}
@@ -652,7 +656,7 @@ export default function TreeVisualizer({
             )}
           </div>
 
-          <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
+          <div className="px-6 py-3 text-xs md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
             Drag nodes to reposition. Use zoom/pan controls to navigate larger trees.
           </div>
         </CardContent>

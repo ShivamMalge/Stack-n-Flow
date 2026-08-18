@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { resolveState, STATE_BOX } from "@/lib/visualizer-states"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -395,14 +396,14 @@ export default function ArrayVisualizer({
                         className={`
                           flex items-center justify-center w-14 h-14 md:w-16 md:h-16 border-2 shadow-sm
                           transition-all duration-500 ease-in-out
-                          ${item.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500 ring-2 ring-yellow-500/20" : "bg-card border-primary"}
-                          ${item.isNew ? "scale-105 border-green-500" : ""}
+                          ${STATE_BOX[resolveState({ comparing: item.highlighted, inserted: item.isNew })]}
+                          ${item.isNew ? "scale-105" : ""}
                           ${item.isDeleting ? "scale-75 opacity-0 -translate-y-8" : ""}
                         `}
                       >
                         <div className="text-base md:text-lg font-bold">{item.value}</div>
                       </div>
-                      <div className="mt-2 text-[10px] font-mono text-muted-foreground group-hover:text-primary transition-colors">
+                      <div className="mt-2 text-xs font-mono text-muted-foreground group-hover:text-primary transition-colors">
                         [{index}]
                       </div>
                     </div>

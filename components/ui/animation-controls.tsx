@@ -163,7 +163,7 @@ export default function AnimationControls({
                     onValueChange={([val]) => onSpeedChange(SPEED_PRESETS[val].value)}
                     disabled={disabled}
                 />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
+                <div className="flex justify-between text-xs text-muted-foreground">
                     {SPEED_PRESETS.map((preset) => (
                         <span key={preset.label}>{preset.label}</span>
                     ))}

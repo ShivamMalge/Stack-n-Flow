@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import CodePanel from "@/components/ui/code-panel"
+import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
 
@@ -624,10 +625,13 @@ export default function BTreeVisualizer() {
           rx={5} // Reduced from 6
           className={`
           transition-all duration-500 ease-in-out cursor-grab active:cursor-grabbing
-          ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : "fill-card stroke-primary"}
-          ${node.isNew ? "stroke-green-500 stroke-[2]" : "stroke-[1.5]"}  /* Reduced stroke width */
-          ${node.isDeleting ? "fill-red-200 stroke-red-500 dark:fill-red-900" : ""}
-          ${node.isSplitting ? "fill-blue-200 stroke-blue-500 dark:fill-blue-900" : ""}
+          ${node.isNew ? "" : "stroke-[1.5]"}
+          ${STATE_SHAPE[resolveState({
+            removed: node.isDeleting,
+            swapping: node.isSplitting,
+            comparing: node.highlighted,
+            inserted: node.isNew,
+          })]}
         `}
           onMouseDown={(e) => handleNodeDragStart(e, node.id, nodeX, nodeY)}
           onTouchStart={(e) => handleNodeDragStart(e, node.id, nodeX, nodeY)}
@@ -891,10 +895,15 @@ export default function BTreeVisualizer() {
             */}
             <div className="flex flex-1 min-h-[300px] max-h-[60vh] w-full overflow-auto border-t p-4" style={{ overscrollBehavior: "contain" }}>
               {root ? (
+                // Intrinsic size, not 100%: a viewBox up to 1500 wide inside a
+                // ~500px plate was letterboxed to about a third scale, rendering
+                // the 12px key labels at roughly 4px. The plate is a real
+                // scroller now, so the tree draws at 1:1 and is scrolled instead,
+                // matching the other tree visualizers.
                 <svg
                   ref={svgRef}
-                  width="100%"
-                  height="100%"
+                  width={viewBoxWidth}
+                  height={viewBoxHeight}
                   viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
                   style={{
                     transform: `scale(${scale})`,
@@ -913,7 +922,7 @@ export default function BTreeVisualizer() {
               )}
             </div>
 
-            <div className="flex flex-wrap justify-center mt-4 gap-3 text-[10px] md:text-xs px-6 border-t pt-4">
+            <div className="flex flex-wrap justify-center mt-4 gap-3 text-xs md:text-xs px-6 border-t pt-4">
               <div className="flex items-center bg-background px-2 py-0.5 rounded border">
                 <div className="w-2.5 h-2.5 bg-card border border-primary rounded-sm mr-1.5"></div>
                 <span>Normal</span>
@@ -932,7 +941,7 @@ export default function BTreeVisualizer() {
               </div>
             </div>
 
-            <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 mt-2 border-t">
+            <div className="px-6 py-3 text-xs md:text-xs text-center text-muted-foreground bg-muted/5 mt-2 border-t">
               Drag nodes to reposition. Degree (t) defines max keys (2t-1).
             </div>
           </CardContent>

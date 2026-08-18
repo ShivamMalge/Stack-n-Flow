@@ -11,6 +11,7 @@ import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical, Trash } fr
 import { useMobile } from "@/hooks/use-mobile"
 import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
+import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { computeTreeLayout } from "@/lib/tree-layout"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
@@ -380,9 +381,11 @@ export default function BinarySearchTreeVisualizer() {
         {node.right && (() => { const c = getChildCoords(node.right!); return <line x1={drawX} y1={drawY + NODE_R} x2={c.x} y2={c.y - NODE_R} stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5" /> })()}
         <circle cx={drawX} cy={drawY} r={NODE_R}
           className={`transition-all duration-300 ease-in-out cursor-grab active:cursor-grabbing stroke-[1.5]
-            ${node.highlighted ? "fill-yellow-200 stroke-yellow-500 dark:fill-yellow-900" : "fill-card stroke-primary"}
-            ${node.isNew ? "stroke-green-500 stroke-[2]" : ""}
-            ${node.isDeleting ? "fill-red-200 stroke-red-500 dark:fill-red-900" : ""}`}
+            ${STATE_SHAPE[resolveState({
+              removed: node.isDeleting,
+              comparing: node.highlighted,
+              inserted: node.isNew,
+            })]}`}
           onMouseDown={(e) => handleNodeDrag(e, node.id, drawX, drawY)}
           onTouchStart={(e) => handleNodeTouchStart(e, node.id, drawX, drawY)}
         />
@@ -666,8 +669,8 @@ export default function BinarySearchTreeVisualizer() {
               )}
 
               <div className="mt-4">
-                <h3 className="text-sm font-medium mb-1">Steps:</h3>
-                <div className="bg-muted/30 rounded-md p-2 h-28 overflow-y-auto">
+                <h3 className="text-sm font-medium mb-1">Algorithm Steps:</h3>
+                <div className="bg-muted/30 rounded-md p-2 h-40 overflow-y-auto">
                   {steps.length > 0 ? (
                     <ol className="pl-4 list-decimal space-y-0.5">
                       {steps.map((s, i) => (
@@ -786,7 +789,7 @@ export default function BinarySearchTreeVisualizer() {
               )}
             </div>
 
-            <div className="px-6 py-3 text-[10px] md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
+            <div className="px-6 py-3 text-xs md:text-xs text-center text-muted-foreground bg-muted/5 border-t">
               Drag nodes to reposition. Use zoom/pan controls to navigate.
             </div>
           </CardContent>

@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MOBILE_BREAKPOINT, SPEED_PRESETS } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
+import { STATE_BAR, STATE_LABEL, swatchFor, type VisualizerState } from "@/lib/visualizer-states"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -281,12 +282,16 @@ const GENERATORS: Record<AlgorithmKey, (v: number[]) => AnimationFrame<SortFrame
 const BAR_MAX_PCT = 90
 const BAR_MAX_PCT_DENSE = 70
 
-const BAR_COLORS: Record<BarState, string> = {
-    default: "bg-primary/60",
-    comparing: "bg-blue-400 dark:bg-blue-500",
-    swapping: "bg-yellow-400 dark:bg-yellow-500",
-    sorted: "bg-green-400 dark:bg-green-500",
-    pivot: "bg-purple-500 dark:bg-purple-400",
+// The local bar states, mapped onto the shared vocabulary. Comparing used to be
+// blue here and in quick-sort while a dozen other files used yellow/amber; the
+// shared map settles it. "sorted" has no entry of its own: a bar in its final
+// position is one the algorithm is finished with, which is `visited`.
+const BAR_STATE: Record<BarState, VisualizerState> = {
+    default: "default",
+    comparing: "comparing",
+    swapping: "swapping",
+    sorted: "visited",
+    pivot: "pivot",
 }
 
 function BarChart({ bars }: { bars: BarItem[] }) {
@@ -306,7 +311,7 @@ function BarChart({ bars }: { bars: BarItem[] }) {
                             maxWidth: bars.length > 20 ? "12px" : "24px",
                             minWidth: "2px"
                         }}
-                        className={`rounded-t transition-all duration-100 ${BAR_COLORS[bar.state]}`}
+                        className={`rounded-t transition-all duration-100 ${STATE_BAR[BAR_STATE[bar.state]]}`}
                     />
                 )
             })}
@@ -472,7 +477,7 @@ export default function SortingComparison() {
                         {/* Algorithm selectors */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Algorithm A</p>
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Algorithm A</p>
                                 <Select value={algoA} onValueChange={(v) => setAlgoA(v as AlgorithmKey)} disabled={isPlaying}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
@@ -483,7 +488,7 @@ export default function SortingComparison() {
                                 </Select>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Algorithm B</p>
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Algorithm B</p>
                                 <Select value={algoB} onValueChange={(v) => setAlgoB(v as AlgorithmKey)} disabled={isPlaying}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
@@ -622,14 +627,14 @@ export default function SortingComparison() {
                                 <div className="grid grid-cols-2 gap-2 text-center">
                                     <div className="bg-muted/40 rounded-md p-2">
                                         <div className="text-xl font-bold tabular-nums">{statsA.comparisons}</div>
-                                        <div className="text-[10px] text-muted-foreground">Comparisons</div>
+                                        <div className="text-xs text-muted-foreground">Comparisons</div>
                                     </div>
                                     <div className="bg-muted/40 rounded-md p-2">
                                         <div className="text-xl font-bold tabular-nums">{statsA.swaps}</div>
-                                        <div className="text-[10px] text-muted-foreground">Swaps</div>
+                                        <div className="text-xs text-muted-foreground">Swaps</div>
                                     </div>
                                 </div>
-                                <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
+                                <div className="text-xs text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
                                     <div>Best: <span className="font-mono">{COMPLEXITY[algoA].best}</span></div>
                                     <div>Space: <span className="font-mono">{COMPLEXITY[algoA].space}</span></div>
                                     <div>Avg: <span className="font-mono">{COMPLEXITY[algoA].avg}</span></div>
@@ -655,14 +660,14 @@ export default function SortingComparison() {
                                 <div className="grid grid-cols-2 gap-2 text-center">
                                     <div className="bg-muted/40 rounded-md p-2">
                                         <div className="text-xl font-bold tabular-nums">{statsB.comparisons}</div>
-                                        <div className="text-[10px] text-muted-foreground">Comparisons</div>
+                                        <div className="text-xs text-muted-foreground">Comparisons</div>
                                     </div>
                                     <div className="bg-muted/40 rounded-md p-2">
                                         <div className="text-xl font-bold tabular-nums">{statsB.swaps}</div>
-                                        <div className="text-[10px] text-muted-foreground">Swaps</div>
+                                        <div className="text-xs text-muted-foreground">Swaps</div>
                                     </div>
                                 </div>
-                                <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
+                                <div className="text-xs text-muted-foreground grid grid-cols-2 gap-x-2 border-t pt-2">
                                     <div>Best: <span className="font-mono">{COMPLEXITY[algoB].best}</span></div>
                                     <div>Space: <span className="font-mono">{COMPLEXITY[algoB].space}</span></div>
                                     <div>Avg: <span className="font-mono">{COMPLEXITY[algoB].avg}</span></div>
@@ -744,9 +749,12 @@ export default function SortingComparison() {
 
             {/* Legend - Last */}
             <div className="order-4 flex flex-wrap gap-4 justify-center text-xs">
-                {([["bg-primary/60", "Unsorted"], ["bg-blue-400", "Comparing"], ["bg-yellow-400", "Swapping"], ["bg-purple-500", "Pivot"], ["bg-green-400", "Sorted"]] as const).map(([color, label]) => (
+                {/* Swatches and wording come from the shared maps, so the legend
+                    cannot drift from the bars it describes. "Unsorted"/"Sorted"
+                    are the domain words for `default`/`visited` here. */}
+                {([["default", "Unsorted"], ["comparing", STATE_LABEL.comparing], ["swapping", STATE_LABEL.swapping], ["pivot", STATE_LABEL.pivot], ["visited", "Sorted"]] as const).map(([state, label]) => (
                     <div key={label} className="flex items-center gap-1.5">
-                        <div className={`w-3 h-3 rounded-sm ${color}`} />
+                        <div className={`w-3 h-3 rounded-sm ${swatchFor(state, "bar")}`} />
                         <span className="text-muted-foreground">{label}</span>
                     </div>
                 ))}

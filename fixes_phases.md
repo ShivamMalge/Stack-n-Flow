@@ -265,43 +265,68 @@ visual pass had only scratched the surface. Headline findings:
 - [x] 🟡 Legends given `flex-wrap`; `doubly-linked-list` desktop grid widened to stop label overlap;
       BST visualization moved back to `order-2` on mobile.
 
-### Still open — needs a proper click-through
-- [ ] 🟠 **Audit every visualizer at desktop and mobile widths.** The three fixed above were found
-      from two screenshots; 15 visualizers have never been reviewed visually. Look specifically for:
-      fixed heights that fight their container, content overflowing SVG viewBoxes, panels that stay
-      empty, and controls that wrap badly under ~400 px.
-- [ ] 🟡 **Tree visualizers with deep trees.** SVG canvases use fixed dimensions; a tree past a few
-      levels likely overflows or clips. Zoom/pan exists but should not be the only recourse.
-- [x] 🟡 **Consistent panel heights** — all 15 code panels are now `h-[280px]`.
-- [ ] 🟡 **Remaining visual inconsistency, catalogued but not yet unified.** The audit found the
-      "highlighted" state rendered **seven** different ways across three encodings (paired
-      `-100/-900`, `-200` fill, `/20` alpha); `binary-search`, `divide-conquer`, `quick-sort` and
-      `sorting-comparison` use blue where 12 other files use yellow; `pathfinding` uses blue for
-      "visited" where `graph` uses green; `heap-sort` alone maps comparing→yellow and
-      swapping→orange, inverting the shared sorter vocabulary. Also six different step-pane heights
-      and four different headings for the same pane. Extend the `--node-*` tokens to all
-      visualizers and collapse these into one vocabulary.
-- [ ] 🟡 **Tree state precedence is arbitrary.** All the tree visualizers concatenate
-      mutually-non-exclusive state classes (a node can emit `fill-yellow-200` *and*
-      `fill-orange-200`), so which wins is decided by Tailwind's palette ordering in the generated
-      stylesheet rather than by intent. Resolve state to a single class with a `switch`.
-- [ ] 🟡 **`b-tree` shrinks to illegibility.** A 1500×300 viewBox in a ~496px plate renders at
-      0.33 scale, so `fontSize="12"` keys become ~4px; zoom is immediately re-clipped by
-      `CardContent p-0 overflow-hidden`.
-- [ ] 🟡 **Graph new-node placement piles up.** All nodes land on one ellipse, so with the golden
-      angle the ~9th added node overlaps an earlier one. Spiral the radius or force-relax.
-- [ ] 🟡 **`prose dark:prose-invert` is dead** on the learn page — `@tailwindcss/typography` is not
-      installed, so learn-page body copy has no typographic styling in either theme.
-- [ ] ⚪ **Success alerts are light-only** in all 7 operations panels (`bg-green-50` with no `dark:`);
-      add a `success` variant to `components/ui/alert.tsx` and replace the 7 hand-rolled copies.
-- [ ] ⚪ **`text-[10px]` at ~25 sites** sits right on the AA contrast line; raise the floor to `text-xs`.
-- [ ] 🟡 **Light theme pass.** The theme toggle only started working in Phase 3, so light mode has
-      effectively never been reviewed. Several visualizers still use fixed dark palettes
-      (`bg-slate-950` in the code panel, `#0d1117` in multi-language-code).
-- [ ] ⚪ **Index keys on reordering lists** (deferred from Phase 3) — likely to show up as janky
-      sorting animations.
+### Third pass — state vocabulary unified (2026-08-18)
 
----
+`lib/visualizer-states.ts` is now the single source for how a state is drawn. It
+defines eight states (`default`, `comparing`, `swapping`, `pivot`, `inserted`,
+`removed`, `visited`, `warning`), four rendering maps (`STATE_BOX`,
+`STATE_SHAPE`, `STATE_BAR`, `STATE_SWATCH`), shared labels, and `resolveState()`.
+15 components consume it. Covered by `tests/lib/visualizer-states.test.ts`.
+
+- [x] 🟡 **Seven renderings of "highlighted" collapsed to one.** The same idea was
+      `bg-yellow-100 dark:bg-yellow-900` in the linear structures, `fill-yellow-200`
+      in the trees, `bg-blue-500/20` in the heap, solid `bg-blue-400` in two sorters
+      and solid `bg-yellow-400` in a third. All now resolve through the shared maps.
+- [x] 🟡 **Tree state precedence is no longer arbitrary.** The five tree
+      visualizers concatenated one class string per flag, so a node that was both
+      highlighted and unbalanced emitted `fill-yellow-200` *and* `fill-orange-200`
+      — the winner decided by the order Tailwind happened to emit its palette in.
+      `resolveState()` picks exactly one state by documented precedence
+      (removed > swapping > comparing > pivot > inserted > warning > visited).
+- [x] 🟡 **Legends derive from the same constants** they describe, so they cannot
+      drift. This also fixed a real bug in the graph legend: its "Unvisited"
+      swatch used `fill-card`, an SVG-only utility, on a `<div>` — it rendered
+      transparent in both themes.
+- [x] 🟡 **Graph placement no longer piles up.** Nodes were random (could land
+      off-canvas), then on a single ellipse where golden-angle neighbours 8 apart
+      sat ~26px apart — an overlap for 40px nodes by the ninth addition. A spiral
+      was no better: 500x300 cannot hold twenty 40px nodes on a curve. Now a
+      lattice: 45 slots at 56px spacing, verified non-overlapping and on-canvas.
+- [x] 🟡 **`b-tree` is legible again.** It rendered `width="100%"` against a
+      viewBox up to 1500 wide, so a ~500px plate letterboxed it to about a third
+      scale and 12px key labels came out near 4px. It now draws at intrinsic size
+      and the plate scrolls, matching the other trees.
+- [x] 🟡 **`prose dark:prose-invert` removed** from the learn page. The plugin was
+      never installed so both classes were dead; the paragraph they wrapped
+      already carried its own styling. Fixed indentation (`ml-10` to `md:ml-10`,
+      which cost 64px on a 375px screen) and the unresponsive `text-4xl` heading.
+- [x] ⚪ **Success alerts** — `success` variant added to `components/ui/alert.tsx`,
+      replacing seven hand-rolled `bg-green-50` copies that had no dark counterpart.
+- [x] ⚪ **`text-[10px]` raised to `text-xs`** across 18 files.
+- [x] ⚪ **Step panes unified** — one height (`h-40`) and one heading
+      ("Algorithm Steps:") across six visualizers, which previously used six
+      heights and four different names for the same pane. The hash table keeps
+      "Execution Trace": it lists probe attempts, not algorithm steps.
+- [x] 🔴 **The shared palette was being purged.** `tailwind.config.ts` scanned
+      `pages`, `components`, `app` and `src` but not `lib`, so every class named
+      only in `lib/visualizer-states.ts` was stripped from the build. Verified
+      against the built CSS: zero `amber-*` and `emerald-*` rules, while
+      `yellow-*` (used directly in components) was present. The five tree
+      visualizers that adopted `STATE_SHAPE` first were already drawing with
+      purged classes. Fixed by adding `./lib/**/*.{js,ts}` to the content globs;
+      the bridge config inherits it, so the notebook widget is covered too.
+- [x] 🟡 **Legend swatches now mirror their own mark.** One swatch set put a
+      saturated dot beside a pale cell — in hue, but not the same colour.
+      `swatchFor(state, mark)` returns the bar fill beside bar charts, the box
+      fill beside cells, and the neutral dot beside SVG marks, whose `fill-*`
+      classes cannot be reused on a `<div>`.
+- [x] 🟡 **`STATE_FILL` added** for marks whose container draws its own border.
+      `STATE_BOX` carries a border colour, which collided with the pathfinding
+      grid's hairline — two border-colour classes on one element, resolved by
+      Tailwind's emit order rather than intent.
+- [x] ⚪ **Queue node ids truncate** — Python sends 8-character UUIDs into a 56px tile.
+
+### Still open — needs a proper click-through
 
 ## Phase 7 — Feature Roadmap (post-hardening)
 

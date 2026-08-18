@@ -9,6 +9,7 @@ import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
+import { STATE_BOX, swatchFor } from "@/lib/visualizer-states"
 
 type ArrayItem = {
   value: number
@@ -439,20 +440,27 @@ export default function BinarySearchVisualizer({
                 <div className="flex justify-center min-w-max mx-auto">
                   {array.map((item, index) => (
                     <div key={index} className="flex flex-col items-center mx-0.5 md:mx-1">
+                      {/* Local flags mapped onto the shared vocabulary: the live
+                          search range is `comparing` (it was blue here, amber
+                          everywhere else), the midpoint is `pivot`, and the target
+                          borrows `visited` -- the cell the search exists to find, so
+                          it outranks the range it sits in. One class is emitted
+                          instead of a stack, so the winner is intent rather than
+                          whichever colour Tailwind happened to emit last.
+                          isLow/isHigh stay local: they are range pointers drawn as
+                          an edge, not a state the cell is in. */}
                       <div
                         className={`
                           flex items-center justify-center w-10 h-10 md:w-12 md:h-12 border-2 
                           transition-all duration-300 ease-in-out rounded-md
-                          ${item.highlighted ? "bg-blue-100 dark:bg-blue-900 border-blue-500" : "bg-card border-primary"}
-                          ${item.isMid ? "bg-purple-100 dark:bg-purple-900 border-purple-500" : ""}
+                          ${STATE_BOX[item.isTarget ? "visited" : item.isMid ? "pivot" : item.highlighted ? "comparing" : "default"]}
                           ${item.isLow ? "border-l-4 border-l-green-500" : ""}
                           ${item.isHigh ? "border-r-4 border-r-green-500" : ""}
-                          ${item.isTarget ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : ""}
                         `}
                       >
                         <div className="text-xs md:text-sm font-bold">{item.value}</div>
                       </div>
-                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-muted-foreground">{index}</div>
+                      <div className="mt-1 md:mt-2 text-xs text-muted-foreground">{index}</div>
                     </div>
                   ))}
                 </div>
@@ -464,19 +472,15 @@ export default function BinarySearchVisualizer({
                   </div>
                 )}
 
+                {/* Swatches come from the shared map, so the legend cannot drift
+                    from the cells it describes; the wording stays domain-specific. */}
                 <div className="flex flex-wrap justify-center mt-8 gap-x-4 gap-y-2">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900 border border-blue-500 rounded-sm mr-2"></div>
-                    <span className="text-xs">Search Range</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-purple-100 dark:bg-purple-900 border border-purple-500 rounded-sm mr-2"></div>
-                    <span className="text-xs">Middle Element</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-yellow-100 dark:bg-yellow-900 border border-yellow-500 rounded-sm mr-2"></div>
-                    <span className="text-xs">Target Value</span>
-                  </div>
+                  {([["comparing", "Search Range"], ["pivot", "Middle Element"], ["visited", "Target Value"]] as const).map(([state, label]) => (
+                    <div key={label} className="flex items-center">
+                      <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "box")}`}></div>
+                      <span className="text-xs">{label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

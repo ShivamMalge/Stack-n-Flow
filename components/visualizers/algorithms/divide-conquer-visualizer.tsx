@@ -9,6 +9,7 @@ import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
+import { STATE_BOX, swatchFor } from "@/lib/visualizer-states"
 
 type ArrayItem = {
   id: number
@@ -367,18 +368,24 @@ export default function DivideConquerVisualizer() {
                   <div className="flex justify-center flex-wrap gap-1 px-2">
                     {array.map((item, index) => (
                       <div key={item.id} className="flex flex-col items-center">
+                        {/* Local flags mapped onto the shared vocabulary: the run
+                            being divided is `comparing` (it was blue here, amber
+                            everywhere else), a run being merged is `swapping` since
+                            its elements are moving, and a finished run is `visited`.
+                            `merged` outranks `highlighted` because the highlight is
+                            left over from the merge frame, and one class is emitted
+                            instead of a stack, so the winner is intent rather than
+                            whichever colour Tailwind happened to emit last. */}
                         <div
                           className={`
                             flex items-center justify-center w-8 h-8 md:w-10 md:h-10 border-2 
                             transition-all duration-300 ease-in-out rounded-md
-                            ${item.highlighted ? "bg-blue-100 dark:bg-blue-900 border-blue-500" : "bg-card border-primary"}
-                            ${item.merging ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500" : ""}
-                            ${item.merged ? "bg-green-100 dark:bg-green-900 border-green-500" : ""}
+                            ${STATE_BOX[item.merging ? "swapping" : item.merged ? "visited" : item.highlighted ? "comparing" : "default"]}
                           `}
                         >
                           <span className="text-xs md:text-sm font-bold">{item.value}</span>
                         </div>
-                        <div className="mt-1 text-[10px] md:text-xs text-muted-foreground">{index}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{index}</div>
                       </div>
                     ))}
                   </div>
@@ -403,7 +410,7 @@ export default function DivideConquerVisualizer() {
                               <div className="flex gap-0.5">
                                 {subArray.map((value, valueIndex) => (
                                   <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-blue-500 bg-blue-50 dark:bg-blue-900 rounded-sm">
-                                    <span className="text-[10px] md:text-xs font-medium">{value}</span>
+                                    <span className="text-xs font-medium">{value}</span>
                                   </div>
                                 ))}
                               </div>
@@ -429,7 +436,7 @@ export default function DivideConquerVisualizer() {
                               <div className="flex gap-0.5">
                                 {subArray.map((value, valueIndex) => (
                                   <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-green-500 bg-green-50 dark:bg-green-900 rounded-sm">
-                                    <span className="text-[10px] md:text-xs font-medium">{value}</span>
+                                    <span className="text-xs font-medium">{value}</span>
                                   </div>
                                 ))}
                               </div>
@@ -441,19 +448,15 @@ export default function DivideConquerVisualizer() {
                   </div>
                 )}
 
+                {/* Swatches come from the shared map, so the legend cannot drift
+                    from the cells it describes; the wording stays domain-specific. */}
                 <div className="flex flex-wrap justify-center mt-2 gap-x-4 gap-y-2">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900 border border-blue-500 rounded-sm mr-2"></div>
-                    <span className="text-xs">Dividing</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-yellow-100 dark:bg-yellow-900 border border-yellow-500 rounded-sm mr-2"></div>
-                    <span className="text-xs">Merging</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-green-100 dark:bg-green-900 border border-green-500 rounded-sm mr-2"></div>
-                    <span className="text-xs">Merged</span>
-                  </div>
+                  {([["comparing", "Dividing"], ["swapping", "Merging"], ["visited", "Merged"]] as const).map(([state, label]) => (
+                    <div key={label} className="flex items-center">
+                      <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "box")}`}></div>
+                      <span className="text-xs">{label}</span>
+                    </div>
+                  ))}
                 </div>
               </>
             )}

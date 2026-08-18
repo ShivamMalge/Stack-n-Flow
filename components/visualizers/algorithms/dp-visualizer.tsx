@@ -216,7 +216,7 @@ export default function DPVisualizer() {
                                     ) : <p className="text-xs text-muted-foreground">Run to see steps</p>}
                                 </div>
                             </div>
-                            <div className="text-[10px] text-muted-foreground border-t pt-2">
+                            <div className="text-xs text-muted-foreground border-t pt-2">
                                 <p>Time: <span className="font-mono">O(n)</span> · Space: <span className="font-mono">O(n)</span></p>
                                 <p className="mt-1">Recurrence: F(n) = F(n-1) + F(n-2), F(0)=0, F(1)=1</p>
                             </div>
@@ -307,7 +307,7 @@ export default function DPVisualizer() {
                                 <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Solve to see DP table</div>
                             ) : (
                                 <div className="overflow-x-auto pb-4">
-                                    <table className="text-[10px] md:text-xs border-collapse min-w-full">
+                                    <table className="text-xs md:text-xs border-collapse min-w-full">
                                         <thead>
                                             <tr>
                                                 <th className="border border-border px-1 md:px-2 py-1 bg-muted/30">i\c</th>
