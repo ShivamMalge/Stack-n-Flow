@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,7 @@ import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "luc
 import { useMobile } from "@/hooks/use-mobile"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
+import { computeTreeLayout } from "@/lib/tree-layout"
 import InlineAlert from "@/components/ui/inline-alert"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 
@@ -297,64 +298,75 @@ export default function TreeVisualizer({
     intervalsRef.current.push(traversalInterval)
   }
 
-  // Calculate tree dimensions
-  const getTreeDimensions = (node: TreeNode | null, level = 0, position = 0): { width: number; height: number } => {
-    if (!node) return { width: 0, height: 0 }
+  /*
+    Node positions come from the shared in-order layout, the same one the BST,
+    AVL and binary-tree visualizers use.
 
-    const leftDimensions = getTreeDimensions(node.left, level + 1, position - 1)
-    const rightDimensions = getTreeDimensions(node.right, level + 1, position + 1)
+    They previously came from a recursive renderer whose horizontal step was
+    `max(60, 200 / (level + 0.5))` — a step that never falls below 60, so a
+    left-leaning tree reached x = -273 — while the viewBox was sized by a
+    *different* model (`|position| * 60 + 40`) that only ever reported 220.
+    Everything past +/-220 was clipped, and because the scroller's scrollWidth
+    equalled its clientWidth there was nothing to scroll to: those nodes were
+    unreachable. Deriving the viewBox from the real extents cannot drift.
+  */
+  const NODE_R = isMobile ? 15 : 20
+  const treeLayout = useMemo(
+    () => computeTreeLayout(root as never, isMobile ? 44 : 65, isMobile ? 60 : 80),
+    [root, isMobile],
+  )
 
-    const width = Math.max(Math.abs(position) * 60 + 40, leftDimensions.width, rightDimensions.width)
-    const height = (level + 1) * 80
-
-    return { width, height }
-  }
-
-  const treeDimensions = root ? getTreeDimensions(root) : { width: 0, height: 0 }
-  const viewBoxWidth = Math.max(300, treeDimensions.width * 2)
-  const viewBoxHeight = Math.max(200, treeDimensions.height + 40)
+  const svgPadding = 30
+  const layoutPositions = Array.from(treeLayout.values())
+  const minX = layoutPositions.length ? Math.min(...layoutPositions.map((pos) => pos.x)) : 0
+  const maxX = layoutPositions.length ? Math.max(...layoutPositions.map((pos) => pos.x)) : 0
+  const maxY = layoutPositions.length ? Math.max(...layoutPositions.map((pos) => pos.y)) : 0
+  const svgW = Math.max(300, maxX - minX + svgPadding * 2)
+  const svgH = Math.max(200, maxY + svgPadding * 2)
 
   // Update the renderTree function to better utilize space and add dragging functionality
-  const renderTree = (node: TreeNode | null, x: number, y: number, level: number) => {
+  const renderTree = (node: TreeNode | null): React.ReactNode => {
     if (!node) return null
+    const pos = treeLayout.get(node.id)
+    if (!pos) return null
 
-    // Adjust spacing based on tree size and device
-    const nodeSize = isMobile ? 30 : 40
-    const horizontalSpacing = isMobile ? Math.max(30, 120 / (level + 1)) : Math.max(60, 200 / (level + 0.5))
-    const verticalSpacing = isMobile ? 60 : 80
+    const defaultX = pos.x - minX + svgPadding
+    const defaultY = pos.y + svgPadding
+    // A dragged node wins over its computed slot. The renderer used to ignore
+    // `nodePositions` entirely, so "drag nodes to reposition" did nothing.
+    const drawX = nodePositions[node.id]?.x ?? defaultX
+    const drawY = nodePositions[node.id]?.y ?? defaultY
+
+    const childCoords = (child: TreeNode) => {
+      if (nodePositions[child.id]) return nodePositions[child.id]
+      const cp = treeLayout.get(child.id)
+      return cp ? { x: cp.x - minX + svgPadding, y: cp.y + svgPadding } : null
+    }
 
     return (
       <g key={node.id}>
-        {/* Draw lines to children */}
-        {node.left && (
-          <line
-            x1={x}
-            y1={y + nodeSize / 2}
-            x2={x - horizontalSpacing}
-            y2={y + verticalSpacing - nodeSize / 2}
-            stroke="currentColor"
-            strokeOpacity="0.3"
-            strokeWidth="2"
-          />
-        )}
+        {([node.left, node.right] as (TreeNode | null | undefined)[]).map((child) => {
+          if (!child) return null
+          const cc = childCoords(child)
+          if (!cc) return null
+          return (
+            <line
+              key={`edge-${node.id}-${child.id}`}
+              x1={drawX}
+              y1={drawY}
+              x2={cc.x}
+              y2={cc.y}
+              stroke="currentColor"
+              strokeOpacity="0.3"
+              strokeWidth="2"
+            />
+          )
+        })}
 
-        {node.right && (
-          <line
-            x1={x}
-            y1={y + nodeSize / 2}
-            x2={x + horizontalSpacing}
-            y2={y + verticalSpacing - nodeSize / 2}
-            stroke="currentColor"
-            strokeOpacity="0.3"
-            strokeWidth="2"
-          />
-        )}
-
-        {/* Draw the node */}
         <circle
-          cx={x}
-          cy={y}
-          r={nodeSize / 2}
+          cx={drawX}
+          cy={drawY}
+          r={NODE_R}
           className={`
           transition-all duration-500 ease-in-out cursor-move
           ${node.isNew ? "" : "stroke-[2]"}
@@ -364,23 +376,22 @@ export default function TreeVisualizer({
             inserted: node.isNew,
           })]}
         `}
-          onMouseDown={(e) => handleNodeDrag(e, node.id, x, y)}
-          onTouchStart={(e) => handleNodeTouchStart(e, node.id, x, y)}
+          onMouseDown={(e) => handleNodeDrag(e, node.id, drawX, drawY)}
+          onTouchStart={(e) => handleNodeTouchStart(e, node.id, drawX, drawY)}
         />
 
         <text
-          x={x}
-          y={y}
+          x={drawX}
+          y={drawY}
           textAnchor="middle"
           dominantBaseline="middle"
-          className={`text-${isMobile ? "xs" : "sm"} font-medium fill-current pointer-events-none`}
+          className={`${isMobile ? "text-xs" : "text-sm"} font-medium fill-current pointer-events-none`}
         >
           {node.value}
         </text>
 
-        {/* Render children */}
-        {node.left && renderTree(node.left, x - horizontalSpacing, y + verticalSpacing, level + 1)}
-        {node.right && renderTree(node.right, x + horizontalSpacing, y + verticalSpacing, level + 1)}
+        {renderTree(node.left)}
+        {renderTree(node.right)}
       </g>
     )
   }
@@ -638,18 +649,18 @@ export default function TreeVisualizer({
               {root ? (
                 <svg
                   ref={svgRef}
-                  width="100%"
-                  height="100%"
-                  viewBox={`${-viewBoxWidth / 2 + pan.x} ${-20 + pan.y} ${viewBoxWidth} ${viewBoxHeight}`}
+                  width={svgW}
+                  height={svgH}
+                  viewBox={`0 0 ${svgW} ${svgH}`}
                   style={{
-                    transform: `scale(${scale})`,
+                    transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
                     transformOrigin: "center",
                     transition: "transform 0.2s ease",
                     touchAction: "none",
                   }}
                   className="m-auto max-w-none"
                 >
-                  <g>{renderTree(root, 0, 0, 1)}</g>
+                  <g>{renderTree(root)}</g>
                 </svg>
               ) : (
                 <div className="m-auto text-muted-foreground text-sm">Empty tree</div>

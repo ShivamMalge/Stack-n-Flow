@@ -105,10 +105,14 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
         icon: Repeat,
     },
     {
+        // Named "Tree" for the route, but the component inserts by comparison,
+        // so what it builds is an ordered binary tree, not an n-ary one. The
+        // description says so rather than promising a general tree.
         slug: "tree",
-        name: "Tree",
+        name: "Tree Traversals",
+        shortName: "Tree",
         category: "data-structures",
-        description: "Hierarchical nodes with a single root.",
+        description: "Build an ordered tree and walk it in-order, pre-order, or post-order.",
         icon: ListTree,
     },
     {

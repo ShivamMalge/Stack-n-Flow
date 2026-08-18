@@ -20,6 +20,27 @@ interface StackRendererProps {
   searchResult?: string | null
 }
 
+/*
+  Plate height shrinks as the stack grows.
+
+  The plate is a `max-h-[60vh]` scroller, so at a fixed 48px per cell a stack of
+  twelve showed only nine: the last three and the base line sat below the fold
+  of a scroller with no visible affordance, and the stack looked bottomless.
+  Twenty cells now fit in the same space, and past that the scroller takes over
+  with cells that are still legible.
+*/
+function cellHeight(count: number): string {
+  if (count <= 8) return "h-10 md:h-12"
+  if (count <= 14) return "h-8 md:h-9"
+  return "h-7 md:h-7"
+}
+
+function cellText(count: number): string {
+  if (count <= 8) return "text-base md:text-lg"
+  if (count <= 14) return "text-sm md:text-base"
+  return "text-xs md:text-sm"
+}
+
 export default function StackRenderer({
   items,
   mini = false,
@@ -45,7 +66,7 @@ export default function StackRenderer({
           {items.length === 0 ? (
             <div className="m-auto text-muted-foreground text-sm">Empty stack</div>
           ) : (
-            <div className="m-auto flex flex-col items-center space-y-2 w-full max-w-[280px] md:max-w-xs px-4">
+            <div className={`m-auto flex flex-col items-center w-full max-w-[280px] md:max-w-xs px-4 ${items.length > 8 ? "space-y-1" : "space-y-2"}`}>
               {items.map((item, index) => (
                 <div key={item.id} className="relative w-full">
                   {index === 0 && (
@@ -58,14 +79,15 @@ export default function StackRenderer({
                   )}
                   <div
                     className={`
-                      flex items-center justify-center h-10 md:h-12 w-full border-2 rounded-md shadow-sm
+                      flex items-center justify-center w-full border-2 rounded-md shadow-sm
+                      ${cellHeight(items.length)}
                       transition-all duration-500 ease-in-out
                       ${STATE_BOX[resolveState({ comparing: item.highlighted, inserted: item.isNew })]}
                       ${item.isNew ? "scale-105" : ""}
                       ${item.isPopping ? "translate-x-full opacity-0 rotate-12" : ""}
                     `}
                   >
-                    <div className="text-base md:text-lg font-bold">{item.value}</div>
+                    <div className={`font-bold ${cellText(items.length)}`}>{item.value}</div>
                   </div>
                 </div>
               ))}

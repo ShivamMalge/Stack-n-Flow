@@ -43,3 +43,47 @@ describe("StackVisualizer compatibility", () => {
     expect(screen.getByText("10")).toBeInTheDocument();
   });
 });
+
+describe("StackRenderer sizing", () => {
+  /** The cell div carrying the height class, found via its value text. */
+  const cellFor = (value: string) =>
+    screen.getByText(value).parentElement as HTMLElement;
+
+  const stackOf = (count: number): StackRendererItem[] =>
+    Array.from({ length: count }, (_, i) => ({ id: i, value: (i + 1) * 10 }));
+
+  it("uses full-size cells for a short stack", () => {
+    render(React.createElement(StackRenderer, { items: stackOf(6) }));
+    expect(cellFor("10").className).toContain("h-10");
+  });
+
+  it("shrinks cells once the stack outgrows the plate", () => {
+    // A twelve-item stack at the old fixed 48px cell showed only nine: the
+    // rest sat below the fold of a max-h-[60vh] scroller with no affordance,
+    // so the stack looked bottomless.
+    render(React.createElement(StackRenderer, { items: stackOf(12) }));
+    const cls = cellFor("10").className;
+    expect(cls).toContain("h-8");
+    expect(cls).not.toContain("h-10");
+  });
+
+  it("shrinks again for a very tall stack", () => {
+    render(React.createElement(StackRenderer, { items: stackOf(18) }));
+    expect(cellFor("10").className).toContain("h-7");
+  });
+
+  it("keeps every item rendered at any height", () => {
+    render(React.createElement(StackRenderer, { items: stackOf(20) }));
+    for (let i = 1; i <= 20; i++) {
+      expect(screen.getByText(String(i * 10))).toBeInTheDocument();
+    }
+  });
+
+  it("tightens the gap between cells as well as their height", () => {
+    const { container } = render(
+      React.createElement(StackRenderer, { items: stackOf(12) }),
+    );
+    expect(container.querySelector(".space-y-1")).toBeTruthy();
+    expect(container.querySelector(".space-y-2")).toBeNull();
+  });
+});

@@ -19,7 +19,7 @@ export default function Footer() {
       <div className="container mx-auto max-w-5xl space-y-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="" width={24} height={24} className="rounded-md" />
+            <Image src="/logo.png" alt="" width={24} height={24} className="rounded-md invert dark:invert-0" />
             <span className="font-bold">Stack&apos;n&apos;Flow</span>
             <span className="hidden lg:inline text-sm text-muted-foreground">
               — learn and visualize data structures and algorithms
