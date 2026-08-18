@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch makes an in-flight run redundant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web app (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # The Prisma client is generated, not committed, so the build cannot
+      # resolve @prisma/client without this.
+      - run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx next lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        # No secrets in CI: lib/env.ts validates at import time and would
+        # otherwise fail the build before it starts.
+        run: npm run verify:web
+        env:
+          SKIP_ENV_VALIDATION: "1"
+
+  bridge:
+    name: Widget bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build the widget bundle
+        run: npm run verify:bridge
+
+      # The committed bundle is what `pip install` ships, so a stale one is a
+      # release bug. Fail if a fresh build differs from what is checked in.
+      - name: Fail if the committed bundle is stale
+        run: |
+          if ! git diff --quiet -- pratyaksha/static; then
+            echo "::error::pratyaksha/static is out of date. Run 'npm run build-lib' and commit the result."
+            git diff --stat -- pratyaksha/static
+            exit 1
+          fi
+
+  python:
+    name: Pratyaksha (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      # Installing the built package rather than running from the source tree is
+      # the point: it is what catches the packaging faults this suite exists for.
+      - name: Install the package
+        run: pip install -e ".[dev]"
+
+      - name: Tests
+        run: pytest tests/python -q
+
+      - name: Import the installed package from outside the repo
+        # A green suite run from the repo root can still hide a broken wheel,
+        # because the source tree is importable regardless of packaging.
+        run: |
+          cd "$RUNNER_TEMP"
+          python -c "import pratyaksha; print('pratyaksha', pratyaksha.__version__)"
+
+  package:
+    name: Wheel contents
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install build
+
+      - run: python -m build
+
+      # Guards the two faults that made the library uninstallable: a wheel with
+      # no Python modules, and one shipped without its widget assets.
+      - name: Assert the wheel ships modules and assets
+        run: |
+          python - <<'PY'
+          import pathlib, sys, zipfile
+
+          wheels = list(pathlib.Path("dist").glob("*.whl"))
+          if not wheels:
+              sys.exit("no wheel was produced")
+
+          names = zipfile.ZipFile(wheels[0]).namelist()
+
+          required = [
+              "pratyaksha/__init__.py",
+              "pratyaksha/widget.py",
+              "pratyaksha/core/telemetry.py",
+              "pratyaksha/structures/stack.py",
+          ]
+          missing = [n for n in required if n not in names]
+          if missing:
+              sys.exit(f"wheel is missing modules: {missing}")
+
+          if not any(n.startswith("pratyaksha/static/") and n.endswith(".mjs") for n in names):
+              sys.exit("wheel is missing the widget bundle under pratyaksha/static/")
+
+          print(f"{wheels[0].name}: {len(names)} entries, modules and assets present")
+          PY

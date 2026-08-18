@@ -8,6 +8,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./tests/setup.ts"],
+    // Scoped explicitly so the runner never walks build output, dependencies, or
+    // a legacy tree that happens to contain test files.
+    include: ["tests/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["node_modules/**", ".next/**", "dist/**", "pratyaksha/**"],
   },
   resolve: {
     alias: {

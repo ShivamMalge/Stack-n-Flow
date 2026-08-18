@@ -157,11 +157,44 @@ The telemetry core and bridge are healthy; the distribution path is broken end-t
 
 ---
 
-## Phase 5 — Tests & CI (≈ 1 day)
+## Phase 5 — Tests & CI ✅ COMPLETE (2026-08-18)
 
-- [ ] 🟠 **Nothing runs the Python tests.** 15 genuinely good tests exist in `tests/python/`, but `anywidget`/`traitlets` aren't even installed locally, no file declares dev dependencies, and there is no `.github/` at all. Add a GitHub Actions workflow: `npm ci && npm run verify:web && npm test` + `pip install -e .[dev] && pytest tests/python`.
-- [ ] 🟡 Add the missing tests: int-key HashTable (regression for the Phase 4 bug), `widget.py` asset resolution, `_repr_mimebundle_`, negative paths (`pop()` empty, `CircularQueue` overflow, `remove_at` out of range), and the 7 untested prop-mapping branches in `pratyaksha-bridge.tsx`.
-- [ ] ⚪ Give `vitest.config.ts` explicit `include`/`exclude` so it never walks legacy trees.
+- [x] 🟠 **CI now exists.** `.github/workflows/ci.yml` with four jobs: **web** (typecheck, lint,
+      vitest, build) on Node 20 and 22; **bridge** (build the widget bundle); **python** (install
+      the package and run pytest) on Python 3.9, 3.11 and 3.12; and **package** (build a wheel and
+      assert its contents). Previously nothing ran the Python suite at all.
+- [x] 🟡 **Missing tests added.** `tests/python/test_edge_cases.py` (12 tests) covers the early-return
+      branches nothing exercised: pop/peek/dequeue on empty, `remove_at` out of range and at the
+      last valid index, circular-queue overflow and wrap-around reuse, and integer hash-table keys.
+      `tests/bridge/prop-mapping.test.tsx` (13 tests) covers every routing branch in the bridge —
+      previously only the registry lookup was tested. JS suite 19 → 32, Python 23 → 35.
+- [x] ⚪ **`vitest.config.ts`** given explicit `include`/`exclude`.
+
+### Two real defects this phase uncovered
+
+- 🔴 **The committed widget bundle was stale**, so `pip install` still shipped the invisible
+      heap-label bug fixed earlier the same day — the source was correct but `pratyaksha/static/`
+      had not been rebuilt. The new **bridge** job fails the build whenever a fresh bundle differs
+      from the committed one, which is what caught it. Confirmed the build is byte-for-byte
+      reproducible first, so the gate is not flaky.
+- 🟠 **`CircularQueue` had no `dequeue`** — only `enqueue`, with no reducer branch for anything
+      else. It filled to capacity and was then permanently stuck, so the structure could never
+      demonstrate the wrap-around that is its entire teaching point. Writing the capacity test is
+      what surfaced it. Added `dequeue()` and `peek()`.
+
+**Verification:** 32 JS tests, 35 Python tests, `tsc` clean, `next lint` exits 0, `next build`
+succeeds. The package was installed with `pip install -e ".[dev]"` and imported from outside the
+repo: assets resolve (772 KB ESM, 52 KB CSS), both carry the theme fix, and `_repr_mimebundle_`
+returns `application/vnd.jupyter.widget-view+json` — the correct notebook protocol.
+
+### Notes
+- The **package** job asserts the wheel contains real modules *and* `pratyaksha/static/*.mjs`.
+  Those were the two faults that made the library uninstallable before Phase 4; a wheel can be
+  built successfully and still ship neither.
+- The **python** job imports from `$RUNNER_TEMP` rather than the repo root on purpose: a suite run
+  from the checkout passes even when packaging is broken, because the source tree is importable.
+- `next lint` is deprecated in Next 15.5. It works today; migrating to `eslint .` is a small
+  follow-up.
 
 ---
 

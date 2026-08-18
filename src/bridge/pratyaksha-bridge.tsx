@@ -7,7 +7,8 @@ type BridgeNodes = unknown[] | Record<string, unknown> | null;
 
 const DEFAULT_STRUCTURE = "STACK";
 
-const VisualizerRouter: React.FC = () => {
+// Exported for tests: the prop mapping below is the Python/React contract.
+export const VisualizerRouter: React.FC = () => {
   const model = useModel<Record<string, any>>();
   const [structure, setStructure] = React.useState<string>(model.get("structure") || DEFAULT_STRUCTURE);
   // Read through the same normaliser on mount and on change. Previously the

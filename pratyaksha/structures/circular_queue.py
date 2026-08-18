@@ -23,6 +23,12 @@ def _reduce_circular_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -
         rear = (rear + 1) % max_size
         nodes[rear] = {"id": event.payload["id"], "value": event.payload["value"]}
         size += 1
+    elif event.op == "dequeue" and size > 0:
+        # Clear the slot and advance front modulo capacity. Wrapping around to
+        # reuse a freed slot is the behaviour this structure exists to show.
+        nodes[front] = {"id": "empty", "value": 0}
+        front = (front + 1) % max_size
+        size -= 1
 
     metadata.update(telemetry_metadata(event.sequence, event.op, front=front, rear=rear, size=size))
     return TelemetrySnapshot(
@@ -52,10 +58,28 @@ class CircularQueue(BaseTelemetryStructure):
         self.rear = self.metadata["rear"]
         self.size = self.metadata["size"]
 
+    def _sync_indices(self) -> None:
+        self.front = self.metadata["front"]
+        self.rear = self.metadata["rear"]
+        self.size = self.metadata["size"]
+
     def enqueue(self, value: Any):
         if self.size == self.max_size:
             return
         self._emit("enqueue", {"id": self._gen_id(), "value": value})
-        self.front = self.metadata["front"]
-        self.rear = self.metadata["rear"]
-        self.size = self.metadata["size"]
+        self._sync_indices()
+
+    def dequeue(self):
+        """Removes and returns the front value, or None when empty."""
+        if self.size == 0:
+            return None
+        value = self.nodes[self.front]["value"]
+        self._emit("dequeue", {"value": value})
+        self._sync_indices()
+        return value
+
+    def peek(self):
+        """Returns the front value without removing it."""
+        if self.size == 0:
+            return None
+        return self.nodes[self.front]["value"]
