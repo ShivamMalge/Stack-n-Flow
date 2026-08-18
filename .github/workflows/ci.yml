@@ -76,9 +76,10 @@ jobs:
 
       # The committed bundle is what `pip install` ships, so a stale one is a
       # release bug no test catches: source correct, suite green, notebook still
-      # rendering yesterday's code. The script reports the first differing byte
-      # with context — these files are minified onto single lines thousands of
-      # characters long, so a line diff shows nothing useful.
+      # rendering yesterday's code. The bundle is compared byte-exact (esbuild
+      # reproduces across platforms); the stylesheet is compared as a rule map,
+      # because lightningcss is a native binary whose Windows and Linux builds
+      # group selectors differently while emitting the same rules.
       - name: Fail if the committed bundle is stale
         run: node scripts/check-bundle-freshness.mjs /tmp/committed
 
