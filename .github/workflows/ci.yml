@@ -64,18 +64,23 @@ jobs:
 
       - run: npm ci
 
+      # Copied before the build, which overwrites them in place.
+      - name: Preserve the committed bundle
+        run: |
+          mkdir -p /tmp/committed
+          cp pratyaksha/static/pratyaksha.css /tmp/committed/
+          cp pratyaksha/static/pratyaksha-bridge.mjs /tmp/committed/
+
       - name: Build the widget bundle
         run: npm run verify:bridge
 
       # The committed bundle is what `pip install` ships, so a stale one is a
-      # release bug. Fail if a fresh build differs from what is checked in.
+      # release bug no test catches: source correct, suite green, notebook still
+      # rendering yesterday's code. The script reports the first differing byte
+      # with context — these files are minified onto single lines thousands of
+      # characters long, so a line diff shows nothing useful.
       - name: Fail if the committed bundle is stale
-        run: |
-          if ! git diff --quiet -- pratyaksha/static; then
-            echo "::error::pratyaksha/static is out of date. Run 'npm run build-lib' and commit the result."
-            git diff --stat -- pratyaksha/static
-            exit 1
-          fi
+        run: node scripts/check-bundle-freshness.mjs /tmp/committed
 
   python:
     name: Pratyaksha (Python ${{ matrix.python }})
