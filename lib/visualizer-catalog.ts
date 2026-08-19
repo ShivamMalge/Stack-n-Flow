@@ -12,6 +12,7 @@ import {
     Grid2x2,
     Grid3x3,
     LayoutGrid,
+    ListOrdered,
     ListTree,
     Map as MapIcon,
     Network,
@@ -190,6 +191,13 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
         category: "data-structures",
         description: "Triple and linked forms, and the two transpose algorithms.",
         icon: Grid2x2,
+    },
+    {
+        slug: "priority-queue",
+        name: "Priority Queue",
+        category: "data-structures",
+        description: "Single-ended heaps, and the min-max heap that serves both ends.",
+        icon: ListOrdered,
     },
     {
         slug: "hash-table",

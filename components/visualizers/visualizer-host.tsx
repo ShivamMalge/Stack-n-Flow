@@ -51,6 +51,7 @@ export const VISUALIZER_COMPONENTS: Record<string, ComponentType> = {
     heap: load(() => import("@/components/visualizers/heap-visualizer")),
     "disjoint-set": load(() => import("@/components/visualizers/disjoint-set-visualizer")),
     "sparse-matrix": load(() => import("@/components/visualizers/sparse-matrix-visualizer")),
+    "priority-queue": load(() => import("@/components/visualizers/priority-queue-visualizer")),
     "hash-table": load(() => import("@/components/visualizers/hash-table-visualizer")),
     "binary-search": load(() => import("@/components/visualizers/algorithms/binary-search-visualizer")),
     expressions: load(() => import("@/components/visualizers/algorithms/expression-visualizer")),
