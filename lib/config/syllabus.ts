@@ -68,7 +68,7 @@ const BCS304: Course = {
                 { title: "Dynamically allocated arrays", visualizer: "dynamic-array", coverage: "full", note: "Capacity against size, doubling, the element-by-element copy, and the amortised cost." },
                 { title: "Structures and unions", coverage: "none" },
                 { title: "Polynomials", operations: "polynomial", coverage: "full", note: "Add, subtract, multiply, evaluate, derivative and degree, on the Operations page." },
-                { title: "Sparse matrices", coverage: "none", note: "Triple representation and transpose are unbuilt." },
+                { title: "Sparse matrices", visualizer: "sparse-matrix", coverage: "full", note: "Triple representation, the storage crossover, and both the simple and fast transpose with their costs compared." },
                 { title: "Representation of multidimensional arrays", coverage: "none", note: "Row-major and column-major address calculation." },
                 { title: "Strings", coverage: "none" },
                 { title: "Stacks", visualizer: "stack", coverage: "full" },
@@ -95,7 +95,7 @@ const BCS304: Course = {
             title: "Linked Lists (continued) and Trees",
             topics: [
                 { title: "Additional list operations (invert, concatenate)", operations: "linkedList", coverage: "partial", note: "Inversion, loop detection, find-middle and nth-from-end are on the Operations page. Concatenation is unbuilt." },
-                { title: "Sparse matrices using linked lists", coverage: "none" },
+                { title: "Sparse matrices using linked lists", visualizer: "sparse-matrix", coverage: "full", note: "The linked view shows one chain per row, alongside the triple form of the same matrix." },
                 { title: "Doubly linked lists", visualizer: "doubly-linked-list", coverage: "full" },
                 { title: "Trees: introduction and terminology", visualizer: "tree", coverage: "full" },
                 { title: "Binary trees", visualizer: "binary-tree", coverage: "full" },

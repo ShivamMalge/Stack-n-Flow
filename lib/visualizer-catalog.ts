@@ -9,6 +9,7 @@ import {
     GitBranchPlus,
     GitFork,
     GitMerge,
+    Grid2x2,
     Grid3x3,
     LayoutGrid,
     ListTree,
@@ -182,6 +183,13 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
         category: "data-structures",
         description: "Union-find: a forest of sets, with rank and path compression.",
         icon: Combine,
+    },
+    {
+        slug: "sparse-matrix",
+        name: "Sparse Matrix",
+        category: "data-structures",
+        description: "Triple and linked forms, and the two transpose algorithms.",
+        icon: Grid2x2,
     },
     {
         slug: "hash-table",
