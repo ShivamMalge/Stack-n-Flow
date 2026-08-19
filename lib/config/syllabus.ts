@@ -110,7 +110,7 @@ const BCS304: Course = {
                 { title: "Binary search trees", visualizer: "binary-search-tree", coverage: "full" },
                 { title: "Selection trees (winner and loser trees)", coverage: "none" },
                 { title: "Forests", coverage: "none", note: "Forest-to-binary-tree conversion is unbuilt." },
-                { title: "Representation of disjoint sets", coverage: "none", note: "Union-find with union by rank and path compression." },
+                { title: "Representation of disjoint sets", visualizer: "disjoint-set", coverage: "full", note: "The forest and the parent[] array that encodes it, with union by rank and path compression as toggles." },
                 { title: "Counting binary trees", coverage: "none", note: "Catalan numbers; largely analytical." },
                 { title: "The graph abstract data type", visualizer: "graph", coverage: "full" },
                 { title: "Elementary graph operations (BFS, DFS)", visualizer: "graph", coverage: "full" },

@@ -4,6 +4,7 @@ import {
     Boxes,
     CircleDashed,
     Coins,
+    Combine,
     GitBranchPlus,
     GitFork,
     GitMerge,
@@ -166,6 +167,13 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
         category: "data-structures",
         description: "A complete tree where every parent beats its children.",
         icon: Triangle,
+    },
+    {
+        slug: "disjoint-set",
+        name: "Disjoint Sets",
+        category: "data-structures",
+        description: "Union-find: a forest of sets, with rank and path compression.",
+        icon: Combine,
     },
     {
         slug: "hash-table",

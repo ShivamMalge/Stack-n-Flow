@@ -48,6 +48,7 @@ export const VISUALIZER_COMPONENTS: Record<string, ComponentType> = {
     graph: load(() => import("@/components/visualizers/graph-visualizer")),
     array: load(() => import("@/components/visualizers/array-visualizer")),
     heap: load(() => import("@/components/visualizers/heap-visualizer")),
+    "disjoint-set": load(() => import("@/components/visualizers/disjoint-set-visualizer")),
     "hash-table": load(() => import("@/components/visualizers/hash-table-visualizer")),
     "binary-search": load(() => import("@/components/visualizers/algorithms/binary-search-visualizer")),
     expressions: load(() => import("@/components/visualizers/algorithms/expression-visualizer")),
