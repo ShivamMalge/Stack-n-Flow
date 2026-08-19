@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Search, Plus, RotateCcw, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import { BINARY_SEARCH } from "@/lib/templates/algorithms"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
 import { STATE_BOX, swatchFor } from "@/lib/visualizer-states"
@@ -24,6 +27,8 @@ type BinarySearchFrame = {
   array: ArrayItem[]
   stepDescription: string
   searchResult?: string | null
+  /** Step in the code panel; see lib/templates/algorithms.ts. */
+  activeStep: number
 }
 
 export default function BinarySearchVisualizer({ 
@@ -164,6 +169,7 @@ export default function BinarySearchVisualizer({
           isTarget: item.value === target,
         })),
         stepDescription: `Starting binary search for value ${target}`,
+          activeStep: 1,
       },
       description: `Searching for ${target}. Range: [${low}, ${high}]`,
     })
@@ -186,6 +192,7 @@ export default function BinarySearchVisualizer({
             isTarget: item.value === target,
           })),
           stepDescription: `Checking middle element at index ${mid} with value ${midValue}`,
+          activeStep: 2,
         },
         description: `Mid=${mid} (value ${midValue}), comparing with ${target}`,
       })
@@ -203,6 +210,7 @@ export default function BinarySearchVisualizer({
               isTarget: item.value === target,
             })),
             stepDescription: `Found ${target} at index ${mid}!`,
+          activeStep: 4,
             searchResult: `Found ${target} at index ${mid}`,
           },
           description: `Found ${target} at index ${mid}!`,
@@ -222,6 +230,7 @@ export default function BinarySearchVisualizer({
               isTarget: item.value === target,
             })),
             stepDescription: `${midValue} < ${target}: searching right half [${low}, ${high}]`,
+          activeStep: 5,
           },
           description: `${midValue} < ${target}: search right half [${low}, ${high}]`,
         })
@@ -240,6 +249,7 @@ export default function BinarySearchVisualizer({
               isTarget: item.value === target,
             })),
             stepDescription: `${midValue} > ${target}: searching left half [${low}, ${high}]`,
+          activeStep: 6,
           },
           description: `${midValue} > ${target}: search left half [${low}, ${high}]`,
         })
@@ -258,6 +268,7 @@ export default function BinarySearchVisualizer({
             isHigh: false,
           })),
           stepDescription: `${target} not found in the array`,
+          activeStep: 7,
           searchResult: `${target} not found in the array`,
         },
         description: `${target} not found`,
@@ -272,255 +283,252 @@ export default function BinarySearchVisualizer({
   const visibleStepIndex = player.currentFrame >= 0 ? player.currentFrame : -1
 
   return (
-    <div className={mini ? "flex flex-col w-full" : "grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start"}>
-      {/* Operations Panel - Order 1 on Mobile, Left on Desktop */}
-      {!mini && (
-        <div className="order-1 md:col-start-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Binary Search Algorithm</CardTitle>
-              <CardDescription>Create a sorted array and search for a value</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+    <VisualizerLayout
+      mini={mini}
+      controls={
+        <Card>
+          <CardHeader>
+            <CardTitle>Binary Search Algorithm</CardTitle>
+            <CardDescription>Create a sorted array and search for a value</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex space-x-2">
+                <Input
+                  type="number"
+                  placeholder="Enter a value to add"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
+                  disabled={player.isPlaying}
+                />
+                <Button onClick={handleAddElement} disabled={player.isPlaying}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+
+              <InlineAlert message={inputError} />
+
+              <div className="flex space-x-2">
+                <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
+                  <Shuffle className="mr-2 h-4 w-4" />
+                  Random Sorted
+                </Button>
+                <Button
+                  onClick={handleSortArray}
+                  disabled={player.isPlaying || array.length <= 1 || isSorted}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Sort
+                </Button>
+                <Button
+                  onClick={handleClearArray}
+                  disabled={player.isPlaying || array.length === 0}
+                  variant="outline"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Clear
+                </Button>
+              </div>
+
+              {!isSorted && array.length > 1 && (
+                <div className="p-2 rounded text-center bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
+                  Array must be sorted for binary search. Click &quot;Sort&quot;.
+                </div>
+              )}
+
+              <div className="pt-4 border-t">
+                <h3 className="text-sm font-medium mb-2">Search in Array</h3>
                 <div className="flex space-x-2">
                   <Input
                     type="number"
-                    placeholder="Enter a value to add"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
-                    disabled={player.isPlaying}
+                    placeholder="Enter a value to search"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    disabled={player.isPlaying || !isSorted || array.length === 0}
                   />
-                  <Button onClick={handleAddElement} disabled={player.isPlaying}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add
-                  </Button>
-                </div>
-
-                <InlineAlert message={inputError} />
-
-                <div className="flex space-x-2">
-                  <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
-                    <Shuffle className="mr-2 h-4 w-4" />
-                    Random Sorted
-                  </Button>
                   <Button
-                    onClick={handleSortArray}
-                    disabled={player.isPlaying || array.length <= 1 || isSorted}
-                    variant="outline"
-                    className="flex-1"
+                    onClick={handleSearch}
+                    disabled={player.isPlaying || !isSorted || array.length === 0}
+                    variant="secondary"
                   >
-                    Sort
+                    <Search className="mr-2 h-4 w-4" />
+                    Search
                   </Button>
-                  <Button
-                    onClick={handleClearArray}
-                    disabled={player.isPlaying || array.length === 0}
-                    variant="outline"
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Clear
-                  </Button>
-                </div>
-
-                {!isSorted && array.length > 1 && (
-                  <div className="p-2 rounded text-center bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
-                    Array must be sorted for binary search. Click &quot;Sort&quot;.
-                  </div>
-                )}
-
-                <div className="pt-4 border-t">
-                  <h3 className="text-sm font-medium mb-2">Search in Array</h3>
-                  <div className="flex space-x-2">
-                    <Input
-                      type="number"
-                      placeholder="Enter a value to search"
-                      value={searchValue}
-                      onChange={(e) => setSearchValue(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      disabled={player.isPlaying || !isSorted || array.length === 0}
-                    />
-                    <Button
-                      onClick={handleSearch}
-                      disabled={player.isPlaying || !isSorted || array.length === 0}
-                      variant="secondary"
-                    >
-                      <Search className="mr-2 h-4 w-4" />
-                      Search
-                    </Button>
-                  </div>
-                </div>
-
-                {searchResult && (
-                  <div
-                    className={`p-2 rounded text-center ${searchResult.includes("Found")
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                      }`}
-                  >
-                    {searchResult}
-                  </div>
-                )}
-
-                {/* Animation Controls */}
-                {player.totalFrames > 0 && (
-                  <AnimationControls
-                    currentFrame={player.currentFrame}
-                    totalFrames={player.totalFrames}
-                    isPlaying={player.isPlaying}
-                    isPaused={player.isPaused}
-                    isComplete={player.isComplete}
-                    speed={player.speed}
-                    onPlay={player.play}
-                    onPause={player.pause}
-                    onStepForward={player.stepForward}
-                    onStepBackward={player.stepBackward}
-                    onReset={() => {
-                      player.reset()
-                      setSearchResult(null)
-                      setArray(array.map((item) => ({
-                        ...item,
-                        highlighted: false,
-                        isTarget: false,
-                        isMid: false,
-                        isLow: false,
-                        isHigh: false,
-                      })))
-                    }}
-                    onSpeedChange={player.setSpeed}
-                    onFrameChange={player.goToFrame}
-                  />
-                )}
-
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
-                  <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
-                    {steps.length > 0 ? (
-                      <ol className="space-y-1 pl-5 list-decimal">
-                        {steps.map((step, index) => (
-                          <li
-                            key={index}
-                            className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
-                          >
-                            {step}
-                          </li>
-                        ))}
-                      </ol>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        1. Add elements to create an array
-                        <br />
-                        2. Make sure the array is sorted
-                        <br />
-                        3. Enter a value and click Search
-                      </p>
-                    )}
-                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
-      {/* Visualization Panel - Order 2 on Mobile, Right on Desktop */}
-      <Card className={mini ? "w-full border-0 md:border md:shadow-sm" : "order-2 md:col-start-2 md:row-span-2 h-full"}>
-        {!mini && (
-          <CardHeader>
-            <CardTitle>Visualization</CardTitle>
-            <CardDescription>Visual representation of binary search</CardDescription>
-          </CardHeader>
-        )}
-        <CardContent className={mini ? "p-0 pt-4" : ""}>
-          <div className="flex items-center justify-center overflow-x-auto py-8 md:py-12 min-h-[200px] md:h-[300px]">
-            {array.length === 0 ? (
-              <div className="text-muted-foreground text-sm">Add elements to create an array</div>
-            ) : (
-              <div className="flex flex-col w-full max-w-full overflow-x-auto pb-4 px-2">
-                <div className="flex justify-center min-w-max mx-auto">
-                  {array.map((item, index) => (
-                    <div key={index} className="flex flex-col items-center mx-0.5 md:mx-1">
-                      {/* Local flags mapped onto the shared vocabulary: the live
-                          search range is `comparing` (it was blue here, amber
-                          everywhere else), the midpoint is `pivot`, and the target
-                          borrows `visited` -- the cell the search exists to find, so
-                          it outranks the range it sits in. One class is emitted
-                          instead of a stack, so the winner is intent rather than
-                          whichever colour Tailwind happened to emit last.
-                          isLow/isHigh stay local: they are range pointers drawn as
-                          an edge, not a state the cell is in. */}
-                      <div
-                        className={`
-                          flex items-center justify-center w-10 h-10 md:w-12 md:h-12 border-2 
-                          transition-all duration-300 ease-in-out rounded-md
-                          ${STATE_BOX[item.isTarget ? "visited" : item.isMid ? "pivot" : item.highlighted ? "comparing" : "default"]}
-                          ${item.isLow ? "border-l-4 border-l-green-500" : ""}
-                          ${item.isHigh ? "border-r-4 border-r-green-500" : ""}
-                        `}
-                      >
-                        <div className="text-xs md:text-sm font-bold">{item.value}</div>
-                      </div>
-                      <div className="mt-1 md:mt-2 text-xs text-muted-foreground">{index}</div>
-                    </div>
-                  ))}
+              {searchResult && (
+                <div
+                  className={`p-2 rounded text-center ${searchResult.includes("Found")
+                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                    }`}
+                >
+                  {searchResult}
                 </div>
+              )}
 
-                {/* Current step description */}
-                {player.currentDescription && (
-                  <div className="mt-4 text-center text-sm font-medium text-primary">
-                    {player.currentDescription}
-                  </div>
-                )}
+              {/* Animation Controls */}
+              {player.totalFrames > 0 && (
+                <AnimationControls
+                  currentFrame={player.currentFrame}
+                  totalFrames={player.totalFrames}
+                  isPlaying={player.isPlaying}
+                  isPaused={player.isPaused}
+                  isComplete={player.isComplete}
+                  speed={player.speed}
+                  onPlay={player.play}
+                  onPause={player.pause}
+                  onStepForward={player.stepForward}
+                  onStepBackward={player.stepBackward}
+                  onReset={() => {
+                    player.reset()
+                    setSearchResult(null)
+                    setArray(array.map((item) => ({
+                      ...item,
+                      highlighted: false,
+                      isTarget: false,
+                      isMid: false,
+                      isLow: false,
+                      isHigh: false,
+                    })))
+                  }}
+                  onSpeedChange={player.setSpeed}
+                  onFrameChange={player.goToFrame}
+                />
+              )}
 
-                {/* Swatches come from the shared map, so the legend cannot drift
-                    from the cells it describes; the wording stays domain-specific. */}
-                <div className="flex flex-wrap justify-center mt-8 gap-x-4 gap-y-2">
-                  {([["comparing", "Search Range"], ["pivot", "Middle Element"], ["visited", "Target Value"]] as const).map(([state, label]) => (
-                    <div key={label} className="flex items-center">
-                      <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "box")}`}></div>
-                      <span className="text-xs">{label}</span>
-                    </div>
-                  ))}
+              <div>
+                <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
+                <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
+                  {steps.length > 0 ? (
+                    <ol className="space-y-1 pl-5 list-decimal">
+                      {steps.map((step, index) => (
+                        <li
+                          key={index}
+                          className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
+                        >
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      1. Add elements to create an array
+                      <br />
+                      2. Make sure the array is sorted
+                      <br />
+                      3. Enter a value and click Search
+                    </p>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Learning Panel - Order 3 on Mobile, Left on Desktop */}
-      {!mini && (
-        <div className="order-3 md:col-start-1">
-          <Card>
+            </div>
+          </CardContent>
+        </Card>
+      }
+      visualization={
+        <Card className={mini ? "w-full border-0 md:border md:shadow-sm" : "h-full"}>
+          {!mini && (
             <CardHeader>
-              <CardTitle>Learning</CardTitle>
-              <CardDescription>Understanding Binary Search</CardDescription>
+              <CardTitle>Visualization</CardTitle>
+              <CardDescription>Visual representation of binary search</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm">
-              <p className="mb-2">
-                <strong>Binary Search</strong> is a search algorithm that finds the position of a target value within a
-                sorted array.
-              </p>
-              <p className="mb-2">
-                <strong>Time Complexity:</strong> O(log n)
-              </p>
-              <p className="mb-2">
-                <strong>Key Steps:</strong>
-              </p>
-              <ol className="list-decimal pl-5 space-y-1">
-                <li>Compare the target value with the middle element of the array</li>
-                <li>If they match, return the middle index</li>
-                <li>If the target is less than the middle element, search the left half</li>
-                <li>If the target is greater than the middle element, search the right half</li>
-                <li>Repeat until the value is found or the search space is empty</li>
-              </ol>
-              <p className="mt-2">
-                <strong>Requirements:</strong> The array must be sorted for binary search to work correctly.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+          )}
+          <CardContent className={mini ? "p-0 pt-4" : ""}>
+            <div className="flex items-center justify-center overflow-x-auto py-8 md:py-12 min-h-[200px] md:h-[300px]">
+              {array.length === 0 ? (
+                <div className="text-muted-foreground text-sm">Add elements to create an array</div>
+              ) : (
+                <div className="flex flex-col w-full max-w-full overflow-x-auto pb-4 px-2">
+                  <div className="flex justify-center min-w-max mx-auto">
+                    {array.map((item, index) => (
+                      <div key={index} className="flex flex-col items-center mx-0.5 md:mx-1">
+                        {/* Local flags mapped onto the shared vocabulary: the live
+                            search range is `comparing` (it was blue here, amber
+                            everywhere else), the midpoint is `pivot`, and the target
+                            borrows `visited` -- the cell the search exists to find, so
+                            it outranks the range it sits in. One class is emitted
+                            instead of a stack, so the winner is intent rather than
+                            whichever colour Tailwind happened to emit last.
+                            isLow/isHigh stay local: they are range pointers drawn as
+                            an edge, not a state the cell is in. */}
+                        <div
+                          className={`
+                            flex items-center justify-center w-10 h-10 md:w-12 md:h-12 border-2 
+                            transition-all duration-300 ease-in-out rounded-md
+                            ${STATE_BOX[item.isTarget ? "visited" : item.isMid ? "pivot" : item.highlighted ? "comparing" : "default"]}
+                            ${item.isLow ? "border-l-4 border-l-green-500" : ""}
+                            ${item.isHigh ? "border-r-4 border-r-green-500" : ""}
+                          `}
+                        >
+                          <div className="text-xs md:text-sm font-bold">{item.value}</div>
+                        </div>
+                        <div className="mt-1 md:mt-2 text-xs text-muted-foreground">{index}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Current step description */}
+                  {player.currentDescription && (
+                    <div className="mt-4 text-center text-sm font-medium text-primary">
+                      {player.currentDescription}
+                    </div>
+                  )}
+
+                  {/* Swatches come from the shared map, so the legend cannot drift
+                      from the cells it describes; the wording stays domain-specific. */}
+                  <div className="flex flex-wrap justify-center mt-8 gap-x-4 gap-y-2">
+                    {([["comparing", "Search Range"], ["pivot", "Middle Element"], ["visited", "Target Value"]] as const).map(([state, label]) => (
+                      <div key={label} className="flex items-center">
+                        <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "box")}`}></div>
+                        <span className="text-xs">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      }
+      code={
+        <CodePanel template={BINARY_SEARCH} activeStep={player.currentSnapshot?.activeStep ?? null} />
+      }
+      docs={
+        <Card>
+          <CardHeader>
+            <CardTitle>Learning</CardTitle>
+            <CardDescription>Understanding Binary Search</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p className="mb-2">
+              <strong>Binary Search</strong> is a search algorithm that finds the position of a target value within a
+              sorted array.
+            </p>
+            <p className="mb-2">
+              <strong>Time Complexity:</strong> O(log n)
+            </p>
+            <p className="mb-2">
+              <strong>Key Steps:</strong>
+            </p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Compare the target value with the middle element of the array</li>
+              <li>If they match, return the middle index</li>
+              <li>If the target is less than the middle element, search the left half</li>
+              <li>If the target is greater than the middle element, search the right half</li>
+              <li>Repeat until the value is found or the search space is empty</li>
+            </ol>
+            <p className="mt-2">
+              <strong>Requirements:</strong> The array must be sorted for binary search to work correctly.
+            </p>
+          </CardContent>
+        </Card>
+      }
+    />
   )
 }

@@ -89,7 +89,8 @@ export function src(source: string, steps: string): CodeLine[] {
     const tokens = steps.trim().split(/\s+/)
     if (texts.length !== tokens.length) {
         throw new Error(
-            `code template mismatch: ${texts.length} lines against ${tokens.length} step markers.` +
+            `code template mismatch in "${texts[0]?.trim().slice(0, 60) ?? "?"}": ` +
+            `${texts.length} lines against ${tokens.length} step markers.` +
             "\n" +
             texts
                 .map((t, i) => `  ${(tokens[i] ?? "MISSING").padStart(7)}  ${t}`)

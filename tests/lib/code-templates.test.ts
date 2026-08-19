@@ -7,11 +7,23 @@ import {
     type CodeTemplate,
 } from "@/lib/code-templates"
 import { FAST_TRANSPOSE, SIMPLE_TRANSPOSE } from "@/lib/templates/sparse-matrix"
+import {
+    BINARY_SEARCH,
+    BST_INSERT,
+    MERGE_SORT,
+    QUICK_SORT,
+    TREE_TRAVERSAL,
+} from "@/lib/templates/algorithms"
 
 /** Every template in the app, with the steps its visualizer actually emits. */
 const TEMPLATES: { name: string; template: CodeTemplate; steps: number[] }[] = [
     { name: "simple transpose", template: SIMPLE_TRANSPOSE, steps: [1, 3, 4] },
     { name: "fast transpose", template: FAST_TRANSPOSE, steps: [1, 3, 6, 7] },
+    { name: "binary search", template: BINARY_SEARCH, steps: [1, 2, 3, 4, 5, 6, 7] },
+    { name: "quick sort", template: QUICK_SORT, steps: [1, 2, 3, 4, 5] },
+    { name: "merge sort", template: MERGE_SORT, steps: [1, 2, 3, 4, 5] },
+    { name: "tree traversal", template: TREE_TRAVERSAL, steps: [1, 2, 3] },
+    { name: "bst insert", template: BST_INSERT, steps: [1, 2, 3, 4] },
 ]
 
 describe("src", () => {
