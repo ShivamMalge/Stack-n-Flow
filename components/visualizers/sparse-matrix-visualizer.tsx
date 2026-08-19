@@ -14,6 +14,7 @@ import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 import { useAnimationPlayer } from "@/hooks/useAnimationPlayer"
 import { SPEED_PRESETS } from "@/lib/constants"
 import { STATE_BOX } from "@/lib/visualizer-states"
+import { FAST_TRANSPOSE, SIMPLE_TRANSPOSE } from "@/lib/templates/sparse-matrix"
 import {
     buildTranspose,
     makeMatrix,
@@ -26,26 +27,6 @@ import {
     MAX_DIMENSION,
     MIN_DIMENSION,
 } from "@/lib/sparse-matrix"
-
-// Line indices match what lib/sparse-matrix.ts sets as `activeLine`.
-const SIMPLE_CODE = [
-    "def transpose(a):                     # the obvious way",
-    "    for c in range(cols):             # every column of a",
-    "        for t in a:                   # rescan every term",
-    "            if t.col == c:",
-    "                emit(t.col, t.row, t.value)",
-]
-
-const FAST_CODE = [
-    "def fast_transpose(a):",
-    "    for t in a: row_terms[t.col] += 1     # count per column",
-    "",
-    "    starting_pos = running_total(row_terms)",
-    "",
-    "    for t in a:                           # one pass, no search",
-    "        b[starting_pos[t.col]] = (t.col, t.row, t.value)",
-    "        starting_pos[t.col] += 1",
-]
 
 /** The worked example this topic is usually taught with. */
 const SAMPLE = [
@@ -365,9 +346,8 @@ export default function SparseMatrixVisualizer() {
             }
             code={
                 <CodePanel
-                    code={method === "fast" ? FAST_CODE : SIMPLE_CODE}
-                    activeLine={snapshot?.activeLine ?? null}
-                    title={method === "fast" ? "Fast transpose" : "Simple transpose"}
+                    template={method === "fast" ? FAST_TRANSPOSE : SIMPLE_TRANSPOSE}
+                    activeStep={snapshot?.activeLine ?? null}
                 />
             }
             docs={

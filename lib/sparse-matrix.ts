@@ -64,7 +64,7 @@ export const MAX_DIMENSION = 6
 export const MIN_DIMENSION = 2
 
 /** Line indices into the visualizer's code panels. */
-const SIMPLE_LINES = { outer: 1, inner: 2, test: 3, emit: 4 }
+const SIMPLE_LINES = { outer: 1, test: 3, emit: 4 }
 const FAST_LINES = { count: 1, positions: 3, place: 6, bump: 7 }
 
 /** Non-zero entries in row-major order — the standard triple representation. */
