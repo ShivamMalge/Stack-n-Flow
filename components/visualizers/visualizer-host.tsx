@@ -47,6 +47,7 @@ export const VISUALIZER_COMPONENTS: Record<string, ComponentType> = {
     "b-tree": load(() => import("@/components/visualizers/b-tree-visualizer")),
     graph: load(() => import("@/components/visualizers/graph-visualizer")),
     array: load(() => import("@/components/visualizers/array-visualizer")),
+    "dynamic-array": load(() => import("@/components/visualizers/dynamic-array-visualizer")),
     heap: load(() => import("@/components/visualizers/heap-visualizer")),
     "disjoint-set": load(() => import("@/components/visualizers/disjoint-set-visualizer")),
     "hash-table": load(() => import("@/components/visualizers/hash-table-visualizer")),

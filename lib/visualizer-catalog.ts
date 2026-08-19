@@ -4,6 +4,7 @@ import {
     Boxes,
     CircleDashed,
     Coins,
+    Expand,
     Combine,
     GitBranchPlus,
     GitFork,
@@ -160,6 +161,13 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
         description: "Contiguous, index-addressable storage.",
         icon: LayoutGrid,
         hasLearnModule: true,
+    },
+    {
+        slug: "dynamic-array",
+        name: "Dynamic Array",
+        category: "data-structures",
+        description: "Capacity, doubling, and the copy that pays for it.",
+        icon: Expand,
     },
     {
         slug: "heap",
