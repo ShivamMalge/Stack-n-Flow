@@ -495,7 +495,7 @@ export default function GraphVisualizer({
                 container hides the overflow on both sides where it cannot be
                 scrolled to. `m-auto` centres it only when it already fits. */}
             <div className="flex min-h-[300px] py-4 bg-muted/5 border-t overflow-auto">
-              <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} className="m-auto max-w-none md:max-w-full">
+              <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} className="m-auto shrink-0 max-w-none md:max-w-full">
                 {edges.map((edge) => {
                   const src = nodes.find((n) => n.id === edge.source)
                   const tgt = nodes.find((n) => n.id === edge.target)

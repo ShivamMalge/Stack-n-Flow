@@ -270,7 +270,7 @@ export default function DisjointSetVisualizer() {
                         {/* The forest. Sized from the layout's real extents so
                             no node can land outside the drawing area. */}
                         <div className="flex flex-1 min-h-[240px] max-h-[52vh] w-full overflow-auto">
-                            <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="m-auto max-w-none">
+                            <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="m-auto shrink-0 max-w-none">
                                 {view.map((node) => {
                                     if (node.parent === node.id) return null
                                     const from = layout.positions.get(node.id)
