@@ -50,6 +50,7 @@ export const VISUALIZER_COMPONENTS: Record<string, ComponentType> = {
     heap: load(() => import("@/components/visualizers/heap-visualizer")),
     "hash-table": load(() => import("@/components/visualizers/hash-table-visualizer")),
     "binary-search": load(() => import("@/components/visualizers/algorithms/binary-search-visualizer")),
+    expressions: load(() => import("@/components/visualizers/algorithms/expression-visualizer")),
     "quick-sort": load(() => import("@/components/visualizers/algorithms/quick-sort-visualizer")),
     "heap-sort": load(() => import("@/components/visualizers/algorithms/heap-sort-visualizer")),
     "sorting-comparison": load(() => import("@/components/visualizers/algorithms/sorting-comparison")),

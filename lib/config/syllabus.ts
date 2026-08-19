@@ -73,7 +73,7 @@ const BCS304: Course = {
                 { title: "Strings", coverage: "none" },
                 { title: "Stacks", visualizer: "stack", coverage: "full" },
                 { title: "Stacks using dynamic arrays", visualizer: "stack", coverage: "partial", note: "The visualizer grows without bound; it never shows the doubling-and-copy step that is the point of the topic." },
-                { title: "Evaluation and conversion of expressions", operations: "stack", coverage: "partial", note: "Postfix evaluation and parenthesis validation exist on the Operations page. Infix-to-postfix conversion does not, and it is the half exams ask for." },
+                { title: "Evaluation and conversion of expressions", visualizer: "expressions", coverage: "full", note: "Shunting-yard conversion and postfix evaluation, both stepping the stack. Parenthesis validation also lives on the Operations page." },
             ],
         },
         {

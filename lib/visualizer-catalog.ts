@@ -12,6 +12,7 @@ import {
     ListTree,
     Map as MapIcon,
     Network,
+    Parentheses,
     Repeat,
     Search,
     SortAsc,
@@ -180,6 +181,14 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
         description: "Halve the search range on every comparison.",
         icon: Search,
         hasLearnModule: true,
+    },
+    {
+        slug: "expressions",
+        name: "Expression Conversion",
+        shortName: "Expressions",
+        category: "algorithms",
+        description: "Convert infix to postfix with a stack, then evaluate it.",
+        icon: Parentheses,
     },
     {
         slug: "quick-sort",
