@@ -121,7 +121,7 @@ const BCS304: Course = {
             title: "Hashing, Priority Queues, Efficient Binary Search Trees",
             topics: [
                 { title: "Hashing: introduction", visualizer: "hash-table", coverage: "full" },
-                { title: "Static hashing", visualizer: "hash-table", coverage: "partial", note: "Chaining only. Linear probing, quadratic probing and double hashing are unbuilt, and the hash function is not user-settable." },
+                { title: "Static hashing", visualizer: "hash-table", coverage: "full", note: "Chaining, linear probing, quadratic probing and double hashing, with table size and hash base settable and tombstones on delete." },
                 { title: "Dynamic hashing", coverage: "none", note: "Extendible hashing with directory doubling." },
                 { title: "Single-ended priority queues", visualizer: "heap", coverage: "partial", note: "Min-heap and max-heap exist; not framed as a priority queue ADT." },
                 { title: "Double-ended priority queues", coverage: "none", note: "Min-max heaps." },

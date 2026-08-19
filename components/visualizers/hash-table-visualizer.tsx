@@ -1,426 +1,452 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Search, Trash2 } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Play, RotateCcw, Sparkles } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
-import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
+import InlineAlert from "@/components/ui/inline-alert"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import { useAnimationPlayer } from "@/hooks/useAnimationPlayer"
+import { STATE_BOX, type VisualizerState } from "@/lib/visualizer-states"
+import {
+    buildDelete,
+    buildInsert,
+    buildSearch,
+    entryCount,
+    hashOf,
+    loadFactor,
+    makeTable,
+    secondaryHash,
+    STRATEGY_LABELS,
+    type HashSlot,
+    type HashSnapshot,
+    type Strategy,
+    DEFAULT_MULTIPLIER,
+    MAX_TABLE_SIZE,
+    MIN_TABLE_SIZE,
+} from "@/lib/hashing"
 
-const INSERT_CODE = [
-    "def insert(key, value):",
-    "  index = hash(key) % size",
-    "  bucket = table[index]",
-    "  for entry in bucket:",
-    "    if entry.key == key:",
-    "      entry.value = value",
-    "      return",
-    "  bucket.append({key, value})",
-    "  return"
+/**
+ * Shape the Pratyaksha widget bridge sends for HASH_TABLE — an array of chains.
+ * Kept as the controlled input so src/bridge/registry.tsx keeps working; the
+ * component converts it into the richer slot model for rendering.
+ */
+export type BucketEntry = { key: string; value: string; state?: string }
+
+// Line indices match what lib/hashing.ts sets as `activeLine`.
+const CHAINING_CODE = [
+    "def insert(key, value):          # separate chaining",
+    "    i = h(key)                   # home bucket",
+    "    for entry in table[i]:",
+    "        if entry.key == key:",
+    "            entry.value = value  # update in place",
+    "            return",
+    "    table[i].append((key, value))",
 ]
 
-const SEARCH_CODE = [
-    "def search(key):",
-    "  index = hash(key) % size",
-    "  bucket = table[index]",
-    "  for entry in bucket:",
-    "    if entry.key == key:",
-    "      return entry.value",
-    "  return None"
+const PROBING_CODE = [
+    "def insert(key, value):          # open addressing",
+    "    home = h(key)",
+    "    for i in range(m):",
+    "        j = probe(home, i)       # linear / quadratic / double",
+    "        if table[j] is empty or tombstone:",
+    "            table[j] = (key, value)",
+    "            return",
+    "        if table[j].key == key:",
+    "            table[j].value = value",
+    "            return",
+    "    raise TableFull",
 ]
 
-const DELETE_CODE = [
-    "def delete(key):",
-    "  index = hash(key) % size",
-    "  bucket = table[index]",
-    "  for i in range(len(bucket)):",
-    "    if bucket[i].key == key:",
-    "      bucket.pop(i)",
-    "      return True",
-    "  return False"
-]
+const STRATEGIES: Strategy[] = ["chaining", "linear", "quadratic", "double"]
+const SAMPLE_KEYS = ["12", "22", "32", "7", "19"]
+const DEFAULT_SIZE = 10
 
-// ── Types ──────────────────────────────────────────────────────────────────
-
-const TABLE_SIZE = 10
-/** Odd prime multiplier, as used by Java's String.hashCode. */
-const HASH_MULTIPLIER = 31
-
-type BucketEntry = { key: string; value: string; state: "default" | "active" | "found" | "collision" | "deleted" }
-
-type HashFrame = {
-    buckets: BucketEntry[][]
-    probeSequence: number[]
-    hashIndex: number
-    stepDescription: string
-    operation: "insert" | "search" | "delete" | "none"
-    activeLine: number | null
-}
-
-function hashFn(key: string): number {
-    let h = 0
-    for (let i = 0; i < key.length; i++) h = (h * HASH_MULTIPLIER + key.charCodeAt(i)) % TABLE_SIZE
-    return h
-}
-
-function cloneBuckets(b: BucketEntry[][]): BucketEntry[][] {
-    return b.map((bucket) => bucket.map((e) => ({ ...e })))
-}
-
-function resetStates(b: BucketEntry[][]): BucketEntry[][] {
-    return b.map((bucket) => bucket.map((e) => ({ ...e, state: "default" })))
-}
-
-function generateInsert(buckets: BucketEntry[][], key: string, value: string): AnimationFrame<HashFrame>[] {
-    const frames: AnimationFrame<HashFrame>[] = []
-    const b = cloneBuckets(buckets)
-    const hi = hashFn(key)
-
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}`, operation: "insert", activeLine: 1 }, description: `hash = ${hi}` })
-
-    // Check if key already exists (update)
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Checking if key already exists...`, operation: "insert", activeLine: 3 }, description: `check` })
-    const existing = b[hi].findIndex((e) => e.key === key && e.state !== "deleted")
-    if (existing !== -1) {
-        b[hi][existing].state = "active"
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" already exists at bucket ${hi}. Updating value to "${value}".`, operation: "insert", activeLine: 5 }, description: "Update" })
-        b[hi][existing].value = value; b[hi][existing].state = "found"
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Updated! Bucket ${hi}: "${key}" → "${value}"`, operation: "insert", activeLine: 6 }, description: "Done" })
-        return frames
-    }
-
-    // Check for collision
-    if (b[hi].length > 0) {
-        b[hi].forEach((e) => { e.state = "collision" })
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Collision at bucket ${hi}! Appending to chain.`, operation: "insert", activeLine: 7 }, description: "Collision!" })
-        b[hi].forEach((e) => { e.state = "default" })
-    }
-
-    b[hi].push({ key, value, state: "active" })
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Chained insertion: added "${key}"→"${value}" at bucket ${hi}`, operation: "insert", activeLine: 7 }, description: "Inserted" })
-
-    b[hi][b[hi].length - 1].state = "default"
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Insert done.`, operation: "insert", activeLine: 8 }, description: "Done" })
-    return frames
-}
-
-function generateSearch(buckets: BucketEntry[][], key: string): AnimationFrame<HashFrame>[] {
-    const frames: AnimationFrame<HashFrame>[] = []
-    const b = cloneBuckets(buckets)
-    const hi = hashFn(key)
-
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}. Looking in bucket ${hi}...`, operation: "search", activeLine: 1 }, description: `hash = ${hi}` })
-
-    if (b[hi].length === 0) {
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Bucket ${hi} is empty. Key "${key}" not found.`, operation: "search", activeLine: 7 }, description: "Not found" })
-        return frames
-    }
-
-    for (let i = 0; i < b[hi].length; i++) {
-        b[hi][i].state = "active"
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Checking entry ${i} in bucket ${hi}...`, operation: "search", activeLine: 3 }, description: `check` })
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `"${b[hi][i].key}" === "${key}"?`, operation: "search", activeLine: 4 }, description: `match?` })
-        if (b[hi][i].key === key) {
-            b[hi][i].state = "found"
-            frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Found! "${key}" → "${b[hi][i].value}"`, operation: "search", activeLine: 5 }, description: `Found` })
-            return frames
-        }
-        b[hi][i].state = "default"
-    }
-
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" not in bucket ${hi}. Not found.`, operation: "search", activeLine: 7 }, description: "Not found" })
-    return frames
-}
-
-function generateDelete(buckets: BucketEntry[][], key: string): AnimationFrame<HashFrame>[] {
-    const frames: AnimationFrame<HashFrame>[] = []
-    const b = cloneBuckets(buckets)
-    const hi = hashFn(key)
-
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `hash("${key}") = ${hi}. Looking for key to delete...`, operation: "delete", activeLine: 1 }, description: `hash = ${hi}` })
-
-    const idx = b[hi].findIndex((e) => e.key === key)
-    if (idx === -1) {
-        frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Key "${key}" not found in bucket ${hi}. Nothing to delete.`, operation: "delete", activeLine: 8 }, description: "Not found" })
-        return frames
-    }
-
-    b[hi][idx].state = "active"
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Found "${key}" in bucket ${hi}. Removing...`, operation: "delete", activeLine: 4 }, description: "Found" })
-    b[hi][idx].state = "deleted"
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Deleted "${key}" from bucket ${hi}.`, operation: "delete", activeLine: 5 }, description: "Deleted" })
-    b[hi].splice(idx, 1)
-    frames.push({ snapshot: { buckets: cloneBuckets(b), probeSequence: [hi], hashIndex: hi, stepDescription: `Done.`, operation: "delete", activeLine: 6 }, description: "Done" })
-    return frames
-}
-
-// ── Main Component ──────────────────────────────────────────────────────────
-
-const ENTRY_BG: Record<BucketEntry["state"], string> = {
-    default: "bg-muted/30 border-border",
-    active: "bg-yellow-500/20 border-yellow-500",
-    found: "bg-green-500/20 border-green-500",
-    collision: "bg-orange-500/20 border-orange-500",
-    deleted: "bg-red-500/20 border-red-500 opacity-60 line-through",
+/** Bridge input -> slot model. Unknown states fall back to the neutral one. */
+function fromBuckets(buckets: BucketEntry[][]): HashSlot[] {
+    return buckets.map((chain) => ({
+        entries: chain.map((e) => ({ key: e.key, value: e.value, state: "default" as VisualizerState })),
+        state: "default" as VisualizerState,
+        tombstone: false,
+    }))
 }
 
 export default function HashTableVisualizer({
     controlledBuckets,
 }: {
-    controlledBuckets?: BucketEntry[][];
+    controlledBuckets?: BucketEntry[][]
 } = {}) {
-    const [internalBuckets, setBuckets] = useState<BucketEntry[][]>(Array.from({ length: TABLE_SIZE }, () => []))
-    const buckets = controlledBuckets !== undefined ? controlledBuckets : internalBuckets;
+    const isControlled = controlledBuckets !== undefined
+
+    const [size, setSize] = useState(DEFAULT_SIZE)
+    const [strategy, setStrategy] = useState<Strategy>("chaining")
+    const [multiplier, setMultiplier] = useState(DEFAULT_MULTIPLIER)
+    const [slots, setSlots] = useState<HashSlot[]>(() => makeTable(DEFAULT_SIZE))
+    const [operation, setOperation] = useState<"insert" | "search" | "delete">("insert")
     const [keyInput, setKeyInput] = useState("")
     const [valueInput, setValueInput] = useState("")
-    const [searchKey, setSearchKey] = useState("")
-    const [operation, setOperation] = useState<"insert" | "search" | "delete">("insert")
-    const [steps, setSteps] = useState<string[]>([])
-    const [highlightIndex, setHighlightIndex] = useState(-1)
+    const [error, setError] = useState<string | null>(null)
+    const [result, setResult] = useState<string | null>(null)
 
-    const onFrameChange = useCallback((snap: HashFrame) => {
-        setBuckets(snap.buckets)
-        setHighlightIndex(snap.hashIndex)
-    }, [])
-    const player = useAnimationPlayer<HashFrame>(onFrameChange)
+    const onFrameChange = useCallback((snap: HashSnapshot) => setSlots(snap.slots), [])
+    const player = useAnimationPlayer<HashSnapshot>(onFrameChange)
 
-    const currentBuckets = player.currentSnapshot?.buckets ?? buckets
-    const stepDesc = player.currentSnapshot?.stepDescription ?? ""
-    const hl = player.currentSnapshot?.hashIndex ?? highlightIndex
+    const options = { strategy, multiplier }
+    const base = isControlled ? fromBuckets(controlledBuckets) : slots
+    const view = player.currentSnapshot?.slots ?? base
+    const probes = player.currentSnapshot?.probes ?? 0
+    const home = player.currentSnapshot?.home ?? -1
 
-    // Buckets the run currently loaded in the player will leave behind. They are
-    // committed to the base state only once the player reports the run genuinely
-    // finished; a wall-clock timer would fire regardless of the user pausing,
-    // stepping, scrubbing or changing speed and clobber the display.
-    const pendingFinalRef = useRef<BucketEntry[][] | null>(null)
+    const preview = useMemo(
+        () => (keyInput.trim() ? hashOf(keyInput.trim(), view.length, multiplier) : null),
+        [keyInput, view.length, multiplier],
+    )
 
-    useEffect(() => {
-        if (!player.isComplete) return
-        const finalBuckets = pendingFinalRef.current
-        if (!finalBuckets) return
-        pendingFinalRef.current = null   // commit once per run, never on re-render
-        setBuckets(resetStates(finalBuckets))
-    }, [player.isComplete])
-
-    const handleInsert = () => {
-        if (!keyInput || player.isPlaying) return
-        const frames = generateInsert(buckets, keyInput.trim(), valueInput.trim() || keyInput.trim())
-        // Base state is updated from the effect above once the run completes
-        pendingFinalRef.current = frames[frames.length - 1].snapshot.buckets
-        setSteps(frames.map((f) => f.description))
-        player.loadFrames(frames)
-        setTimeout(() => player.play(), 50)
-        setKeyInput(""); setValueInput("")
+    const reset = (nextSize = size) => {
+        player.clear()
+        setSlots(makeTable(nextSize))
+        setError(null)
+        setResult(null)
     }
 
-    const handleSearch = () => {
-        if (!searchKey || player.isPlaying) return
-        const frames = generateSearch(buckets, searchKey.trim())
-        pendingFinalRef.current = null   // a search never mutates the table
-        setSteps(frames.map((f) => f.description))
-        player.loadFrames(frames)
-        setTimeout(() => player.play(), 50)
-    }
+    const run = () => {
+        const key = keyInput.trim()
+        const build =
+            operation === "insert"
+                ? () => buildInsert(base, key, valueInput.trim() || key, options)
+                : operation === "search"
+                    ? () => buildSearch(base, key, options)
+                    : () => buildDelete(base, key, options)
 
-    const handleDelete = () => {
-        if (!searchKey || player.isPlaying) return
-        const frames = generateDelete(buckets, searchKey.trim())
-        pendingFinalRef.current = frames[frames.length - 1].snapshot.buckets
-        setSteps(frames.map((f) => f.description))
-        player.loadFrames(frames)
+        const outcome = build()
+        if (outcome.error) {
+            setError(outcome.error)
+            return
+        }
+        setError(null)
+        setResult(outcome.result)
+        setSlots(outcome.slots)
+        player.loadFrames(outcome.frames)
         setTimeout(() => player.play(), 50)
-    }
-
-    const handleClear = () => {
-        if (player.isPlaying) return
-        pendingFinalRef.current = null
-        setBuckets(Array.from({ length: TABLE_SIZE }, () => []))
-        setSteps([]); player.clear(); setHighlightIndex(-1)
     }
 
     const loadSample = () => {
-        if (player.isPlaying) return
-        pendingFinalRef.current = null
-        const pairs = [["apple", "fruit"], ["banana", "fruit"], ["car", "vehicle"], ["dog", "animal"], ["cat", "animal"]]
-        const b: BucketEntry[][] = Array.from({ length: TABLE_SIZE }, () => [])
-        for (const [k, v] of pairs) {
-            const hi = hashFn(k)
-            b[hi] = [...b[hi], { key: k, value: v, state: "default" }]
+        let state = makeTable(size)
+        for (const key of SAMPLE_KEYS) {
+            const outcome = buildInsert(state, key, key, options)
+            if (!outcome.error) state = outcome.slots
         }
-        setBuckets(b); setSteps([]); player.clear()
+        player.clear()
+        setSlots(state)
+        setError(null)
+        setResult(null)
     }
 
-  return (
-    <VisualizerLayout
-      controls={
-        <div className="space-y-6">
-          <Card>
-              <CardHeader>
-                  <CardTitle>Hash Table Operations</CardTitle>
-                  <CardDescription>Insert, search, or delete key-value pairs</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-md mb-4">
-                      <p className="text-xs text-blue-400">
-                          <strong>How it works:</strong> Keys are hashed into an index [0-9].
-                          If multiple keys map to the same index, they are stored in a <strong>chain</strong> (linked list) inside that bucket.
-                      </p>
-                  </div>
+    const changeStrategy = (next: string) => {
+        setStrategy(next as Strategy)
+        reset()
+    }
 
-                  <div className="flex gap-2">
-                      {(["insert", "search", "delete"] as const).map((op) => (
-                          <Button key={op} variant={operation === op ? "default" : "outline"}
-                              onClick={() => setOperation(op)} disabled={player.isPlaying} className="flex-1 capitalize">
-                              {op}
-                          </Button>
-                      ))}
-                  </div>
+    const changeSize = (raw: string) => {
+        const n = Number(raw)
+        if (!Number.isInteger(n) || n < MIN_TABLE_SIZE || n > MAX_TABLE_SIZE) return
+        setSize(n)
+        reset(n)
+    }
 
-                  {operation === "insert" && (
-                      <div className="space-y-3">
-                          <div>
-                              <label htmlFor="ht-key" className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Identifier (Key)</label>
-                              <Input id="ht-key" placeholder="e.g. 'name' or 'id'" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
-                                  onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
-                          </div>
-                          <div>
-                              <label htmlFor="ht-value" className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Data (Value)</label>
-                              <Input id="ht-value" placeholder="e.g. 'John' or '123'" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
-                                  onKeyDown={(e) => e.key === "Enter" && handleInsert()} disabled={player.isPlaying} />
-                          </div>
-                          <Button onClick={handleInsert} disabled={player.isPlaying || !keyInput} className="w-full">
-                              <Plus className="mr-2 h-4 w-4" /> Add to Table
-                          </Button>
-                      </div>
-                  )}
+    const isChaining = strategy === "chaining"
+    const factor = loadFactor(view)
 
-                  {(operation === "search" || operation === "delete") && (
-                      <div className="space-y-3">
-                          <div>
-                              <label htmlFor="ht-search" className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Key to find</label>
-                              <Input id="ht-search" placeholder="Enter the key" value={searchKey} onChange={(e) => setSearchKey(e.target.value)}
-                                  onKeyDown={(e) => e.key === "Enter" && (operation === "search" ? handleSearch() : handleDelete())}
-                                  disabled={player.isPlaying} />
-                          </div>
-                          <Button onClick={operation === "search" ? handleSearch : handleDelete}
-                              disabled={player.isPlaying || !searchKey} className="w-full"
-                              variant={operation === "delete" ? "destructive" : "default"}>
-                              {operation === "search" ? <><Search className="mr-2 h-4 w-4" /> Search Key</> : <><Trash2 className="mr-2 h-4 w-4" /> Remove Key</>}
-                          </Button>
-                      </div>
-                  )}
-
-                  <div className="flex gap-2 pt-2">
-                      <Button onClick={loadSample} disabled={player.isPlaying} variant="outline" className="flex-1 text-xs">Load Sample Data</Button>
-                      <Button onClick={handleClear} disabled={player.isPlaying} variant="ghost" className="text-xs">Clear Table</Button>
-                  </div>
-              </CardContent>
-          </Card>
-        </div>
-      }
-      visualization={
-        <Card className="h-full">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-base">Bucket Array (Chaining)</CardTitle>
-                <CardDescription>Index = hash(key) % {TABLE_SIZE}</CardDescription>
+    const visualization = (
+        <Card className="flex flex-col h-full">
+            <CardHeader className="shrink-0">
+                <CardTitle>Bucket Array</CardTitle>
+                <CardDescription>
+                    {isControlled
+                        ? "Driven from the notebook"
+                        : `${STRATEGY_LABELS[strategy]} · ${entryCount(view)} of ${view.length} slots used · load factor ${factor.toFixed(2)}`}
+                </CardDescription>
             </CardHeader>
-            <CardContent>
-                <div className="space-y-1.5 max-h-[400px] md:max-h-none overflow-y-auto px-1 pt-1">
-                    {currentBuckets.map((bucket, i) => (
-                        <div key={i}
-                            className={`flex items-start md:items-center gap-2 p-1.5 rounded-md border transition-all duration-300 ${i === hl ? "ring-2 ring-blue-500 bg-blue-500/10 border-blue-500" : "border-transparent bg-muted/5"}`}>
-                            {/* Index */}
-                            <div className="w-8 shrink-0 text-right pt-1 md:pt-0">
-                                <span className="text-xs font-mono font-bold text-muted-foreground">[{i}]</span>
-                            </div>
-                            {/* Bucket cell */}
-                            <div className="w-8 h-8 shrink-0 border border-border bg-card shadow-sm rounded flex items-center justify-center">
-                                <span className="text-xs text-muted-foreground">{bucket.length === 0 ? "∅" : "→"}</span>
-                            </div>
-                            {/* Entries */}
-                            <div className="flex gap-1.5 flex-wrap min-w-0">
-                                {bucket.map((entry, j) => (
-                                    <div key={j}
-                                        className={`flex items-center gap-1.5 border rounded-md shadow-sm px-2.5 py-1 text-xs md:text-xs transition-all duration-200 whitespace-nowrap ${ENTRY_BG[entry.state]}`}>
-                                        <span className="font-semibold">{entry.key}</span>
-                                        <span className="text-muted-foreground opacity-30">:</span>
-                                        <span className="truncate max-w-[80px] md:max-w-[120px]">{entry.value}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
+
+            <CardContent className="flex flex-col flex-1 min-h-0 gap-3 border-t pt-4 pb-4 bg-muted/5">
+                {!isControlled && (
+                    <p className="shrink-0 rounded-md border bg-muted/30 px-3 py-1.5 text-center font-mono text-xs">
+                        {preview
+                            ? preview.working
+                            : `h(key) = key mod ${view.length} for numbers, polynomial base ${multiplier} otherwise`}
+                        {!isChaining && preview && strategy === "double" &&
+                            ` · step h₂ = ${secondaryHash(keyInput.trim(), view.length, multiplier)}`}
+                    </p>
+                )}
+
+                <div className="flex-1 min-h-0 overflow-auto pr-1">
+                    <ul className="space-y-1">
+                        {view.map((slot, index) => (
+                            <li key={index} className="flex items-center gap-2">
+                                <span
+                                    className={`w-9 shrink-0 text-right font-mono text-xs ${index === home ? "font-bold text-primary" : "text-muted-foreground"}`}
+                                >
+                                    [{index}]
+                                </span>
+                                <div
+                                    className={`flex flex-1 min-w-0 items-center gap-1.5 rounded-md border-2 px-2 py-1 transition-all duration-300 ${STATE_BOX[slot.state]}`}
+                                >
+                                    {slot.entries.length === 0 ? (
+                                        <span className="font-mono text-xs text-muted-foreground">
+                                            {slot.tombstone ? "⌫ tombstone" : "∅"}
+                                        </span>
+                                    ) : (
+                                        slot.entries.map((entry, ei) => (
+                                            <span
+                                                key={`${entry.key}-${ei}`}
+                                                className={`flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-xs transition-all duration-300 ${STATE_BOX[entry.state]}`}
+                                            >
+                                                <strong>{entry.key}</strong>
+                                                <span className="text-muted-foreground">:</span>
+                                                {entry.value}
+                                            </span>
+                                        ))
+                                    )}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
 
-                {/* Legend */}
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t text-xs">
-                    {([["bg-yellow-500/30 border-yellow-500", "Checking"], ["bg-green-500/30 border-green-500", "Success"], ["bg-orange-500/30 border-orange-500", "Collision"], ["bg-red-500/30 border-red-500", "Deleted"]] as const).map(([cls, lbl]) => (
-                        <div key={lbl} className="flex items-center gap-1.5">
-                            <div className={`w-3 h-3 rounded-sm border ${cls}`} />
-                            <span className="text-muted-foreground">{lbl}</span>
+                {player.currentDescription && (
+                    <p className="shrink-0 rounded-md border bg-muted/30 px-3 py-2 text-center text-xs md:text-sm font-medium text-primary">
+                        {player.currentDescription}
+                    </p>
+                )}
+
+                <div className="shrink-0 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t pt-3 text-xs">
+                    {([
+                        ["default", "Free"],
+                        ["comparing", "Probing"],
+                        ["inserted", "Placed"],
+                        ["warning", "Collision"],
+                        ["removed", "Deleted"],
+                    ] as const).map(([state, label]) => (
+                        <div
+                            key={label}
+                            className="flex items-center gap-1.5 rounded border border-border bg-background px-2 py-0.5"
+                        >
+                            <div className={`h-2.5 w-2.5 rounded-sm border ${STATE_BOX[state]}`} />
+                            <span className="whitespace-nowrap text-muted-foreground">{label}</span>
                         </div>
                     ))}
                 </div>
             </CardContent>
         </Card>
-      }
-      code={
-        <CodePanel
-            code={player.currentSnapshot?.operation === "insert" ? INSERT_CODE : player.currentSnapshot?.operation === "delete" ? DELETE_CODE : SEARCH_CODE}
-            activeLine={player.currentSnapshot?.activeLine ?? null}
-            title={player.currentSnapshot?.operation === "insert" ? "def insert(key, value):" : player.currentSnapshot?.operation === "delete" ? "def delete(key):" : "def search(key):"}
+    )
+
+    // The notebook bridge renders the table alone, with no controls to drive it.
+    if (isControlled) return <VisualizerLayout mini visualization={visualization} />
+
+    return (
+        <VisualizerLayout
+            controls={
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Hash Table Operations</CardTitle>
+                        <CardDescription>Insert, search or delete, and watch the collisions resolve</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-1.5">
+                            <Label>Collision resolution</Label>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                {STRATEGIES.map((option) => (
+                                    <Button
+                                        key={option}
+                                        size="sm"
+                                        variant={strategy === option ? "default" : "outline"}
+                                        onClick={() => changeStrategy(option)}
+                                        disabled={player.isPlaying}
+                                        className="text-xs"
+                                    >
+                                        {STRATEGY_LABELS[option]}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="ht-size">Table size (m)</Label>
+                                <Input
+                                    id="ht-size"
+                                    type="number"
+                                    min={MIN_TABLE_SIZE}
+                                    max={MAX_TABLE_SIZE}
+                                    value={size}
+                                    onChange={(e) => changeSize(e.target.value)}
+                                    disabled={player.isPlaying}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="ht-mult">Hash base</Label>
+                                <Input
+                                    id="ht-mult"
+                                    type="number"
+                                    min={2}
+                                    max={97}
+                                    value={multiplier}
+                                    onChange={(e) => {
+                                        const n = Number(e.target.value)
+                                        if (Number.isInteger(n) && n >= 2 && n <= 97) setMultiplier(n)
+                                    }}
+                                    disabled={player.isPlaying}
+                                />
+                            </div>
+                        </div>
+
+                        <Tabs value={operation} onValueChange={(v) => setOperation(v as typeof operation)}>
+                            <TabsList className="grid grid-cols-3 w-full">
+                                <TabsTrigger value="insert">Insert</TabsTrigger>
+                                <TabsTrigger value="search">Search</TabsTrigger>
+                                <TabsTrigger value="delete">Delete</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+                        <div className="flex gap-2">
+                            <Input
+                                value={keyInput}
+                                onChange={(e) => setKeyInput(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && run()}
+                                placeholder="Key, e.g. 12"
+                                aria-label="Key"
+                                className="font-mono"
+                                disabled={player.isPlaying}
+                            />
+                            {operation === "insert" && (
+                                <Input
+                                    value={valueInput}
+                                    onChange={(e) => setValueInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && run()}
+                                    placeholder="Value"
+                                    aria-label="Value"
+                                    className="font-mono"
+                                    disabled={player.isPlaying}
+                                />
+                            )}
+                            <Button onClick={run} disabled={player.isPlaying}>
+                                <Play className="mr-2 h-4 w-4" />
+                                Run
+                            </Button>
+                        </div>
+
+                        <InlineAlert message={error} />
+
+                        <div className="flex gap-2">
+                            <Button variant="secondary" size="sm" onClick={loadSample} disabled={player.isPlaying}>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Sample keys
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => reset()} disabled={player.isPlaying}>
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Clear
+                            </Button>
+                        </div>
+
+                        <div className="border-t pt-4">
+                            <AnimationControls
+                                currentFrame={player.currentFrame}
+                                totalFrames={player.totalFrames}
+                                isPlaying={player.isPlaying}
+                                isPaused={player.isPaused}
+                                isComplete={player.isComplete}
+                                speed={player.speed}
+                                onPlay={player.play}
+                                onPause={player.pause}
+                                onStepForward={player.stepForward}
+                                onStepBackward={player.stepBackward}
+                                onReset={player.reset}
+                                onSpeedChange={player.setSpeed}
+                                onFrameChange={player.goToFrame}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 border-t pt-4 text-center">
+                            {[
+                                ["Entries", `${entryCount(view)}`],
+                                ["Load factor", factor.toFixed(2)],
+                                ["Probes", `${probes}`],
+                            ].map(([label, value]) => (
+                                <div key={label}>
+                                    <p className="font-mono text-lg font-bold">{value}</p>
+                                    <p className="text-xs text-muted-foreground">{label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {result && (
+                            <div className="rounded-md border bg-muted/30 p-3">
+                                <p className="font-mono text-sm font-bold break-all">{result}</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            }
+            visualization={visualization}
+            code={
+                <CodePanel
+                    code={isChaining ? CHAINING_CODE : PROBING_CODE}
+                    activeLine={player.currentSnapshot?.activeLine ?? null}
+                    title={STRATEGY_LABELS[strategy]}
+                />
+            }
+            docs={
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Learning</CardTitle>
+                        <CardDescription>Static hashing and collisions</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                        <p>
+                            A hash function maps a key to a slot. Two keys landing in the same slot is a{" "}
+                            <strong>collision</strong>, and it is not an edge case — with m slots you can expect
+                            one after roughly √m insertions.
+                        </p>
+                        <div>
+                            <p className="mb-1 font-medium">The four strategies</p>
+                            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                                <li>
+                                    <strong>Separate chaining</strong> — each slot holds a list. Load factor can
+                                    exceed 1, and deletion just unlinks.
+                                </li>
+                                <li>
+                                    <strong>Linear probing</strong> — try h+1, h+2, … Simple, but occupied runs
+                                    merge into longer ones, called primary clustering.
+                                </li>
+                                <li>
+                                    <strong>Quadratic probing</strong> — try h+1², h+2², … It breaks up clusters,
+                                    but the sequence does not reach every slot, so an insert can fail while the
+                                    table still has room. Try it: size 10, insert 0, 10, 20, 30, 40, 50, then 60.
+                                </li>
+                                <li>
+                                    <strong>Double hashing</strong> — step by a second hash of the key, so two
+                                    keys that collide rarely follow the same path.
+                                </li>
+                            </ul>
+                        </div>
+                        <p>
+                            <strong>Deletion is the subtle one.</strong> Under open addressing you cannot simply
+                            empty a slot: any key placed by probing <em>through</em> it would become unreachable.
+                            The slot is marked with a tombstone instead — occupied for searching, free for
+                            inserting.
+                        </p>
+                        <p>
+                            <strong>Complexity:</strong> O(1) average for all three operations, O(n) worst case
+                            when every key collides. The load factor is what keeps you away from the worst case.
+                        </p>
+                    </CardContent>
+                </Card>
+            }
         />
-      }
-      docs={
-        <div className="space-y-4">
-          <Card>
-              <CardContent className="pt-6 space-y-4">
-                  {player.totalFrames > 0 && (
-                      <AnimationControls
-                          currentFrame={player.currentFrame} totalFrames={player.totalFrames}
-                          isPlaying={player.isPlaying} isPaused={player.isPaused} isComplete={player.isComplete}
-                          speed={player.speed}
-                          onPlay={player.play} onPause={player.pause}
-                          onStepForward={player.stepForward} onStepBackward={player.stepBackward}
-                          onReset={player.reset} onSpeedChange={player.setSpeed} onFrameChange={player.goToFrame}
-                      />
-                  )}
-
-                  {stepDesc && <p className="text-xs text-center bg-muted/40 p-2.5 rounded-md text-muted-foreground italic">&quot;{stepDesc}&quot;</p>}
-
-                  {/* Steps */}
-                  <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          Execution Trace
-                      </h3>
-                      <div className="bg-muted/30 rounded-md p-3 h-40 overflow-y-auto border border-border/50">
-                          {steps.length > 0 ? (
-                              <ol className="pl-4 list-decimal space-y-1">
-                                  {steps.map((s, i) => (
-                                      <li key={i} className={`text-[11px] leading-tight ${i === player.currentFrame ? "text-primary font-bold" : i < player.currentFrame ? "text-muted-foreground/70 line-through" : "text-muted-foreground"}`}>{s}</li>
-                                  ))}
-                              </ol>
-                          ) : <p className="text-[11px] text-muted-foreground italic">Operation required to see execution trace...</p>}
-                      </div>
-                  </div>
-
-                  {/* Complexity */}
-                  <div className="text-xs text-muted-foreground border-t pt-2.5 grid grid-cols-2 gap-y-1.5">
-                      <div className="flex justify-between pr-4"><span>Average Case:</span> <span className="font-mono text-primary font-bold">O(1)</span></div>
-                      <div className="flex justify-between"><span>Space Complexity:</span> <span className="font-mono text-primary font-bold">O(n)</span></div>
-                      <div className="col-span-2 flex justify-between border-t border-dashed pt-1.5 mt-1">
-                          <span>Worst Case (all collisions):</span>
-                          <span className="font-mono text-red-500 font-bold">O(n)</span>
-                      </div>
-                  </div>
-              </CardContent>
-          </Card>
-        </div>
-      }
-    />
-  )
+    )
 }

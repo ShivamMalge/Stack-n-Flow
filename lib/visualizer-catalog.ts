@@ -179,7 +179,7 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
         slug: "hash-table",
         name: "Hash Table",
         category: "data-structures",
-        description: "Keys hashed to buckets, with chaining on collision.",
+        description: "Chaining, linear and quadratic probing, and double hashing.",
         icon: Table2,
     },
     {
