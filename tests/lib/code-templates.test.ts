@@ -12,7 +12,9 @@ import {
     BST_INSERT,
     MERGE_SORT,
     QUICK_SORT,
-    TREE_TRAVERSAL,
+    IN_ORDER,
+    PRE_ORDER,
+    POST_ORDER,
 } from "@/lib/templates/algorithms"
 
 /** Every template in the app, with the steps its visualizer actually emits. */
@@ -22,7 +24,9 @@ const TEMPLATES: { name: string; template: CodeTemplate; steps: number[] }[] = [
     { name: "binary search", template: BINARY_SEARCH, steps: [1, 2, 3, 4, 5, 6, 7] },
     { name: "quick sort", template: QUICK_SORT, steps: [1, 2, 3, 4, 5] },
     { name: "merge sort", template: MERGE_SORT, steps: [1, 2, 3, 4, 5] },
-    { name: "tree traversal", template: TREE_TRAVERSAL, steps: [1, 2, 3] },
+    { name: "in-order", template: IN_ORDER, steps: [1, 2, 3] },
+    { name: "pre-order", template: PRE_ORDER, steps: [1, 2, 3] },
+    { name: "post-order", template: POST_ORDER, steps: [1, 2, 3] },
     { name: "bst insert", template: BST_INSERT, steps: [1, 2, 3, 4] },
 ]
 

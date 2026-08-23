@@ -321,56 +321,43 @@ fn merge(left: &[i32], right: &[i32]) -> Vec<i32> {
 }
 
 /**
- * In-order, pre-order and post-order in one template, since the visualizer
- * animates whichever the user selected.
+ * The three depth-first traversals. Each is the same three actions in a
+ * different order, which is exactly the point, so they are separate templates
+ * rather than one with a comment underneath.
+ *
  * Steps: 1 recurse left, 2 visit, 3 recurse right.
  */
-export const TREE_TRAVERSAL: CodeTemplate = {
-    title: "Tree traversal",
+export const IN_ORDER: CodeTemplate = {
+    title: "In-order traversal",
     sources: {
         python: src(`
 def in_order(node):
-    if node is None: return
+    if node is None:
+        return
     in_order(node.left)
     visit(node)
-    in_order(node.right)
-
-# pre_order:  visit, left, right
-# post_order: left, right, visit`, ". . 1 2 3 . . ."),
-
+    in_order(node.right)`, ". . . 1 2 3"),
         c: src(`
 void in_order(Node *node) {
     if (node == NULL) return;
     in_order(node->left);
     visit(node);
     in_order(node->right);
-}
-
-/* pre_order:  visit, left, right
-   post_order: left, right, visit */`, ". . 1 2 3 . . . ."),
-
+}`, ". . 1 2 3 ."),
         cpp: src(`
 void in_order(Node* node) {
     if (!node) return;
     in_order(node->left);
     visit(node);
     in_order(node->right);
-}
-
-// pre_order:  visit, left, right
-// post_order: left, right, visit`, ". . 1 2 3 . . . ."),
-
+}`, ". . 1 2 3 ."),
         java: src(`
 void inOrder(Node node) {
     if (node == null) return;
     inOrder(node.left);
     visit(node);
     inOrder(node.right);
-}
-
-// preOrder:  visit, left, right
-// postOrder: left, right, visit`, ". . 1 2 3 . . . ."),
-
+}`, ". . 1 2 3 ."),
         rust: src(`
 fn in_order(node: &Option<Box<Node>>) {
     if let Some(n) = node {
@@ -378,11 +365,99 @@ fn in_order(node: &Option<Box<Node>>) {
         visit(n);
         in_order(&n.right);
     }
+}`, ". . 1 2 3 . ."),
+    },
 }
 
-// pre_order:  visit, left, right
-// post_order: left, right, visit`, ". . 1 2 3 . . . . ."),
+export const PRE_ORDER: CodeTemplate = {
+    title: "Pre-order traversal",
+    sources: {
+        python: src(`
+def pre_order(node):
+    if node is None:
+        return
+    visit(node)
+    pre_order(node.left)
+    pre_order(node.right)`, ". . . 2 1 3"),
+        c: src(`
+void pre_order(Node *node) {
+    if (node == NULL) return;
+    visit(node);
+    pre_order(node->left);
+    pre_order(node->right);
+}`, ". . 2 1 3 ."),
+        cpp: src(`
+void pre_order(Node* node) {
+    if (!node) return;
+    visit(node);
+    pre_order(node->left);
+    pre_order(node->right);
+}`, ". . 2 1 3 ."),
+        java: src(`
+void preOrder(Node node) {
+    if (node == null) return;
+    visit(node);
+    preOrder(node.left);
+    preOrder(node.right);
+}`, ". . 2 1 3 ."),
+        rust: src(`
+fn pre_order(node: &Option<Box<Node>>) {
+    if let Some(n) = node {
+        visit(n);
+        pre_order(&n.left);
+        pre_order(&n.right);
+    }
+}`, ". . 2 1 3 . ."),
     },
+}
+
+export const POST_ORDER: CodeTemplate = {
+    title: "Post-order traversal",
+    sources: {
+        python: src(`
+def post_order(node):
+    if node is None:
+        return
+    post_order(node.left)
+    post_order(node.right)
+    visit(node)`, ". . . 1 3 2"),
+        c: src(`
+void post_order(Node *node) {
+    if (node == NULL) return;
+    post_order(node->left);
+    post_order(node->right);
+    visit(node);
+}`, ". . 1 3 2 ."),
+        cpp: src(`
+void post_order(Node* node) {
+    if (!node) return;
+    post_order(node->left);
+    post_order(node->right);
+    visit(node);
+}`, ". . 1 3 2 ."),
+        java: src(`
+void postOrder(Node node) {
+    if (node == null) return;
+    postOrder(node.left);
+    postOrder(node.right);
+    visit(node);
+}`, ". . 1 3 2 ."),
+        rust: src(`
+fn post_order(node: &Option<Box<Node>>) {
+    if let Some(n) = node {
+        post_order(&n.left);
+        post_order(&n.right);
+        visit(n);
+    }
+}`, ". . 1 3 2 . ."),
+    },
+}
+
+/** Keyed by the visualizer's traversal select value. */
+export const TRAVERSALS: Record<string, CodeTemplate> = {
+    inorder: IN_ORDER,
+    preorder: PRE_ORDER,
+    postorder: POST_ORDER,
 }
 
 /**

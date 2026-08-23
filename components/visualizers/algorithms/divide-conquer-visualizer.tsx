@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RotateCcw, Plus, ArrowDown, ArrowUp, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import { MERGE_SORT } from "@/lib/templates/algorithms"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
@@ -26,6 +29,8 @@ type DivideConquerFrame = {
   dividePhase: { arrays: number[][]; level: number }[]
   mergePhase: { arrays: number[][]; level: number }[]
   stepDescription: string
+  /** Step in the code panel; see MERGE_SORT in lib/templates/algorithms.ts. */
+  activeStep: number
 }
 
 export default function DivideConquerVisualizer() {
@@ -115,6 +120,7 @@ export default function DivideConquerVisualizer() {
         dividePhase: [],
         mergePhase: [],
         stepDescription: "Starting Merge Sort",
+        activeStep: 1,
       },
       description: "Starting Merge Sort algorithm",
     })
@@ -143,6 +149,7 @@ export default function DivideConquerVisualizer() {
           dividePhase: dividePhaseArrays.map((d) => ({ ...d, arrays: d.arrays.map((a) => [...a]) })),
           mergePhase: mergePhaseArrays.map((m) => ({ ...m, arrays: m.arrays.map((a) => [...a]) })),
           stepDescription: desc,
+          activeStep: 1,
         },
         description: desc,
       })
@@ -168,6 +175,7 @@ export default function DivideConquerVisualizer() {
           dividePhase: dividePhaseArrays.map((d) => ({ ...d, arrays: d.arrays.map((a) => [...a]) })),
           mergePhase: mergePhaseArrays.map((m) => ({ ...m, arrays: m.arrays.map((a) => [...a]) })),
           stepDescription: desc,
+          activeStep: 3,
         },
         description: desc,
       })
@@ -204,6 +212,7 @@ export default function DivideConquerVisualizer() {
           dividePhase: dividePhaseArrays.map((d) => ({ ...d, arrays: d.arrays.map((a) => [...a]) })),
           mergePhase: mergePhaseArrays.map((m) => ({ ...m, arrays: m.arrays.map((a) => [...a]) })),
           stepDescription: mergedDesc,
+        activeStep: 4,
         },
         description: mergedDesc,
       })
@@ -219,6 +228,7 @@ export default function DivideConquerVisualizer() {
         dividePhase: [],
         mergePhase: [],
         stepDescription: "Array is now sorted!",
+        activeStep: 5,
       },
       description: "Array is now sorted!",
     })
@@ -231,238 +241,243 @@ export default function DivideConquerVisualizer() {
   const visibleStepIndex = player.currentFrame
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Divide &amp; Conquer — Merge Sort</CardTitle>
-            <CardDescription>Create an array and sort it using the Merge Sort algorithm</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex space-x-2">
-                <Input
-                  type="number"
-                  placeholder="Enter a value to add"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
-                  disabled={player.isPlaying}
-                />
-                <Button onClick={handleAddElement} disabled={player.isPlaying}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
+    <VisualizerLayout
+      controls={
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Divide &amp; Conquer — Merge Sort</CardTitle>
+              <CardDescription>Create an array and sort it using the Merge Sort algorithm</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex space-x-2">
+                  <Input
+                    type="number"
+                    placeholder="Enter a value to add"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
+                    disabled={player.isPlaying}
+                  />
+                  <Button onClick={handleAddElement} disabled={player.isPlaying}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add
+                  </Button>
+                </div>
+
+                <InlineAlert message={inputError} />
+
+                <div className="flex space-x-2">
+                  <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
+                    <Shuffle className="mr-2 h-4 w-4" />
+                    Random
+                  </Button>
+                  <Button
+                    onClick={handleClearArray}
+                    disabled={player.isPlaying || array.length === 0}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
+                </div>
+
+                <Button onClick={handleMergeSort} disabled={player.isPlaying || array.length <= 1} className="w-full">
+                  Sort Array (Merge Sort)
                 </Button>
-              </div>
 
-              <InlineAlert message={inputError} />
+                {player.totalFrames > 0 && (
+                  <AnimationControls
+                    currentFrame={player.currentFrame}
+                    totalFrames={player.totalFrames}
+                    isPlaying={player.isPlaying}
+                    isPaused={player.isPaused}
+                    isComplete={player.isComplete}
+                    speed={player.speed}
+                    onPlay={player.play}
+                    onPause={player.pause}
+                    onStepForward={player.stepForward}
+                    onStepBackward={player.stepBackward}
+                    onReset={() => { player.reset(); setCurrentPhase("none"); setDividePhase([]); setMergePhase([]) }}
+                    onSpeedChange={player.setSpeed}
+                    onFrameChange={player.goToFrame}
+                  />
+                )}
 
-              <div className="flex space-x-2">
-                <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
-                  <Shuffle className="mr-2 h-4 w-4" />
-                  Random
-                </Button>
-                <Button
-                  onClick={handleClearArray}
-                  disabled={player.isPlaying || array.length === 0}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-              </div>
-
-              <Button onClick={handleMergeSort} disabled={player.isPlaying || array.length <= 1} className="w-full">
-                Sort Array (Merge Sort)
-              </Button>
-
-              {player.totalFrames > 0 && (
-                <AnimationControls
-                  currentFrame={player.currentFrame}
-                  totalFrames={player.totalFrames}
-                  isPlaying={player.isPlaying}
-                  isPaused={player.isPaused}
-                  isComplete={player.isComplete}
-                  speed={player.speed}
-                  onPlay={player.play}
-                  onPause={player.pause}
-                  onStepForward={player.stepForward}
-                  onStepBackward={player.stepBackward}
-                  onReset={() => { player.reset(); setCurrentPhase("none"); setDividePhase([]); setMergePhase([]) }}
-                  onSpeedChange={player.setSpeed}
-                  onFrameChange={player.goToFrame}
-                />
-              )}
-
-              <div>
-                <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
-                <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
-                  {steps.length > 0 ? (
-                    <ol className="space-y-1 pl-5 list-decimal">
-                      {steps.map((step, index) => (
-                        <li
-                          key={index}
-                          className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
-                        >
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      1. Add elements to create an array
-                      <br />
-                      2. Click &quot;Sort Array&quot; to visualize the Merge Sort algorithm
-                      <br />
-                      3. Watch the divide and conquer process
-                    </p>
-                  )}
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
+                  <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
+                    {steps.length > 0 ? (
+                      <ol className="space-y-1 pl-5 list-decimal">
+                        {steps.map((step, index) => (
+                          <li
+                            key={index}
+                            className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
+                          >
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        1. Add elements to create an array
+                        <br />
+                        2. Click &quot;Sort Array&quot; to visualize the Merge Sort algorithm
+                        <br />
+                        3. Watch the divide and conquer process
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Learning</CardTitle>
+              <CardDescription>Understanding Divide and Conquer Algorithms</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p className="mb-2">
+                <strong>Divide and Conquer</strong> is an algorithmic paradigm that breaks a problem into smaller
+                subproblems, solves them recursively, and then combines their solutions.
+              </p>
+              <p className="mb-2">
+                <strong>Merge Sort</strong> is a classic divide and conquer algorithm with three main steps:
+              </p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li><strong>Divide:</strong> Split the array into two halves</li>
+                <li><strong>Conquer:</strong> Recursively sort the two halves</li>
+                <li><strong>Combine:</strong> Merge the sorted halves to produce a sorted array</li>
+              </ol>
+              <p className="mb-2 mt-2"><strong>Time Complexity:</strong> O(n log n) for all cases</p>
+              <p className="mb-2"><strong>Space Complexity:</strong> O(n) for the temporary arrays used during merging</p>
+            </CardContent>
+          </Card>
+        </div>
+      }
+      visualization={
+        <Card className="h-full">
           <CardHeader>
-            <CardTitle>Learning</CardTitle>
-            <CardDescription>Understanding Divide and Conquer Algorithms</CardDescription>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of Merge Sort</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm">
-            <p className="mb-2">
-              <strong>Divide and Conquer</strong> is an algorithmic paradigm that breaks a problem into smaller
-              subproblems, solves them recursively, and then combines their solutions.
-            </p>
-            <p className="mb-2">
-              <strong>Merge Sort</strong> is a classic divide and conquer algorithm with three main steps:
-            </p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li><strong>Divide:</strong> Split the array into two halves</li>
-              <li><strong>Conquer:</strong> Recursively sort the two halves</li>
-              <li><strong>Combine:</strong> Merge the sorted halves to produce a sorted array</li>
-            </ol>
-            <p className="mb-2 mt-2"><strong>Time Complexity:</strong> O(n log n) for all cases</p>
-            <p className="mb-2"><strong>Space Complexity:</strong> O(n) for the temporary arrays used during merging</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of Merge Sort</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Scrolls instead of escaping the card: the array row, the per-level
-              phase stack and the legend together exceed 350px once the array
-              has more than a handful of elements. */}
-          <div className="flex flex-col items-center gap-3 min-h-[350px] max-h-[60vh] overflow-auto">
-            {array.length === 0 ? (
-              <div className="text-muted-foreground self-center">Add elements to create an array</div>
-            ) : (
-              <>
-                <div className="w-full">
-                  <h3 className="text-sm font-medium mb-2">Array:</h3>
-                  <div className="flex justify-center flex-wrap gap-1 px-2">
-                    {array.map((item, index) => (
-                      <div key={item.id} className="flex flex-col items-center">
-                        {/* Local flags mapped onto the shared vocabulary: the run
-                            being divided is `comparing` (it was blue here, amber
-                            everywhere else), a run being merged is `swapping` since
-                            its elements are moving, and a finished run is `visited`.
-                            `merged` outranks `highlighted` because the highlight is
-                            left over from the merge frame, and one class is emitted
-                            instead of a stack, so the winner is intent rather than
-                            whichever colour Tailwind happened to emit last. */}
-                        <div
-                          className={`
-                            flex items-center justify-center w-8 h-8 md:w-10 md:h-10 border-2 
-                            transition-all duration-300 ease-in-out rounded-md
-                            ${STATE_BOX[item.merging ? "swapping" : item.merged ? "visited" : item.highlighted ? "comparing" : "default"]}
-                          `}
-                        >
-                          <span className="text-xs md:text-sm font-bold">{item.value}</span>
+          <CardContent>
+            {/* Scrolls instead of escaping the card: the array row, the per-level
+                phase stack and the legend together exceed 350px once the array
+                has more than a handful of elements. */}
+            <div className="flex flex-col items-center gap-3 min-h-[350px] max-h-[60vh] overflow-auto">
+              {array.length === 0 ? (
+                <div className="text-muted-foreground self-center">Add elements to create an array</div>
+              ) : (
+                <>
+                  <div className="w-full">
+                    <h3 className="text-sm font-medium mb-2">Array:</h3>
+                    <div className="flex justify-center flex-wrap gap-1 px-2">
+                      {array.map((item, index) => (
+                        <div key={item.id} className="flex flex-col items-center">
+                          {/* Local flags mapped onto the shared vocabulary: the run
+                              being divided is `comparing` (it was blue here, amber
+                              everywhere else), a run being merged is `swapping` since
+                              its elements are moving, and a finished run is `visited`.
+                              `merged` outranks `highlighted` because the highlight is
+                              left over from the merge frame, and one class is emitted
+                              instead of a stack, so the winner is intent rather than
+                              whichever colour Tailwind happened to emit last. */}
+                          <div
+                            className={`
+                              flex items-center justify-center w-8 h-8 md:w-10 md:h-10 border-2 
+                              transition-all duration-300 ease-in-out rounded-md
+                              ${STATE_BOX[item.merging ? "swapping" : item.merged ? "visited" : item.highlighted ? "comparing" : "default"]}
+                            `}
+                          >
+                            <span className="text-xs md:text-sm font-bold">{item.value}</span>
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">{index}</div>
                         </div>
-                        <div className="mt-1 text-xs text-muted-foreground">{index}</div>
+                      ))}
+                    </div>
+                    {player.currentDescription && (
+                      <div className="mt-2 text-center text-sm font-medium text-primary">
+                        {player.currentDescription}
+                      </div>
+                    )}
+                  </div>
+
+                  {currentPhase === "divide" && dividePhase.length > 0 && (
+                    <div className="w-full mt-2 bg-muted/20 p-2 rounded-lg">
+                      <div className="flex items-center justify-center mb-1">
+                        <ArrowDown className="h-4 w-4 text-blue-500" />
+                        <h3 className="text-xs font-medium ml-1">Divide Phase</h3>
+                      </div>
+                      <div className="space-y-3 overflow-x-auto pb-2 -mx-2 px-2">
+                        {dividePhase.map((level, levelIndex) => (
+                          <div key={levelIndex} className="flex justify-center min-w-max mx-auto gap-2">
+                            {level.arrays.map((subArray, arrayIndex) => (
+                              <div key={arrayIndex} className="border border-dashed border-blue-300 p-1 rounded bg-background/50">
+                                <div className="flex gap-0.5">
+                                  {subArray.map((value, valueIndex) => (
+                                    <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-blue-500 bg-blue-50 dark:bg-blue-900 rounded-sm">
+                                      <span className="text-xs font-medium">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentPhase === "merge" && mergePhase.length > 0 && (
+                    <div className="w-full mt-2 bg-muted/20 p-2 rounded-lg">
+                      <div className="flex items-center justify-center mb-1">
+                        <ArrowUp className="h-4 w-4 text-green-500" />
+                        <h3 className="text-xs font-medium ml-1">Merge Phase</h3>
+                      </div>
+                      <div className="space-y-3 overflow-x-auto pb-2 -mx-2 px-2">
+                        {mergePhase.map((level, levelIndex) => (
+                          <div key={levelIndex} className="flex justify-center min-w-max mx-auto gap-2">
+                            {level.arrays.map((subArray, arrayIndex) => (
+                              <div key={arrayIndex} className="border border-dashed border-green-300 p-1 rounded bg-background/50">
+                                <div className="flex gap-0.5">
+                                  {subArray.map((value, valueIndex) => (
+                                    <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-green-500 bg-green-50 dark:bg-green-900 rounded-sm">
+                                      <span className="text-xs font-medium">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Swatches come from the shared map, so the legend cannot drift
+                      from the cells it describes; the wording stays domain-specific. */}
+                  <div className="flex flex-wrap justify-center mt-2 gap-x-4 gap-y-2">
+                    {([["comparing", "Dividing"], ["swapping", "Merging"], ["visited", "Merged"]] as const).map(([state, label]) => (
+                      <div key={label} className="flex items-center">
+                        <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "box")}`}></div>
+                        <span className="text-xs">{label}</span>
                       </div>
                     ))}
                   </div>
-                  {player.currentDescription && (
-                    <div className="mt-2 text-center text-sm font-medium text-primary">
-                      {player.currentDescription}
-                    </div>
-                  )}
-                </div>
-
-                {currentPhase === "divide" && dividePhase.length > 0 && (
-                  <div className="w-full mt-2 bg-muted/20 p-2 rounded-lg">
-                    <div className="flex items-center justify-center mb-1">
-                      <ArrowDown className="h-4 w-4 text-blue-500" />
-                      <h3 className="text-xs font-medium ml-1">Divide Phase</h3>
-                    </div>
-                    <div className="space-y-3 overflow-x-auto pb-2 -mx-2 px-2">
-                      {dividePhase.map((level, levelIndex) => (
-                        <div key={levelIndex} className="flex justify-center min-w-max mx-auto gap-2">
-                          {level.arrays.map((subArray, arrayIndex) => (
-                            <div key={arrayIndex} className="border border-dashed border-blue-300 p-1 rounded bg-background/50">
-                              <div className="flex gap-0.5">
-                                {subArray.map((value, valueIndex) => (
-                                  <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-blue-500 bg-blue-50 dark:bg-blue-900 rounded-sm">
-                                    <span className="text-xs font-medium">{value}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {currentPhase === "merge" && mergePhase.length > 0 && (
-                  <div className="w-full mt-2 bg-muted/20 p-2 rounded-lg">
-                    <div className="flex items-center justify-center mb-1">
-                      <ArrowUp className="h-4 w-4 text-green-500" />
-                      <h3 className="text-xs font-medium ml-1">Merge Phase</h3>
-                    </div>
-                    <div className="space-y-3 overflow-x-auto pb-2 -mx-2 px-2">
-                      {mergePhase.map((level, levelIndex) => (
-                        <div key={levelIndex} className="flex justify-center min-w-max mx-auto gap-2">
-                          {level.arrays.map((subArray, arrayIndex) => (
-                            <div key={arrayIndex} className="border border-dashed border-green-300 p-1 rounded bg-background/50">
-                              <div className="flex gap-0.5">
-                                {subArray.map((value, valueIndex) => (
-                                  <div key={valueIndex} className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 border border-green-500 bg-green-50 dark:bg-green-900 rounded-sm">
-                                    <span className="text-xs font-medium">{value}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Swatches come from the shared map, so the legend cannot drift
-                    from the cells it describes; the wording stays domain-specific. */}
-                <div className="flex flex-wrap justify-center mt-2 gap-x-4 gap-y-2">
-                  {([["comparing", "Dividing"], ["swapping", "Merging"], ["visited", "Merged"]] as const).map(([state, label]) => (
-                    <div key={label} className="flex items-center">
-                      <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "box")}`}></div>
-                      <span className="text-xs">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      }
+      code={
+        <CodePanel template={MERGE_SORT} activeStep={player.currentSnapshot?.activeStep ?? null} />
+      }
+    />
   )
 }

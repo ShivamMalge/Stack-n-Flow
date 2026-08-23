@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import { QUICK_SORT } from "@/lib/templates/algorithms"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
@@ -23,6 +26,8 @@ type ArrayItem = {
 type QuickSortFrame = {
   array: ArrayItem[]
   stepDescription: string
+  /** Step in the code panel; see QUICK_SORT in lib/templates/algorithms.ts. */
+  activeStep: number
 }
 
 // Tallest bar allowed, in pixels. The plate is 240px tall on mobile with 32px of
@@ -108,7 +113,7 @@ export default function QuickSortVisualizer({
     // Initial frame
     sortingSteps.push("Starting Quick Sort algorithm")
     frames.push({
-      snapshot: { array: cleanArray.map((item) => ({ ...item })), stepDescription: "Starting Quick Sort algorithm" },
+      snapshot: { array: cleanArray.map((item) => ({ ...item })), stepDescription: "Starting Quick Sort algorithm", activeStep: 5 },
       description: "Starting Quick Sort algorithm",
     })
 
@@ -118,7 +123,9 @@ export default function QuickSortVisualizer({
     const captureFrame = (
       workingArr: ArrayItem[],
       description: string,
-      overrides?: Record<number, Partial<ArrayItem>>
+      overrides?: Record<number, Partial<ArrayItem>>,
+      // 1 pivot, 2 compare, 3 swap, 4 place pivot, 5 recurse.
+      activeStep = 2,
     ) => {
       const snap = workingArr.map((item, idx) => ({
         ...item,
@@ -129,7 +136,7 @@ export default function QuickSortVisualizer({
       }))
       sortingSteps.push(description)
       frames.push({
-        snapshot: { array: snap, stepDescription: description },
+        snapshot: { array: snap, stepDescription: description, activeStep },
         description,
       })
     }
@@ -144,7 +151,7 @@ export default function QuickSortVisualizer({
         arr[low] = { ...arr[low], isSorted: true }
         captureFrame(arr, `Element ${arr[low].value} at index ${low} is in its sorted position`, {
           [low]: { isSorted: true },
-        })
+        }, 5)
       }
     }
 
@@ -154,7 +161,7 @@ export default function QuickSortVisualizer({
       // Show pivot selection
       captureFrame(arr, `Choosing pivot: ${pivotValue} (index ${high})`, {
         [high]: { isPivot: true },
-      })
+      }, 1)
 
       let i = low - 1
 
@@ -164,7 +171,7 @@ export default function QuickSortVisualizer({
           [high]: { isPivot: true },
           [j]: { highlighted: true },
         }
-        captureFrame(arr, `Comparing ${arr[j].value} with pivot ${pivotValue}`, compareOverrides)
+        captureFrame(arr, `Comparing ${arr[j].value} with pivot ${pivotValue}`, compareOverrides, 2)
 
         if (arr[j].value < pivotValue) {
           i++
@@ -174,7 +181,7 @@ export default function QuickSortVisualizer({
               [high]: { isPivot: true },
               [i]: { isSwapping: true },
               [j]: { isSwapping: true },
-            })
+            }, 3)
 
             // Perform swap
             const temp = { ...arr[i] }
@@ -184,16 +191,16 @@ export default function QuickSortVisualizer({
             // Show result of swap
             captureFrame(arr, `Swapped: array now has ${arr[i].value} at index ${i} and ${arr[j].value} at index ${j}`, {
               [high]: { isPivot: true },
-            })
+            }, 3)
           } else {
             captureFrame(arr, `${arr[j].value} < ${pivotValue}: Already in correct position`, {
               [high]: { isPivot: true },
-            })
+            }, 3)
           }
         } else {
           captureFrame(arr, `${arr[j].value} >= ${pivotValue}: No swap needed`, {
             [high]: { isPivot: true },
-          })
+          }, 2)
         }
       }
 
@@ -203,7 +210,7 @@ export default function QuickSortVisualizer({
         captureFrame(arr, `Placing pivot ${pivotValue} at its correct position (index ${i})`, {
           [i]: { isSwapping: true },
           [high]: { isSwapping: true, isPivot: true },
-        })
+        }, 4)
 
         const temp = { ...arr[i] }
         arr[i] = { ...arr[high] }
@@ -214,7 +221,7 @@ export default function QuickSortVisualizer({
       arr[i] = { ...arr[i], isSorted: true }
       captureFrame(arr, `Pivot ${pivotValue} is now at its sorted position (index ${i})`, {
         [i]: { isSorted: true },
-      })
+      }, 4)
 
       return i
     }
@@ -225,7 +232,7 @@ export default function QuickSortVisualizer({
     const finalArr = arr.map((item) => ({ ...item, isSorted: true, highlighted: false, isPivot: false, isSwapping: false }))
     sortingSteps.push("Array is now sorted!")
     frames.push({
-      snapshot: { array: finalArr, stepDescription: "Array is now sorted!" },
+      snapshot: { array: finalArr, stepDescription: "Array is now sorted!", activeStep: 5 },
       description: "Array is now sorted!",
     })
 
@@ -238,197 +245,201 @@ export default function QuickSortVisualizer({
   const visibleStepIndex = player.currentFrame >= 0 ? player.currentFrame : -1
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      {/* Operations Panel */}
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Sort Algorithm</CardTitle>
-            <CardDescription>Create an array and sort it using the Quick Sort algorithm</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex space-x-2">
-                <Input
-                  type="number"
-                  placeholder="Enter a value to add"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
-                  disabled={player.isPlaying}
-                />
-                <Button onClick={handleAddElement} disabled={player.isPlaying}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
+    <VisualizerLayout
+      controls={
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Sort Algorithm</CardTitle>
+              <CardDescription>Create an array and sort it using the Quick Sort algorithm</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex space-x-2">
+                  <Input
+                    type="number"
+                    placeholder="Enter a value to add"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddElement()}
+                    disabled={player.isPlaying}
+                  />
+                  <Button onClick={handleAddElement} disabled={player.isPlaying}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add
+                  </Button>
+                </div>
+
+                <InlineAlert message={inputError} />
+
+                <div className="flex space-x-2">
+                  <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
+                    <Shuffle className="mr-2 h-4 w-4" />
+                    Random
+                  </Button>
+                  <Button
+                    onClick={handleClearArray}
+                    disabled={player.isPlaying || array.length === 0}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                </div>
+
+                <Button onClick={handleSort} disabled={player.isPlaying || array.length <= 1} className="w-full">
+                  Sort Array
                 </Button>
-              </div>
 
-              <InlineAlert message={inputError} />
+                {/* Animation Controls */}
+                {player.totalFrames > 0 && (
+                  <AnimationControls
+                    currentFrame={player.currentFrame}
+                    totalFrames={player.totalFrames}
+                    isPlaying={player.isPlaying}
+                    isPaused={player.isPaused}
+                    isComplete={player.isComplete}
+                    speed={player.speed}
+                    disabled={false}
+                    onPlay={player.play}
+                    onPause={player.pause}
+                    onStepForward={player.stepForward}
+                    onStepBackward={player.stepBackward}
+                    onReset={() => {
+                      player.reset()
+                      // Restore the initial unsorted array
+                      if (player.totalFrames > 0) {
+                        player.goToFrame(0)
+                      }
+                    }}
+                    onSpeedChange={player.setSpeed}
+                    onFrameChange={player.goToFrame}
+                  />
+                )}
 
-              <div className="flex space-x-2">
-                <Button onClick={handleGenerateRandom} disabled={player.isPlaying} variant="outline" className="flex-1">
-                  <Shuffle className="mr-2 h-4 w-4" />
-                  Random
-                </Button>
-                <Button
-                  onClick={handleClearArray}
-                  disabled={player.isPlaying || array.length === 0}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Clear
-                </Button>
-              </div>
-
-              <Button onClick={handleSort} disabled={player.isPlaying || array.length <= 1} className="w-full">
-                Sort Array
-              </Button>
-
-              {/* Animation Controls */}
-              {player.totalFrames > 0 && (
-                <AnimationControls
-                  currentFrame={player.currentFrame}
-                  totalFrames={player.totalFrames}
-                  isPlaying={player.isPlaying}
-                  isPaused={player.isPaused}
-                  isComplete={player.isComplete}
-                  speed={player.speed}
-                  disabled={false}
-                  onPlay={player.play}
-                  onPause={player.pause}
-                  onStepForward={player.stepForward}
-                  onStepBackward={player.stepBackward}
-                  onReset={() => {
-                    player.reset()
-                    // Restore the initial unsorted array
-                    if (player.totalFrames > 0) {
-                      player.goToFrame(0)
-                    }
-                  }}
-                  onSpeedChange={player.setSpeed}
-                  onFrameChange={player.goToFrame}
-                />
-              )}
-
-              <div>
-                <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
-                <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
-                  {steps.length > 0 ? (
-                    <ol className="space-y-1 pl-5 list-decimal">
-                      {steps.map((step, index) => (
-                        <li
-                          key={index}
-                          className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"
-                            }`}
-                        >
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      1. Add elements to create an array
-                      <br />
-                      2. Click &quot;Sort Array&quot; to visualize the Quick Sort algorithm
-                    </p>
-                  )}
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
+                  <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
+                    {steps.length > 0 ? (
+                      <ol className="space-y-1 pl-5 list-decimal">
+                        {steps.map((step, index) => (
+                          <li
+                            key={index}
+                            className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"
+                              }`}
+                          >
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        1. Add elements to create an array
+                        <br />
+                        2. Click &quot;Sort Array&quot; to visualize the Quick Sort algorithm
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Learning</CardTitle>
+              <CardDescription>Understanding Quick Sort</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p className="mb-2">
+                <strong>Quick Sort</strong> is a divide-and-conquer sorting algorithm that works by selecting a
+                &apos;pivot&apos; element and partitioning the array around it.
+              </p>
+              <p className="mb-2">
+                <strong>Time Complexity:</strong>
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Best/Average Case: O(n log n)</li>
+                <li>Worst Case: O(n²) when the array is already sorted</li>
+              </ul>
+              <p className="mb-2">
+                <strong>Key Steps:</strong>
+              </p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Choose a pivot element from the array</li>
+                <li>Partition the array around the pivot (elements less than pivot go to the left, greater go to the right)</li>
+                <li>Recursively apply the above steps to the sub-arrays</li>
+              </ol>
+              <p className="mt-2">
+                <strong>Advantages:</strong> Quick Sort is often faster in practice than other O(n log n) algorithms like
+                Merge Sort, and it doesn&apos;t require additional memory for merging.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      }
+      visualization={
+        <Card className="h-full">
           <CardHeader>
-            <CardTitle>Learning</CardTitle>
-            <CardDescription>Understanding Quick Sort</CardDescription>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of Quick Sort</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm">
-            <p className="mb-2">
-              <strong>Quick Sort</strong> is a divide-and-conquer sorting algorithm that works by selecting a
-              &apos;pivot&apos; element and partitioning the array around it.
-            </p>
-            <p className="mb-2">
-              <strong>Time Complexity:</strong>
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Best/Average Case: O(n log n)</li>
-              <li>Worst Case: O(n²) when the array is already sorted</li>
-            </ul>
-            <p className="mb-2">
-              <strong>Key Steps:</strong>
-            </p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>Choose a pivot element from the array</li>
-              <li>Partition the array around the pivot (elements less than pivot go to the left, greater go to the right)</li>
-              <li>Recursively apply the above steps to the sub-arrays</li>
-            </ol>
-            <p className="mt-2">
-              <strong>Advantages:</strong> Quick Sort is often faster in practice than other O(n log n) algorithms like
-              Merge Sort, and it doesn&apos;t require additional memory for merging.
-            </p>
+          <CardContent>
+            <div className="flex items-end justify-center h-[240px] md:h-[300px] pt-8 px-2 overflow-x-hidden">
+              {array.length === 0 ? (
+                <div className="text-muted-foreground">Add elements to create an array</div>
+              ) : (
+                array.map((item, index) => {
+                  const height = Math.min(item.value * 2 + 20, MAX_BAR_HEIGHT)
+
+                  // Local flags mapped onto the shared vocabulary: highlighted →
+                  // comparing (it was blue here, amber everywhere else), isSwapping →
+                  // swapping, isPivot → pivot, and isSorted → visited, since a bar in
+                  // its final position is one the algorithm is finished with. One
+                  // class is emitted instead of a stack, so the winner is intent
+                  // rather than whichever colour Tailwind happened to emit last.
+                  return (
+                    <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center flex-1 max-w-[40px] mx-0.5">
+                      <div
+                        style={{ height: `${height}px` }}
+                        className={`
+                          w-full max-h-full rounded-t-sm md:rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
+                          ${STATE_BAR[item.isSwapping ? "swapping" : item.isPivot ? "pivot" : item.highlighted ? "comparing" : item.isSorted ? "visited" : "default"]}
+                        `}
+                      >
+                        <span className="text-xs font-medium text-white">{item.value}</span>
+                      </div>
+                      <div className="mt-2 text-xs">{index}</div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Current step description */}
+            {player.currentDescription && (
+              <div className="mt-3 text-center text-sm font-medium text-primary">
+                {player.currentDescription}
+              </div>
+            )}
+
+            {/* Swatches and wording come from the shared maps, so the legend cannot
+                drift from the bars it describes. "Sorted" is the domain word for
+                `visited` here. */}
+            <div className="flex flex-wrap justify-center mt-4 gap-x-4 gap-y-2">
+              {([["pivot", STATE_LABEL.pivot], ["comparing", STATE_LABEL.comparing], ["swapping", STATE_LABEL.swapping], ["visited", "Sorted"]] as const).map(([state, label]) => (
+                <div key={label} className="flex items-center">
+                  <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "bar")}`}></div>
+                  <span className="text-xs">{label}</span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of Quick Sort</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end justify-center h-[240px] md:h-[300px] pt-8 px-2 overflow-x-hidden">
-            {array.length === 0 ? (
-              <div className="text-muted-foreground">Add elements to create an array</div>
-            ) : (
-              array.map((item, index) => {
-                const height = Math.min(item.value * 2 + 20, MAX_BAR_HEIGHT)
-
-                // Local flags mapped onto the shared vocabulary: highlighted →
-                // comparing (it was blue here, amber everywhere else), isSwapping →
-                // swapping, isPivot → pivot, and isSorted → visited, since a bar in
-                // its final position is one the algorithm is finished with. One
-                // class is emitted instead of a stack, so the winner is intent
-                // rather than whichever colour Tailwind happened to emit last.
-                return (
-                  <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center flex-1 max-w-[40px] mx-0.5">
-                    <div
-                      style={{ height: `${height}px` }}
-                      className={`
-                        w-full max-h-full rounded-t-sm md:rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
-                        ${STATE_BAR[item.isSwapping ? "swapping" : item.isPivot ? "pivot" : item.highlighted ? "comparing" : item.isSorted ? "visited" : "default"]}
-                      `}
-                    >
-                      <span className="text-xs font-medium text-white">{item.value}</span>
-                    </div>
-                    <div className="mt-2 text-xs">{index}</div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-
-          {/* Current step description */}
-          {player.currentDescription && (
-            <div className="mt-3 text-center text-sm font-medium text-primary">
-              {player.currentDescription}
-            </div>
-          )}
-
-          {/* Swatches and wording come from the shared maps, so the legend cannot
-              drift from the bars it describes. "Sorted" is the domain word for
-              `visited` here. */}
-          <div className="flex flex-wrap justify-center mt-4 gap-x-4 gap-y-2">
-            {([["pivot", STATE_LABEL.pivot], ["comparing", STATE_LABEL.comparing], ["swapping", STATE_LABEL.swapping], ["visited", "Sorted"]] as const).map(([state, label]) => (
-              <div key={label} className="flex items-center">
-                <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "bar")}`}></div>
-                <span className="text-xs">{label}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      }
+      code={
+        <CodePanel template={QUICK_SORT} activeStep={player.currentSnapshot?.activeStep ?? null} />
+      }
+    />
   )
 }

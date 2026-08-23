@@ -14,6 +14,8 @@ import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import { computeTreeLayout } from "@/lib/tree-layout"
 import InlineAlert from "@/components/ui/inline-alert"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import CodePanel from "@/components/ui/code-panel"
+import { IN_ORDER, TRAVERSALS } from "@/lib/templates/algorithms"
 
 type TreeNode = {
   id: number
@@ -38,6 +40,12 @@ export default function TreeVisualizer({
   const [nextId, setNextId] = useState(1)
   const [traversalPath, setTraversalPath] = useState<number[]>([])
   const [traversalType, setTraversalType] = useState("inorder")
+  /**
+   * Line of the traversal the animation is on. Each tick lands on a node, and
+   * landing on a node *is* the visit, so step 2 is what a tick means; the
+   * descents either side of it happen between ticks.
+   */
+  const [activeStep, setActiveStep] = useState<number | null>(null)
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [inputError, setInputError] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
@@ -273,9 +281,12 @@ export default function TreeVisualizer({
         timersRef.current.push(setTimeout(() => {
           setRoot(resetHighlights(structuredClone(rootRef.current)))
           setAnimating(false)
+          setActiveStep(null)
         }, 1000))
         return
       }
+
+      setActiveStep(2)
 
       setTraversalPath(path.slice(0, index + 1))
 
@@ -602,6 +613,12 @@ export default function TreeVisualizer({
             </CardContent>
           </Card>
         </div>
+      }
+      code={
+        <CodePanel
+          template={TRAVERSALS[traversalType] ?? IN_ORDER}
+          activeStep={activeStep}
+        />
       }
       visualization={
         <Card className="flex flex-col h-full">
