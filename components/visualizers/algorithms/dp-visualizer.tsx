@@ -5,35 +5,37 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
+import { FIBONACCI_DP, KNAPSACK_DP } from "@/lib/templates/dp-greedy"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { parseBoundedInt } from "@/lib/constants"
 
 // ── Fibonacci DP ────────────────────────────────────────────────────────────
 
-type FibFrame = { table: (number | null)[]; current: number; stepDescription: string }
+type FibFrame = { table: (number | null)[]; current: number; stepDescription: string; activeStep: number }
 
 function generateFibonacci(n: number): AnimationFrame<FibFrame>[] {
     const frames: AnimationFrame<FibFrame>[] = []
     const table: (number | null)[] = Array(n + 1).fill(null)
 
-    frames.push({ snapshot: { table: [...table], current: -1, stepDescription: `Initialize DP table for F(${n})` }, description: "Init" })
+    frames.push({ snapshot: { table: [...table], current: -1, stepDescription: `Initialize DP table for F(${n})`, activeStep: 1 }, description: "Init" })
 
     table[0] = 0
-    frames.push({ snapshot: { table: [...table], current: 0, stepDescription: "Base case: F(0) = 0" }, description: "F(0)=0" })
+    frames.push({ snapshot: { table: [...table], current: 0, stepDescription: "Base case: F(0) = 0", activeStep: 2 }, description: "F(0)=0" })
 
     if (n >= 1) {
         table[1] = 1
-        frames.push({ snapshot: { table: [...table], current: 1, stepDescription: "Base case: F(1) = 1" }, description: "F(1)=1" })
+        frames.push({ snapshot: { table: [...table], current: 1, stepDescription: "Base case: F(1) = 1", activeStep: 2 }, description: "F(1)=1" })
     }
 
     for (let i = 2; i <= n; i++) {
         table[i] = table[i - 1]! + table[i - 2]!
         frames.push({
-            snapshot: { table: [...table], current: i, stepDescription: `F(${i}) = F(${i - 1}) + F(${i - 2}) = ${table[i - 1]} + ${table[i - 2]} = ${table[i]}` },
+            snapshot: { table: [...table], current: i, stepDescription: `F(${i}) = F(${i - 1}) + F(${i - 2}) = ${table[i - 1]} + ${table[i - 2]} = ${table[i]}`, activeStep: 3 },
             description: `F(${i})=${table[i]}`
         })
     }
-    frames.push({ snapshot: { table: [...table], current: n, stepDescription: `Done! F(${n}) = ${table[n]}` }, description: `Result: ${table[n]}` })
+    frames.push({ snapshot: { table: [...table], current: n, stepDescription: `Done! F(${n}) = ${table[n]}`, activeStep: 4 }, description: `Result: ${table[n]}` })
     return frames
 }
 
@@ -50,6 +52,7 @@ type KnapsackFrame = {
     dp: number[][]
     currentRow: number; currentCol: number
     stepDescription: string
+    activeStep: number
     items: KnapsackItem[]; capacity: number
 }
 
@@ -58,7 +61,7 @@ function generateKnapsack(items: KnapsackItem[], capacity: number): AnimationFra
     const n = items.length
     const dp: number[][] = Array.from({ length: n + 1 }, () => Array(capacity + 1).fill(0))
 
-    frames.push({ snapshot: { dp: dp.map((r) => [...r]), currentRow: 0, currentCol: 0, stepDescription: "Initialize DP table (all zeros = base case: 0 items)", items, capacity }, description: "Init" })
+    frames.push({ snapshot: { dp: dp.map((r) => [...r]), currentRow: 0, currentCol: 0, stepDescription: "Initialize DP table (all zeros = base case: 0 items)", items, capacity, activeStep: 1 }, description: "Init" })
 
     for (let i = 1; i <= n; i++) {
         const { weight: w, value: v } = items[i - 1]
@@ -66,13 +69,13 @@ function generateKnapsack(items: KnapsackItem[], capacity: number): AnimationFra
             if (w <= c) {
                 dp[i][c] = Math.max(dp[i - 1][c], v + dp[i - 1][c - w])
                 frames.push({
-                    snapshot: { dp: dp.map((r) => [...r]), currentRow: i, currentCol: c, stepDescription: `Item ${i} (w=${w}, v=${v}), cap=${c}: max(skip=${dp[i - 1][c]}, take=${v}+${dp[i - 1][c - w]}=${v + dp[i - 1][c - w]}) = ${dp[i][c]}`, items, capacity },
+                    snapshot: { dp: dp.map((r) => [...r]), currentRow: i, currentCol: c, stepDescription: `Item ${i} (w=${w}, v=${v}), cap=${c}: max(skip=${dp[i - 1][c]}, take=${v}+${dp[i - 1][c - w]}=${v + dp[i - 1][c - w]}) = ${dp[i][c]}`, items, capacity, activeStep: 3 },
                     description: `dp[${i}][${c}]=${dp[i][c]}`
                 })
             } else {
                 dp[i][c] = dp[i - 1][c]
                 frames.push({
-                    snapshot: { dp: dp.map((r) => [...r]), currentRow: i, currentCol: c, stepDescription: `Item ${i} (w=${w}, v=${v}), cap=${c}: can't take (w > cap), skip → dp[${i}][${c}]=${dp[i][c]}`, items, capacity },
+                    snapshot: { dp: dp.map((r) => [...r]), currentRow: i, currentCol: c, stepDescription: `Item ${i} (w=${w}, v=${v}), cap=${c}: can't take (w > cap), skip → dp[${i}][${c}]=${dp[i][c]}`, items, capacity, activeStep: 2 },
                     description: `dp[${i}][${c}]=${dp[i][c]}`
                 })
             }
@@ -87,7 +90,7 @@ function generateKnapsack(items: KnapsackItem[], capacity: number): AnimationFra
     }
 
     frames.push({
-        snapshot: { dp: dp.map((r) => [...r]), currentRow: n, currentCol: capacity, stepDescription: `Max value = ${dp[n][capacity]}. Selected items: ${selected.map((i) => `Item ${i + 1}`).join(", ")}`, items, capacity },
+        snapshot: { dp: dp.map((r) => [...r]), currentRow: n, currentCol: capacity, stepDescription: `Max value = ${dp[n][capacity]}. Selected items: ${selected.map((i) => `Item ${i + 1}`).join(", ")}`, items, capacity, activeStep: 4 },
         description: `Result: ${dp[n][capacity]}`
     })
     return frames
@@ -242,6 +245,12 @@ export default function DPVisualizer() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Full width: the table above already uses both columns, and a
+                        third cell in the flow would leave a dead row beside it. */}
+                    <div className="md:col-span-2 h-[320px]">
+                        <CodePanel template={FIBONACCI_DP} activeStep={fibPlayer.currentSnapshot?.activeStep ?? null} />
+                    </div>
                 </div>
             )}
 
@@ -335,6 +344,12 @@ export default function DPVisualizer() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Full width: the table above already uses both columns, and a
+                        third cell in the flow would leave a dead row beside it. */}
+                    <div className="md:col-span-2 h-[320px]">
+                        <CodePanel template={KNAPSACK_DP} activeStep={ksPlayer.currentSnapshot?.activeStep ?? null} />
+                    </div>
                 </div>
             )}
         </div>

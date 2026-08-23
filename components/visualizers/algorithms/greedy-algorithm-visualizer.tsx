@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash, RotateCcw, Coins } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
+import CodePanel from "@/components/ui/code-panel"
+import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import { COIN_CHANGE } from "@/lib/templates/dp-greedy"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
@@ -22,6 +25,8 @@ type GreedyFrame = {
   coins: Coin[]
   result: { coins: Coin[]; total: number } | null
   stepDescription: string
+  /** Step in the code panel; see COIN_CHANGE in lib/templates/dp-greedy.ts. */
+  activeStep: number
 }
 
 export default function GreedyAlgorithmVisualizer() {
@@ -90,7 +95,7 @@ export default function GreedyAlgorithmVisualizer() {
     algorithmSteps.push(`Available coins (sorted): ${sortedCoins.map((c) => c.value).join(", ")}`)
 
     frames.push({
-      snapshot: { coins: cleanCoins, result: null, stepDescription: `Finding change for ${amount}` },
+      snapshot: { coins: cleanCoins, result: null, stepDescription: `Finding change for ${amount}`, activeStep: 1 },
       description: `Finding change for ${amount}. Coins sorted: ${sortedCoins.map((c) => c.value).join(", ")}`,
     })
 
@@ -112,7 +117,7 @@ export default function GreedyAlgorithmVisualizer() {
       }))
 
       frames.push({
-        snapshot: { coins: considerSnapshot, result: null, stepDescription: considerDesc },
+        snapshot: { coins: considerSnapshot, result: null, stepDescription: considerDesc, activeStep: 2 },
         description: considerDesc,
       })
 
@@ -133,14 +138,14 @@ export default function GreedyAlgorithmVisualizer() {
         }))
 
         frames.push({
-          snapshot: { coins: useSnapshot, result: null, stepDescription: useDesc },
+          snapshot: { coins: useSnapshot, result: null, stepDescription: useDesc, activeStep: 3 },
           description: useDesc,
         })
       } else {
         const skipDesc = `${coin.value} is too large for remaining ${remainingAmount}, skip`
         algorithmSteps.push(skipDesc)
         frames.push({
-          snapshot: { coins: considerSnapshot, result: null, stepDescription: skipDesc },
+          snapshot: { coins: considerSnapshot, result: null, stepDescription: skipDesc, activeStep: 2 },
           description: skipDesc,
         })
       }
@@ -167,7 +172,7 @@ export default function GreedyAlgorithmVisualizer() {
       : `No exact solution found`)
 
     frames.push({
-      snapshot: { coins: finalCoins, result: finalResult, stepDescription: "Complete!" },
+      snapshot: { coins: finalCoins, result: finalResult, stepDescription: "Complete!", activeStep: 5 },
       description: remainingAmount === 0 ? `Done! ${selectedCoins.length} coin(s) used` : "No exact solution",
     })
 
@@ -179,228 +184,233 @@ export default function GreedyAlgorithmVisualizer() {
   const visibleStepIndex = player.currentFrame
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Greedy Algorithm — Coin Change</CardTitle>
-            <CardDescription>Define coin denominations and find the minimum number of coins to make change</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex space-x-2">
-                <Input
-                  type="number"
-                  placeholder="Enter coin value"
-                  value={coinValue}
-                  onChange={(e) => setCoinValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddCoin()}
-                  disabled={player.isPlaying}
-                />
-                <Button onClick={handleAddCoin} disabled={player.isPlaying}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Coin
-                </Button>
-              </div>
-
-              <InlineAlert message={inputError} />
-
-              {coins.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {Object.entries(
-                    coins.reduce((acc: Record<number, { count: number; ids: number[] }>, coin) => {
-                      if (!acc[coin.value]) acc[coin.value] = { count: 0, ids: [] }
-                      acc[coin.value].count++
-                      acc[coin.value].ids.push(coin.id)
-                      return acc
-                    }, {})
-                  ).map(([value, { count, ids }]) => (
-                    <div
-                      key={`coin-${value}-${ids[0]}`}
-                      className={`flex items-center justify-between px-3 py-1 rounded-full border
-                        ${coins.find((c) => c.id === ids[0])?.selected ? "bg-green-100 border-green-500 dark:bg-green-900" : "bg-card border-primary"}
-                        ${coins.find((c) => c.id === ids[0])?.isNew ? "animate-pulse border-green-500" : ""}
-                      `}
-                    >
-                      <span className="mr-2">{value}</span>
-                      {count > 1 && (
-                        <span className="text-xs bg-blue-500 text-white rounded-full px-2 py-0.5">x{count}</span>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 ml-1"
-                        onClick={() => handleRemoveCoin(ids[0])}
-                        disabled={player.isPlaying}
-                      >
-                        <Trash className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="pt-4 border-t">
-                <h3 className="text-sm font-medium mb-2">Target Amount</h3>
+    <VisualizerLayout
+      controls={
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Greedy Algorithm — Coin Change</CardTitle>
+              <CardDescription>Define coin denominations and find the minimum number of coins to make change</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                 <div className="flex space-x-2">
                   <Input
                     type="number"
-                    placeholder="Enter target amount"
-                    value={targetAmount}
-                    onChange={(e) => setTargetAmount(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSolve()}
+                    placeholder="Enter coin value"
+                    value={coinValue}
+                    onChange={(e) => setCoinValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddCoin()}
                     disabled={player.isPlaying}
                   />
-                  <Button onClick={handleSolve} disabled={player.isPlaying || coins.length === 0 || !targetAmount} variant="secondary">
-                    Solve
+                  <Button onClick={handleAddCoin} disabled={player.isPlaying}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Coin
                   </Button>
                 </div>
-              </div>
 
-              <Button onClick={handleClearCoins} disabled={player.isPlaying || coins.length === 0} variant="outline" className="w-full">
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Clear All
-              </Button>
+                <InlineAlert message={inputError} />
 
-              {player.totalFrames > 0 && (
-                <AnimationControls
-                  currentFrame={player.currentFrame}
-                  totalFrames={player.totalFrames}
-                  isPlaying={player.isPlaying}
-                  isPaused={player.isPaused}
-                  isComplete={player.isComplete}
-                  speed={player.speed}
-                  onPlay={player.play}
-                  onPause={player.pause}
-                  onStepForward={player.stepForward}
-                  onStepBackward={player.stepBackward}
-                  onReset={() => { player.reset(); setResult(null); setCoins(coins.map((c) => ({ ...c, selected: false, count: 0 }))) }}
-                  onSpeedChange={player.setSpeed}
-                  onFrameChange={player.goToFrame}
-                />
-              )}
-
-              <div>
-                <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
-                <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
-                  {steps.length > 0 ? (
-                    <ol className="space-y-1 pl-5 list-decimal">
-                      {steps.map((step, index) => (
-                        <li
-                          key={index}
-                          className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
+                {coins.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {Object.entries(
+                      coins.reduce((acc: Record<number, { count: number; ids: number[] }>, coin) => {
+                        if (!acc[coin.value]) acc[coin.value] = { count: 0, ids: [] }
+                        acc[coin.value].count++
+                        acc[coin.value].ids.push(coin.id)
+                        return acc
+                      }, {})
+                    ).map(([value, { count, ids }]) => (
+                      <div
+                        key={`coin-${value}-${ids[0]}`}
+                        className={`flex items-center justify-between px-3 py-1 rounded-full border
+                          ${coins.find((c) => c.id === ids[0])?.selected ? "bg-green-100 border-green-500 dark:bg-green-900" : "bg-card border-primary"}
+                          ${coins.find((c) => c.id === ids[0])?.isNew ? "animate-pulse border-green-500" : ""}
+                        `}
+                      >
+                        <span className="mr-2">{value}</span>
+                        {count > 1 && (
+                          <span className="text-xs bg-blue-500 text-white rounded-full px-2 py-0.5">x{count}</span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 ml-1"
+                          onClick={() => handleRemoveCoin(ids[0])}
+                          disabled={player.isPlaying}
                         >
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      1. Add coin denominations (e.g., 1, 5, 10, 25)
-                      <br />
-                      2. Enter a target amount
-                      <br />
-                      3. Click &quot;Solve&quot; to find the minimum number of coins
-                    </p>
-                  )}
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-medium mb-2">Target Amount</h3>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="number"
+                      placeholder="Enter target amount"
+                      value={targetAmount}
+                      onChange={(e) => setTargetAmount(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSolve()}
+                      disabled={player.isPlaying}
+                    />
+                    <Button onClick={handleSolve} disabled={player.isPlaying || coins.length === 0 || !targetAmount} variant="secondary">
+                      Solve
+                    </Button>
+                  </div>
+                </div>
+
+                <Button onClick={handleClearCoins} disabled={player.isPlaying || coins.length === 0} variant="outline" className="w-full">
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Clear All
+                </Button>
+
+                {player.totalFrames > 0 && (
+                  <AnimationControls
+                    currentFrame={player.currentFrame}
+                    totalFrames={player.totalFrames}
+                    isPlaying={player.isPlaying}
+                    isPaused={player.isPaused}
+                    isComplete={player.isComplete}
+                    speed={player.speed}
+                    onPlay={player.play}
+                    onPause={player.pause}
+                    onStepForward={player.stepForward}
+                    onStepBackward={player.stepBackward}
+                    onReset={() => { player.reset(); setResult(null); setCoins(coins.map((c) => ({ ...c, selected: false, count: 0 }))) }}
+                    onSpeedChange={player.setSpeed}
+                    onFrameChange={player.goToFrame}
+                  />
+                )}
+
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Algorithm Steps:</h3>
+                  <div className="bg-muted/30 rounded-md p-3 h-[200px] overflow-y-auto">
+                    {steps.length > 0 ? (
+                      <ol className="space-y-1 pl-5 list-decimal">
+                        {steps.map((step, index) => (
+                          <li
+                            key={index}
+                            className={`text-sm transition-colors ${index <= visibleStepIndex ? "text-foreground" : "text-muted-foreground"}`}
+                          >
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        1. Add coin denominations (e.g., 1, 5, 10, 25)
+                        <br />
+                        2. Enter a target amount
+                        <br />
+                        3. Click &quot;Solve&quot; to find the minimum number of coins
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Learning</CardTitle>
+              <CardDescription>Understanding Greedy Algorithms</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p className="mb-2">
+                <strong>Greedy Algorithms</strong> make locally optimal choices at each step with the hope of finding a
+                global optimum.
+              </p>
+              <p className="mb-2">
+                <strong>Coin Change Problem:</strong> Given a set of coin denominations and a target amount, find the
+                minimum number of coins needed to make that amount.
+              </p>
+              <p className="mb-2"><strong>Greedy Approach:</strong></p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Sort the coins in descending order</li>
+                <li>Start with the largest coin and use as many as possible</li>
+                <li>Move to the next largest coin and repeat</li>
+                <li>Continue until the target amount is reached</li>
+              </ol>
+              <p className="mt-2">
+                <strong>Note:</strong> The greedy approach works for some coin systems (like US coins) but doesn&apos;t
+                always produce the optimal solution for arbitrary coin denominations.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      }
+      visualization={
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Visualization</CardTitle>
+            <CardDescription>Visual representation of the coin change solution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center min-h-[300px] md:h-[350px] py-4">
+              {player.currentDescription && (
+                <div className="mb-4 text-center text-xs md:text-sm font-medium text-primary bg-muted/30 p-2 rounded-md w-full">
+                  {player.currentDescription}
+                </div>
+              )}
+              {!result ? (
+                coins.length === 0 ? (
+                  <div className="text-muted-foreground text-sm">Add coins to start</div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <Coins className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mb-4" />
+                    <div className="text-center text-muted-foreground text-sm">
+                      {player.isPlaying ? "Solving..." : "Enter a target amount and click Solve"}
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="flex flex-col items-center w-full">
+                  <div className="text-lg md:text-xl font-bold mb-4 md:mb-6">
+                    Solution: {result.total} coin{result.total !== 1 ? "s" : ""}
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-1.5 md:gap-2 max-w-full overflow-y-auto max-h-[160px] p-2 bg-muted/10 rounded-lg">
+                    {result.coins.map((coin, index) => (
+                      <div
+                        key={`result-coin-${coin.value}-${index}`}
+                        className="flex items-center justify-center w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-100 border-2 border-green-500 dark:bg-green-900 transition-all animate-in zoom-in-50 duration-300"
+                      >
+                        <span className="text-xs md:text-sm font-bold">{coin.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {result.coins.length > 0 && (
+                    <div className="mt-4 md:mt-6 text-xs md:text-xs text-center border-t pt-4 w-full">
+                      <span className="font-semibold text-muted-foreground uppercase tracking-wider">Distribution: </span>
+                      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-1">
+                        {Object.entries(
+                          result.coins.reduce((acc: Record<number, number>, coin) => {
+                            acc[coin.value] = (acc[coin.value] || 0) + 1
+                            return acc
+                          }, {})
+                        )
+                          .sort((a, b) => Number(b[0]) - Number(a[0]))
+                          .map(([value, count]) => (
+                            <span key={`dist-${value}`} className="bg-background px-2 py-0.5 rounded border border-border shadow-sm">
+                              <span className="font-bold">{count}</span> × {value}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Learning</CardTitle>
-            <CardDescription>Understanding Greedy Algorithms</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <p className="mb-2">
-              <strong>Greedy Algorithms</strong> make locally optimal choices at each step with the hope of finding a
-              global optimum.
-            </p>
-            <p className="mb-2">
-              <strong>Coin Change Problem:</strong> Given a set of coin denominations and a target amount, find the
-              minimum number of coins needed to make that amount.
-            </p>
-            <p className="mb-2"><strong>Greedy Approach:</strong></p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>Sort the coins in descending order</li>
-              <li>Start with the largest coin and use as many as possible</li>
-              <li>Move to the next largest coin and repeat</li>
-              <li>Continue until the target amount is reached</li>
-            </ol>
-            <p className="mt-2">
-              <strong>Note:</strong> The greedy approach works for some coin systems (like US coins) but doesn&apos;t
-              always produce the optimal solution for arbitrary coin denominations.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Visualization Panel */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Visualization</CardTitle>
-          <CardDescription>Visual representation of the coin change solution</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center min-h-[300px] md:h-[350px] py-4">
-            {player.currentDescription && (
-              <div className="mb-4 text-center text-xs md:text-sm font-medium text-primary bg-muted/30 p-2 rounded-md w-full">
-                {player.currentDescription}
-              </div>
-            )}
-            {!result ? (
-              coins.length === 0 ? (
-                <div className="text-muted-foreground text-sm">Add coins to start</div>
-              ) : (
-                <div className="flex flex-col items-center">
-                  <Coins className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mb-4" />
-                  <div className="text-center text-muted-foreground text-sm">
-                    {player.isPlaying ? "Solving..." : "Enter a target amount and click Solve"}
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="flex flex-col items-center w-full">
-                <div className="text-lg md:text-xl font-bold mb-4 md:mb-6">
-                  Solution: {result.total} coin{result.total !== 1 ? "s" : ""}
-                </div>
-                <div className="flex flex-wrap justify-center gap-1.5 md:gap-2 max-w-full overflow-y-auto max-h-[160px] p-2 bg-muted/10 rounded-lg">
-                  {result.coins.map((coin, index) => (
-                    <div
-                      key={`result-coin-${coin.value}-${index}`}
-                      className="flex items-center justify-center w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-100 border-2 border-green-500 dark:bg-green-900 transition-all animate-in zoom-in-50 duration-300"
-                    >
-                      <span className="text-xs md:text-sm font-bold">{coin.value}</span>
-                    </div>
-                  ))}
-                </div>
-                {result.coins.length > 0 && (
-                  <div className="mt-4 md:mt-6 text-xs md:text-xs text-center border-t pt-4 w-full">
-                    <span className="font-semibold text-muted-foreground uppercase tracking-wider">Distribution: </span>
-                    <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-1">
-                      {Object.entries(
-                        result.coins.reduce((acc: Record<number, number>, coin) => {
-                          acc[coin.value] = (acc[coin.value] || 0) + 1
-                          return acc
-                        }, {})
-                      )
-                        .sort((a, b) => Number(b[0]) - Number(a[0]))
-                        .map(([value, count]) => (
-                          <span key={`dist-${value}`} className="bg-background px-2 py-0.5 rounded border border-border shadow-sm">
-                            <span className="font-bold">{count}</span> × {value}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      }
+      code={
+        <CodePanel template={COIN_CHANGE} activeStep={player.currentSnapshot?.activeStep ?? null} />
+      }
+    />
   )
 }

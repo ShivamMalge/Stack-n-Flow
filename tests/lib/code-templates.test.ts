@@ -16,6 +16,7 @@ import {
     PRE_ORDER,
     POST_ORDER,
 } from "@/lib/templates/algorithms"
+import { COIN_CHANGE, FIBONACCI_DP, KNAPSACK_DP } from "@/lib/templates/dp-greedy"
 
 /** Every template in the app, with the steps its visualizer actually emits. */
 const TEMPLATES: { name: string; template: CodeTemplate; steps: number[] }[] = [
@@ -28,6 +29,9 @@ const TEMPLATES: { name: string; template: CodeTemplate; steps: number[] }[] = [
     { name: "pre-order", template: PRE_ORDER, steps: [1, 2, 3] },
     { name: "post-order", template: POST_ORDER, steps: [1, 2, 3] },
     { name: "bst insert", template: BST_INSERT, steps: [1, 2, 3, 4] },
+    { name: "coin change", template: COIN_CHANGE, steps: [1, 2, 3, 5] },
+    { name: "fibonacci dp", template: FIBONACCI_DP, steps: [1, 2, 3, 4] },
+    { name: "knapsack dp", template: KNAPSACK_DP, steps: [1, 2, 3, 4] },
 ]
 
 describe("src", () => {

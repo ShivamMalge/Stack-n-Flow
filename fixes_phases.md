@@ -326,7 +326,38 @@ defines eight states (`default`, `comparing`, `swapping`, `pivot`, `inserted`,
       Tailwind's emit order rather than intent.
 - [x] ⚪ **Queue node ids truncate** — Python sends 8-character UUIDs into a 56px tile.
 
-### Still open — needs a proper click-through
+### The click-through happened, and it is now automated ✅ (2026-08-23)
+
+The scope note above said this phase stays open until someone has clicked through every
+visualizer at both desktop and mobile widths. That happened, and rather than being a one-off it
+became `scripts/visual-audit.mjs` — 132 page loads across every catalog route, both themes, both
+viewports, checking sideways scroll, content past the viewport with no scroller, content hidden
+behind `overflow:hidden`, svg children outside their viewBox, svgs scaled below intrinsic size,
+and console errors. Run it with `npm run audit:visual` against a production server.
+
+Two defects it found on its first correct run, neither visible to any test:
+
+- [x] 🟠 **The graph rendered at 0.71x on mobile** — 356px of an intrinsic 500 — because the svg is
+      a flex child and flex children shrink. It was scaling down instead of scrolling, which
+      contradicted a comment already in that file. The disjoint set had the same defect at 0.557x.
+      Both now carry `shrink-0`.
+- [x] 🟡 **Disjoint-set rank labels clipped** by 9 user-units at the top edge.
+
+Writing the instrument taught the same lesson twice. Its first version compared client rects and
+cleared a genuinely clipped label, because `getBoundingClientRect` reports CSS-pixel geometry and
+cannot see viewBox clipping. Its second used `getBBox` alone and reported five false positives on
+the graph, because `getBBox` is in the element's own user space and the graph draws nodes as
+`<g transform="translate(x,y)"><circle r=20>`, whose raw bbox reads as 20 units outside. Only
+`getBBox` mapped through `getCTM` is correct. Both versions were run against a deliberately
+reintroduced bug before being trusted.
+
+`tests/lib/css-tokens.test.ts` is the half that needs no browser and runs on every commit: every
+`var(--token)` must resolve, and any token stored as bare HSL components must be wrapped in
+`hsl()`. That rule exists because a visualizer shipped with `fill-[var(--node-label)]` and its
+labels rendered invisible — the token was defined, but used raw, producing `fill: 0 0% 9%`, which
+is invalid, and CSS drops invalid declarations silently.
+
+**Phase 6 is closed.** Visual regressions are now caught by an instrument rather than by chance.
 
 ## Phase 7 — Feature Roadmap (post-hardening)
 
