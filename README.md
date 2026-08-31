@@ -25,8 +25,14 @@ s          # renders a live Stack in the notebook
 s.pop()    # the rendered view follows the Python object
 ```
 
-Works in Jupyter Notebook and JupyterLab. Colab is untested — see the honesty
-note below.
+Works in Jupyter Notebook and JupyterLab.
+
+**On Colab you must first run** `output.enable_custom_widget_manager()` — Colab
+does not display widgets from packages outside its bundled set, and without it
+the cells produce no output and nothing says why.
+[`examples/pratyaksha_colab_demo.ipynb`](examples/pratyaksha_colab_demo.ipynb)
+does this for you and ends with a diagnostic cell that tells a packaging problem
+apart from a widget-manager one. Colab itself is still unverified.
 
 ### What actually works today
 
