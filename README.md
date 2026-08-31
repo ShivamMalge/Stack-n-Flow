@@ -27,12 +27,15 @@ s.pop()    # the rendered view follows the Python object
 
 Works in Jupyter Notebook and JupyterLab.
 
-**On Colab you must first run** `output.enable_custom_widget_manager()` — Colab
-does not display widgets from packages outside its bundled set, and without it
-the cells produce no output and nothing says why.
+**Colab needs two extra steps.** It ships ipywidgets 7.7.1, and anywidget's
+front end needs the ipywidgets 8 protocol — on 7.x the widget installs, emits a
+correct mimebundle, and then renders nothing at all with no error. So you must
+upgrade ipywidgets, **restart the runtime**, and call
+`output.enable_custom_widget_manager()`.
 [`examples/pratyaksha_colab_demo.ipynb`](examples/pratyaksha_colab_demo.ipynb)
-does this for you and ends with a diagnostic cell that tells a packaging problem
-apart from a widget-manager one. Colab itself is still unverified.
+does all three in order, refuses to continue on ipywidgets 7 instead of drawing
+nothing, and ends with a diagnostic cell that separates a packaging failure from
+a front-end one.
 
 ### What actually works today
 

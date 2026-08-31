@@ -28,6 +28,12 @@ dependencies = [
     # anywidget 0.9 is the first release with the stable ESM/CSS attribute contract
     # this package relies on.
     "anywidget>=0.9",
+    # anywidget's own floor is ipywidgets>=7.6, which is too loose to be useful:
+    # its ESM front end needs the ipywidgets 8 widget protocol. On 7.x the widget
+    # installs, emits a correct widget-view mimebundle, and then renders nothing
+    # at all with no error anywhere. Google Colab ships 7.7.1, so without this
+    # floor pip leaves it in place and the library silently does not work there.
+    "ipywidgets>=8",
     "traitlets>=5.0",
 ]
 
