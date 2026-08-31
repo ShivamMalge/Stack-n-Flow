@@ -104,6 +104,12 @@ jobs:
       - name: Install the package
         run: pip install -e ".[dev]"
 
+      # The notebook tests need a kernel to execute against. Installed here
+      # rather than in [dev] so a plain `pip install -e .[dev]` stays light;
+      # the tests skip themselves when these are absent.
+      - name: Install the notebook stack
+        run: pip install nbclient nbformat ipykernel
+
       - name: Tests
         run: pytest tests/python -q
 
@@ -157,3 +163,15 @@ jobs:
 
           print(f"{wheels[0].name}: {len(names)} entries, modules and assets present")
           PY
+
+      # P1 asks for the built assets to be reproducible rather than only
+      # hand-committed. The wheel is the artifact a person would actually
+      # install, so publishing it makes any green run downloadable and lets a
+      # release be cut from CI output instead of a local build.
+      - name: Publish the wheel and sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: pratyaksha-dist
+          path: dist/
+          retention-days: 30
+          if-no-files-found: error

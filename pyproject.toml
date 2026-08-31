@@ -49,3 +49,8 @@ include = ["pratyaksha*"]
 # import time.
 [tool.setuptools.package-data]
 pratyaksha = ["static/*", "py.typed"]
+
+[tool.pytest.ini_options]
+markers = [
+    "notebook: runs Pratyaksha inside a real Jupyter kernel; needs nbclient and ipykernel",
+]

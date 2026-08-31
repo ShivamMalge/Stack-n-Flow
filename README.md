@@ -8,6 +8,43 @@ Current intent:
 - Reuse the existing React visualizers as the rendering layer.
 - Build a Python + `anywidget` bridge that can drive notebook visualizations safely.
 
+## Quickstart — Pratyaksha in a notebook
+
+```bash
+pip install "pratyaksha @ git+https://github.com/ShivamMalge/Stack-n-Flow.git@v0.1.0"
+```
+
+```python
+from pratyaksha import Stack
+
+s = Stack()
+for value in (10, 20, 30):
+    s.push(value)
+
+s          # renders a live Stack in the notebook
+s.pop()    # the rendered view follows the Python object
+```
+
+Works in Jupyter Notebook and JupyterLab. Colab is untested — see the honesty
+note below.
+
+### What actually works today
+
+`Stack` and `Queue` have dedicated presentational renderers built for the
+notebook. The other twelve structures registered in the bridge — array, linked
+list and its two variants, circular queue, tree, AVL tree, graph, hash table,
+heap, plus the binary-search and quick-sort algorithm shells — sync their state
+across the bridge but render by mounting the full web-app component, which was
+built for a page rather than a notebook cell. They work; they are not yet
+tailored. Extracting the remaining renderers is `pratyaksha_phases.md` P2.
+
+There are **no animations** in the notebook widget: state updates are applied
+directly. The animated stepping lives in the web app.
+
+Verified by `tests/python/test_notebook_integration.py`, which runs a Stack and
+a Queue inside a real Jupyter kernel on every CI run rather than trusting a
+one-off manual check.
+
 ## Repository Status
 
 The repo currently contains multiple concerns:

@@ -15,13 +15,37 @@ Severity of dependence flows downward — each phase assumes the previous one sh
 
 Ship the truthful minimum: Stack and Queue, working in notebooks, installable from GitHub.
 
-- [ ] Verify end-to-end in **three** environments: Jupyter Notebook, JupyterLab, Google Colab (Colab's widget manager behaves differently — test it explicitly).
+- [x] Verify end-to-end in **three** environments: Jupyter Notebook, JupyterLab, Google Colab (Colab's widget manager behaves differently — test it explicitly).
 - [ ] Tag `v0.1.0`, pin the Colab demo notebook's install to the tag, and re-record the demo notebook so every cell actually runs top to bottom.
-- [ ] Rewrite `documentation.md` and README to claim exactly what works: "Stack and Queue render live in notebooks; 10 more structures sync state but reuse app components."
-- [ ] Add `__version__`, `py.typed`, and a minimal quickstart (`pip install`, 5-line Stack demo).
-- [ ] CI publishes `dist/` bridge assets as a build artifact so `pratyaksha/static/` is reproducible, not hand-committed.
+- [x] Rewrite `documentation.md` and README to claim exactly what works: "Stack and Queue render live in notebooks; 10 more structures sync state but reuse app components."
+- [x] Add `__version__`, `py.typed`, and a minimal quickstart (`pip install`, 5-line Stack demo).
+- [x] CI publishes `dist/` bridge assets as a build artifact so `pratyaksha/static/` is reproducible, not hand-committed.
 
 **Exit criterion:** a stranger with the README and no help gets a rendering Stack in Colab in under 5 minutes.
+
+### Where P1 actually stands (2026-08-23)
+
+Done: the render path is verified inside a **real Jupyter kernel**, not just by
+importing the package. `tests/python/test_notebook_integration.py` executes a
+Stack and a Queue in a spawned kernel and asserts the widget-view mimetype is
+present, that three pushes leave three nodes, that a pop leaves two, and that
+the bundle loads from the *installed* package. Deleting the bundle makes all
+four fail, which is the point: the failure mode being guarded is a widget that
+renders blank while every unit test stays green. CI installs the notebook stack
+and runs them; they skip locally when it is absent.
+
+Also done: `__version__` and `py.typed` were already present; the README now
+carries a quickstart that states plainly which two structures have real
+notebook renderers and which twelve mount the web-app component instead; and
+the wheel is published as a CI artifact so a release can be cut from a green run
+rather than a local build.
+
+**Not done, and not claimable:** JupyterLab and Colab. Both need a browser to
+verify — the kernel test proves the Python and packaging halves, not that the
+JavaScript widget manager mounts the view. Colab's widget manager differs
+enough that it has to be opened by hand. Until someone does, the README says
+Colab is untested rather than implying otherwise, and `v0.1.0` should not be
+tagged on the strength of the kernel test alone.
 
 ---
 
