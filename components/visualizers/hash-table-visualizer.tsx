@@ -11,8 +11,8 @@ import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
 import InlineAlert from "@/components/ui/inline-alert"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import HashTableRenderer from "@/components/visualizers/hash-table/hash-table-renderer"
 import { useAnimationPlayer } from "@/hooks/useAnimationPlayer"
-import { STATE_BOX, type VisualizerState } from "@/lib/visualizer-states"
 import {
     buildDelete,
     buildInsert,
@@ -30,13 +30,6 @@ import {
     MAX_TABLE_SIZE,
     MIN_TABLE_SIZE,
 } from "@/lib/hashing"
-
-/**
- * Shape the Pratyaksha widget bridge sends for HASH_TABLE — an array of chains.
- * Kept as the controlled input so src/bridge/registry.tsx keeps working; the
- * component converts it into the richer slot model for rendering.
- */
-export type BucketEntry = { key: string; value: string; state?: string }
 
 // Line indices match what lib/hashing.ts sets as `activeLine`.
 const CHAINING_CODE = [
@@ -67,22 +60,7 @@ const STRATEGIES: Strategy[] = ["chaining", "linear", "quadratic", "double"]
 const SAMPLE_KEYS = ["12", "22", "32", "7", "19"]
 const DEFAULT_SIZE = 10
 
-/** Bridge input -> slot model. Unknown states fall back to the neutral one. */
-function fromBuckets(buckets: BucketEntry[][]): HashSlot[] {
-    return buckets.map((chain) => ({
-        entries: chain.map((e) => ({ key: e.key, value: e.value, state: "default" as VisualizerState })),
-        state: "default" as VisualizerState,
-        tombstone: false,
-    }))
-}
-
-export default function HashTableVisualizer({
-    controlledBuckets,
-}: {
-    controlledBuckets?: BucketEntry[][]
-} = {}) {
-    const isControlled = controlledBuckets !== undefined
-
+export default function HashTableVisualizer() {
     const [size, setSize] = useState(DEFAULT_SIZE)
     const [strategy, setStrategy] = useState<Strategy>("chaining")
     const [multiplier, setMultiplier] = useState(DEFAULT_MULTIPLIER)
@@ -97,7 +75,7 @@ export default function HashTableVisualizer({
     const player = useAnimationPlayer<HashSnapshot>(onFrameChange)
 
     const options = { strategy, multiplier }
-    const base = isControlled ? fromBuckets(controlledBuckets) : slots
+    const base = slots
     const view = player.currentSnapshot?.slots ?? base
     const probes = player.currentSnapshot?.probes ?? 0
     const home = player.currentSnapshot?.home ?? -1
@@ -163,90 +141,19 @@ export default function HashTableVisualizer({
     const factor = loadFactor(view)
 
     const visualization = (
-        <Card className="flex flex-col h-full">
-            <CardHeader className="shrink-0">
-                <CardTitle>Bucket Array</CardTitle>
-                <CardDescription>
-                    {isControlled
-                        ? "Driven from the notebook"
-                        : `${STRATEGY_LABELS[strategy]} · ${entryCount(view)} of ${view.length} slots used · load factor ${factor.toFixed(2)}`}
-                </CardDescription>
-            </CardHeader>
-
-            <CardContent className="flex flex-col flex-1 min-h-0 gap-3 border-t pt-4 pb-4 bg-muted/5">
-                {!isControlled && (
-                    <p className="shrink-0 rounded-md border bg-muted/30 px-3 py-1.5 text-center font-mono text-xs">
-                        {preview
-                            ? preview.working
-                            : `h(key) = key mod ${view.length} for numbers, polynomial base ${multiplier} otherwise`}
-                        {!isChaining && preview && strategy === "double" &&
-                            ` · step h₂ = ${secondaryHash(keyInput.trim(), view.length, multiplier)}`}
-                    </p>
-                )}
-
-                <div className="flex-1 min-h-0 overflow-auto pr-1">
-                    <ul className="space-y-1">
-                        {view.map((slot, index) => (
-                            <li key={index} className="flex items-center gap-2">
-                                <span
-                                    className={`w-9 shrink-0 text-right font-mono text-xs ${index === home ? "font-bold text-primary" : "text-muted-foreground"}`}
-                                >
-                                    [{index}]
-                                </span>
-                                <div
-                                    className={`flex flex-1 min-w-0 items-center gap-1.5 rounded-md border-2 px-2 py-1 transition-all duration-300 ${STATE_BOX[slot.state]}`}
-                                >
-                                    {slot.entries.length === 0 ? (
-                                        <span className="font-mono text-xs text-muted-foreground">
-                                            {slot.tombstone ? "⌫ tombstone" : "∅"}
-                                        </span>
-                                    ) : (
-                                        slot.entries.map((entry, ei) => (
-                                            <span
-                                                key={`${entry.key}-${ei}`}
-                                                className={`flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-xs transition-all duration-300 ${STATE_BOX[entry.state]}`}
-                                            >
-                                                <strong>{entry.key}</strong>
-                                                <span className="text-muted-foreground">:</span>
-                                                {entry.value}
-                                            </span>
-                                        ))
-                                    )}
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
-                {player.currentDescription && (
-                    <p className="shrink-0 rounded-md border bg-muted/30 px-3 py-2 text-center text-xs md:text-sm font-medium text-primary">
-                        {player.currentDescription}
-                    </p>
-                )}
-
-                <div className="shrink-0 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t pt-3 text-xs">
-                    {([
-                        ["default", "Free"],
-                        ["comparing", "Probing"],
-                        ["inserted", "Placed"],
-                        ["warning", "Collision"],
-                        ["removed", "Deleted"],
-                    ] as const).map(([state, label]) => (
-                        <div
-                            key={label}
-                            className="flex items-center gap-1.5 rounded border border-border bg-background px-2 py-0.5"
-                        >
-                            <div className={`h-2.5 w-2.5 rounded-sm border ${STATE_BOX[state]}`} />
-                            <span className="whitespace-nowrap text-muted-foreground">{label}</span>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+        <HashTableRenderer
+            slots={view}
+            home={home}
+            subtitle={`${STRATEGY_LABELS[strategy]} · ${entryCount(view)} of ${view.length} slots used · load factor ${factor.toFixed(2)}`}
+            caption={
+                (preview ? preview.working : `h(key) = key mod ${view.length} for numbers, polynomial base ${multiplier} otherwise`) +
+                (!isChaining && preview && strategy === "double"
+                    ? ` · step h₂ = ${secondaryHash(keyInput.trim(), view.length, multiplier)}`
+                    : "")
+            }
+            description={player.currentDescription}
+        />
     )
-
-    // The notebook bridge renders the table alone, with no controls to drive it.
-    if (isControlled) return <VisualizerLayout mini visualization={visualization} />
 
     return (
         <VisualizerLayout

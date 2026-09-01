@@ -1,16 +1,6 @@
 import React from "react";
 import { render } from "@testing-library/react";
-import GraphVisualizer from "@/components/visualizers/graph-visualizer";
-
-/*
-  Cast because the point of these payloads is that they do *not* satisfy the
-  component's own node type. Python is not bound by it: `Graph.add_node` takes
-  x and y as `Any`, so whatever a notebook passes arrives here unchecked.
-*/
-const Graph = GraphVisualizer as unknown as React.ComponentType<{
-  controlledNodes: unknown[]
-  controlledEdges: unknown[]
-}>;
+import Graph from "@/components/visualizers/graph/graph-renderer";
 
 /**
  * Pratyaksha's `Graph.add_node(label, x, y)` types both coordinates as `Any`, so
@@ -52,8 +42,8 @@ describe("graph node placement", () => {
   it("keeps the coordinates it is given", () => {
     const { container } = render(
       React.createElement(Graph, {
-        controlledNodes: [{ id: "A", label: "A", x: 120, y: 150 }],
-        controlledEdges: [],
+        nodes: [{ id: "A", label: "A", x: 120, y: 150 }],
+        edges: [],
       }),
     );
     expect(placements(container)).toContainEqual([120, 150]);
@@ -62,11 +52,11 @@ describe("graph node placement", () => {
   it("places a node that arrived without coordinates", () => {
     const { container } = render(
       React.createElement(Graph, {
-        controlledNodes: [
+        nodes: [
           { id: "A", label: "A", x: 120, y: 150 },
           { id: "B", label: "B" },
         ],
-        controlledEdges: [],
+        edges: [],
       }),
     );
 
@@ -83,8 +73,8 @@ describe("graph node placement", () => {
   ])("survives %s as a coordinate", (_label, value) => {
     const { container } = render(
       React.createElement(Graph, {
-        controlledNodes: [{ id: "A", label: "A", x: value, y: value }],
-        controlledEdges: [],
+        nodes: [{ id: "A", label: "A", x: value, y: value }],
+        edges: [],
       }),
     );
     // coordinates() rejects anything that is not a plain number, so reaching
@@ -101,11 +91,11 @@ describe("graph node placement", () => {
   it("draws edges from where the nodes ended up", () => {
     const { container } = render(
       React.createElement(Graph, {
-        controlledNodes: [
+        nodes: [
           { id: "A", label: "A", x: 120, y: 150 },
           { id: "B", label: "B" },
         ],
-        controlledEdges: [{ id: "A-B", source: "A", target: "B" }],
+        edges: [{ id: "A-B", source: "A", target: "B" }],
       }),
     );
 

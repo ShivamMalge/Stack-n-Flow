@@ -9,6 +9,8 @@ import QueueRenderer from "@/components/visualizers/queue/queue-renderer"
 import LinkedListRenderer from "@/components/visualizers/linked-list/linked-list-renderer"
 import ArrayRenderer from "@/components/visualizers/array/array-renderer"
 import TreeRenderer from "@/components/visualizers/tree/tree-renderer"
+import GraphRenderer from "@/components/visualizers/graph/graph-renderer"
+import HashTableRenderer from "@/components/visualizers/hash-table/hash-table-renderer"
 
 /** Shorthand for the props a structure produces from a given payload. */
 const propsFor = (structure: string, nodes: unknown, metadata: Record<string, unknown> = {}) =>
@@ -32,6 +34,8 @@ describe("bridge registry", () => {
         expect(getRegistryEntry("ARRAY")!.component).toBe(ArrayRenderer)
         expect(getRegistryEntry("TREE")!.component).toBe(TreeRenderer)
         expect(getRegistryEntry("AVL_TREE")!.component).toBe(TreeRenderer)
+        expect(getRegistryEntry("GRAPH")!.component).toBe(GraphRenderer)
+        expect(getRegistryEntry("HASH_TABLE")!.component).toBe(HashTableRenderer)
     })
 })
 
@@ -85,19 +89,32 @@ describe("prop mappings", () => {
     })
 
     it("splits graph nodes and edges", () => {
-        const edges = [{ source: "A", target: "B" }]
-        const props = propsFor("GRAPH", [{ id: "A" }], { edges })
-        expect(props.controlledNodes).toEqual([{ id: "A" }])
-        expect(props.controlledEdges).toEqual(edges)
+        const edges = [{ id: "A-B", source: "A", target: "B" }]
+        const props = propsFor("GRAPH", [{ id: "A", label: "A" }], { edges })
+        expect(props.nodes).toEqual([{ id: "A", label: "A" }])
+        expect(props.edges).toEqual(edges)
     })
 
     it("defaults graph edges to an empty array when metadata omits them", () => {
-        expect(propsFor("GRAPH", [{ id: "A" }]).controlledEdges).toEqual([])
+        expect(propsFor("GRAPH", [{ id: "A", label: "A" }]).edges).toEqual([])
     })
 
-    it("maps hash table buckets", () => {
+    // The renderer drops the click affordance when it has no handler, which is
+    // what keeps a notebook from offering a start-node click that does nothing.
+    it("gives the graph no click handler", () => {
+        expect(propsFor("GRAPH", []).onNodeClick).toBeUndefined()
+    })
+
+    it("converts hash table chains into slots", () => {
         const buckets = [[{ key: "a", value: "1" }], []]
-        expect(propsFor("HASH_TABLE", buckets).controlledBuckets).toEqual(buckets)
+        const slots = propsFor("HASH_TABLE", buckets).slots as {
+            entries: { key: string; value: string }[]
+            tombstone: boolean
+        }[]
+        expect(slots).toHaveLength(2)
+        expect(slots[0].entries).toEqual([{ key: "a", value: "1", state: "default" }])
+        expect(slots[1].entries).toEqual([])
+        expect(slots[1].tombstone).toBe(false)
     })
 
     it("maps heap values and their states", () => {
@@ -156,11 +173,13 @@ describe("renderer extraction progress", () => {
         expect(waiting).not.toContain("ARRAY")
         expect(waiting).not.toContain("TREE")
         expect(waiting).not.toContain("AVL_TREE")
+        expect(waiting).not.toContain("GRAPH")
+        expect(waiting).not.toContain("HASH_TABLE")
     })
 
     it("counts down as renderers are extracted", () => {
         // Update this as P2 lands. It exists so the phase cannot quietly stall,
         // and so nothing regresses to mounting a full visualizer again.
-        expect(structuresAwaitingRenderer()).toHaveLength(8)
+        expect(structuresAwaitingRenderer()).toHaveLength(6)
     })
 })

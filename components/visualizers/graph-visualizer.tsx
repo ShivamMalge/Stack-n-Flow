@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,8 +10,10 @@ import { Plus } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import CodePanel from "@/components/ui/code-panel"
-import { resolveState, STATE_SHAPE, STATE_SWATCH } from "@/lib/visualizer-states"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+// The canvas constants live with the drawing; this file only needs them to
+// place a newly added node, which is a decision about the data, not the view.
+import GraphRenderer, { CANVAS_WIDTH, CANVAS_HEIGHT, NODE_RADIUS, clamp } from "@/components/visualizers/graph/graph-renderer"
 
 const BFS_CODE = [
   "def bfs(graph, start):",
@@ -57,18 +59,6 @@ type Edge = {
   isNew?: boolean
 }
 
-// Canvas dimensions the node coordinates below are expressed in; must match the
-// <svg> viewBox further down.
-const CANVAS_WIDTH = 500
-const CANVAS_HEIGHT = 300
-const NODE_MARGIN = 50
-/** Radius of the rendered node circle; also the drag clamp inset. */
-const NODE_RADIUS = 20
-
-/** Keeps a dragged coordinate inside the canvas so a node can never be lost. */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
 
 /** Starting graph, laid out to show a branch and a re-join. */
 const SAMPLE_GRAPH: { nodes: GraphNode[]; edges: Edge[] } = {
@@ -146,31 +136,6 @@ export default function GraphVisualizer({
   const [internalEdges, setEdges] = useState<Edge[]>([])
   const nodes = controlledNodes !== undefined ? controlledNodes : internalNodes;
   const edges = controlledEdges !== undefined ? controlledEdges : internalEdges;
-
-  /*
-    Every node is drawn from a finite pair of coordinates, even when it did not
-    arrive with one.
-
-    Pratyaksha's `Graph.add_node(label, x, y)` types both coordinates as `Any`,
-    so a notebook can hand us None, a string, or nothing at all. That reached the
-    svg as transform="translate(undefined, undefined)", which the browser rejects
-    outright: the node and its edges vanished, with an error only visible in a
-    console no notebook user opens. Falling back to a ring placement keeps the
-    graph readable and leaves the node draggable.
-  */
-  const drawn = useMemo(() => {
-    const usable = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value)
-    const radius = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) / 2 - NODE_RADIUS * 2
-    return nodes.map((node, index) => {
-      if (usable(node.x) && usable(node.y)) return node
-      const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2
-      return {
-        ...node,
-        x: usable(node.x) ? node.x : CANVAS_WIDTH / 2 + radius * Math.cos(angle),
-        y: usable(node.y) ? node.y : CANVAS_HEIGHT / 2 + radius * Math.sin(angle),
-      }
-    })
-  }, [nodes])
   const [sourceNode, setSourceNode] = useState("")
   const [targetNode, setTargetNode] = useState("")
   const [nodeLabel, setNodeLabel] = useState("")
@@ -182,7 +147,6 @@ export default function GraphVisualizer({
   const [steps, setSteps] = useState<string[]>([])
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
 
   const onFrameChange = useCallback((snap: GraphFrame) => {
     setNodes(snap.nodes)
@@ -350,32 +314,6 @@ export default function GraphVisualizer({
     setSelectedNode(nodeId)
   }
 
-  const handleNodeDrag = (event: React.MouseEvent, nodeId: string) => {
-    if (player.isPlaying) return
-    const startX = event.clientX, startY = event.clientY
-    const node = nodes.find((n) => n.id === nodeId)
-    if (!node) return
-    const startNodeX = node.x, startNodeY = node.y
-
-    // The svg is drawn in viewBox units but rendered at whatever width the column
-    // allows, so client-space deltas have to be divided by that scale or the node
-    // trails the cursor. Coordinates are then clamped to the canvas so a node can
-    // never be dragged out of sight (there is no pan or view reset here).
-    const renderedWidth = svgRef.current?.getBoundingClientRect().width ?? 0
-    const scale = renderedWidth > 0 ? renderedWidth / CANVAS_WIDTH : 1
-
-    const onMove = (e: MouseEvent) => {
-      const dx = (e.clientX - startX) / scale, dy = (e.clientY - startY) / scale
-      setNodes((prev) => prev.map((n) => n.id === nodeId ? {
-        ...n,
-        x: clamp(startNodeX + dx, NODE_RADIUS, CANVAS_WIDTH - NODE_RADIUS),
-        y: clamp(startNodeY + dy, NODE_RADIUS, CANVAS_HEIGHT - NODE_RADIUS),
-      } : n))
-    }
-    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp) }
-    document.addEventListener("mousemove", onMove)
-    document.addEventListener("mouseup", onUp)
-  }
 
   const visibleStep = player.currentFrame
 
@@ -510,78 +448,14 @@ export default function GraphVisualizer({
         </Card>
       }
       visualization={
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Visualization</CardTitle>
-            <CardDescription>Visual representation of the graph — drag nodes to reposition</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 overflow-hidden flex flex-col">
-            {/* No flex centring: centring a 500px svg inside a narrower scroll
-                container hides the overflow on both sides where it cannot be
-                scrolled to. `m-auto` centres it only when it already fits. */}
-            <div className="flex min-h-[300px] py-4 bg-muted/5 border-t overflow-auto">
-              <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} className="m-auto shrink-0 max-w-none md:max-w-full">
-                {edges.map((edge) => {
-                  const src = drawn.find((n) => n.id === edge.source)
-                  const tgt = drawn.find((n) => n.id === edge.target)
-                  if (!src || !tgt) return null
-                  return (
-                    <line key={edge.id}
-                      x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
-                      className={`stroke-current stroke-[2] transition-all duration-300
-                        ${edge.highlighted ? "stroke-yellow-500 stroke-[3]" : "stroke-muted-foreground"}
-                        ${edge.isNew ? "stroke-green-500 stroke-[3]" : ""}
-                      `}
-                    />
-                  )
-                })}
-                {drawn.map((node) => (
-                  <g key={node.id}
-                    transform={`translate(${node.x}, ${node.y})`}
-                    onMouseDown={(e) => handleNodeDrag(e, node.id)}
-                    onClick={() => handleNodeClick(node.id)}
-                    className="cursor-pointer"
-                  >
-                    <circle r={NODE_RADIUS} className={`
-                      transition-all duration-300 ease-in-out
-                      ${node.isNew || node.id === selectedNode ? "" : "stroke-[2]"}
-                      ${STATE_SHAPE[resolveState({
-                        comparing: node.highlighted,
-                        inserted: node.isNew,
-                        visited: node.visited,
-                      })]}
-                      ${node.id === selectedNode ? "stroke-blue-500 stroke-[3]" : ""}
-                    `} />
-                    <text textAnchor="middle" dominantBaseline="middle" className="text-sm font-medium fill-current select-none pointer-events-none">
-                      {node.label}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-            </div>
-            {/* Current frame description */}
-            {player.currentDescription && (
-              <p className="text-center text-xs md:text-sm font-medium text-primary mt-2 px-4 py-2 bg-muted/30 border-t">{player.currentDescription}</p>
-            )}
-            {/* Legend */}
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 p-4 text-xs md:text-xs border-t">
-              {[
-                // Swatches come from the shared map so the legend cannot drift
-                // from the nodes it describes. "fill-card" here was a bug: that
-                // is an SVG utility and did nothing to a div.
-                [STATE_SWATCH.default, "Unvisited"],
-                [STATE_SWATCH.comparing, "Current"],
-                [STATE_SWATCH.visited, "Visited"],
-                ["bg-card border-2 border-blue-500", "Start Node"],
-              ].map(([cls, label]) => (
-                <div key={label} className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-border bg-background">
-                  <div className={`w-2.5 h-2.5 rounded-full ${cls}`} />
-                  <span className="text-muted-foreground whitespace-nowrap">{label}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <GraphRenderer
+          nodes={nodes}
+          edges={edges}
+          selectedNode={selectedNode}
+          onNodeClick={handleNodeClick}
+          description={player.currentDescription}
+          interactionsDisabled={player.isPlaying}
+        />
       }
       code={
         <CodePanel

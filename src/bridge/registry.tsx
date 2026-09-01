@@ -1,6 +1,4 @@
 import type React from "react";
-import GraphVisualizer from "../../components/visualizers/graph-visualizer";
-import HashTableVisualizer from "../../components/visualizers/hash-table-visualizer";
 import HeapVisualizer from "../../components/visualizers/heap-visualizer";
 import CircularLinkedListVisualizer from "../../components/visualizers/circular-linked-list-visualizer";
 import DoublyLinkedListVisualizer from "../../components/visualizers/doubly-linked-list-visualizer";
@@ -12,6 +10,8 @@ import QueueRenderer from "../../components/visualizers/queue/queue-renderer";
 import LinkedListRenderer from "../../components/visualizers/linked-list/linked-list-renderer";
 import ArrayRenderer from "../../components/visualizers/array/array-renderer";
 import TreeRenderer from "../../components/visualizers/tree/tree-renderer";
+import GraphRenderer from "../../components/visualizers/graph/graph-renderer";
+import HashTableRenderer, { fromBuckets } from "../../components/visualizers/hash-table/hash-table-renderer";
 
 export type BridgeVisualizerComponent = React.ComponentType<any>;
 
@@ -90,17 +90,28 @@ const componentRegistry: Record<string, RegistryEntry> = {
     rendererOnly: true,
   },
   GRAPH: {
-    component: GraphVisualizer,
+    component: GraphRenderer,
+    // No onNodeClick: picking a start node in a notebook would only set state
+    // Python is about to overwrite, and the renderer drops the click affordance
+    // when it is not given a handler.
     props: ({ nodes, metadata }) => ({
-      controlledNodes: nodes,
-      controlledEdges: metadata.edges || [],
+      nodes: asArray(nodes),
+      edges: Array.isArray(metadata.edges) ? metadata.edges : [],
+      description: metadata.description ?? null,
     }),
-    rendererOnly: false,
+    rendererOnly: true,
   },
   HASH_TABLE: {
-    component: HashTableVisualizer,
-    props: ({ nodes }) => ({ controlledBuckets: nodes }),
-    rendererOnly: false,
+    component: HashTableRenderer,
+    // Python sends chains, which is the shape separate chaining produces; the
+    // renderer wants the richer slot model that also carries probe states and
+    // tombstones, so it is converted on the way in.
+    props: ({ nodes, metadata }) => ({
+      slots: fromBuckets(asArray(nodes) as never),
+      home: typeof metadata.home === "number" ? metadata.home : null,
+      description: metadata.description ?? null,
+    }),
+    rendererOnly: true,
   },
   HEAP: {
     component: HeapVisualizer,
