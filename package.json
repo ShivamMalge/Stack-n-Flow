@@ -12,7 +12,8 @@
     "verify:bridge": "tsup && npx tailwindcss -c tailwind.bridge.config.ts -i ./src/bridge/bridge.css -o ./pratyaksha/static/pratyaksha.css --minify",
     "audit:visual": "node scripts/visual-audit.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:widget": "node scripts/check-widget-bundle.mjs"
   },
   "dependencies": {
     "@anywidget/react": "^0.2.0",
