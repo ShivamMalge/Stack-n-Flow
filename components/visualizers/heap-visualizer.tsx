@@ -5,14 +5,17 @@ import { useState, useCallback, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
+import HeapRenderer, { HeapArrayView, HeapLegend, type HeapNodeState } from "@/components/visualizers/heap/heap-renderer"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type NodeState = "default" | "comparing" | "swapping" | "inserted" | "deleted" | "heapified"
+// The states are the renderer's, so the palettes it draws them with cannot
+// go out of step with the frames built here.
+type NodeState = HeapNodeState
 
 type HeapFrame = {
     heap: number[]
@@ -156,133 +159,6 @@ function generateDeleteRoot(heap: number[], isMin: boolean): AnimationFrame<Heap
     return frames
 }
 
-// ── Node state colors ────────────────────────────────────────────────────────
-
-// Themed via CSS variables (see app/globals.css) so nodes stay legible in both
-// light and dark mode; these were previously dark-only hex literals.
-const NODE_FILL: Record<NodeState, string> = {
-    default: "hsl(var(--node-default-fill))",
-    comparing: "hsl(var(--node-comparing-fill))",
-    swapping: "hsl(var(--node-swapping-fill))",
-    inserted: "hsl(var(--node-inserted-fill))",
-    deleted: "hsl(var(--node-deleted-fill))",
-    heapified: "hsl(var(--node-heapified-fill))",
-}
-const NODE_STROKE: Record<NodeState, string> = {
-    default: "hsl(var(--node-default-stroke))",
-    comparing: "hsl(var(--node-comparing-stroke))",
-    swapping: "hsl(var(--node-swapping-stroke))",
-    inserted: "hsl(var(--node-inserted-stroke))",
-    deleted: "hsl(var(--node-deleted-stroke))",
-    heapified: "hsl(var(--node-heapified-stroke))",
-}
-
-// ── SVG Tree Renderer ────────────────────────────────────────────────────────
-
-function HeapTreeSVG({
-    heap, states, scale, pan,
-}: {
-    heap: number[]; states: NodeState[]; scale: number; pan: { x: number; y: number }
-}) {
-    const R = 24
-    const xGap = 60
-    const yGap = 76
-
-    const positions: Array<{ x: number; y: number }> = []
-    for (let i = 0; i < heap.length; i++) {
-        const depth = Math.floor(Math.log2(i + 1))
-        const nodesAtDepth = Math.pow(2, depth)
-        const posInDepth = i - (nodesAtDepth - 1)
-        const totalWidth = nodesAtDepth * xGap
-        const x = (posInDepth + 0.5) * (totalWidth / nodesAtDepth) - totalWidth / 2
-        const y = depth * yGap + R + 10
-        positions.push({ x, y })
-    }
-
-    const maxDepth = heap.length > 0 ? Math.floor(Math.log2(heap.length)) : 0
-    const maxWidth = Math.pow(2, maxDepth) * xGap
-    const svgW = Math.max(300, maxWidth + 100)
-    const svgH = (maxDepth + 1) * yGap + 60
-
-    return (
-        // `m-auto` centres the tree inside the scrolling plate while it fits and
-        // lets it scroll from the true origin once it does not.
-        <svg
-            width="100%"
-            height="100%"
-            viewBox={`${pan.x - svgW / 2 - 30} ${pan.y} ${svgW + 60} ${svgH}`}
-            style={{
-                transform: `scale(${scale})`,
-                transformOrigin: "center top",
-                transition: "transform 0.2s ease",
-            }}
-            className="m-auto"
-        >
-            {/* Edges */}
-            {heap.map((_, i) => {
-                const l = leftIdx(i); const r = rightIdx(i)
-                return (
-                    <g key={`e-${i}`}>
-                        {l < heap.length && (
-                            <line x1={positions[i].x} y1={positions[i].y + R}
-                                x2={positions[l].x} y2={positions[l].y - R}
-                                stroke="hsl(var(--node-edge))" strokeWidth="1.5" />
-                        )}
-                        {r < heap.length && (
-                            <line x1={positions[i].x} y1={positions[i].y + R}
-                                x2={positions[r].x} y2={positions[r].y - R}
-                                stroke="hsl(var(--node-edge))" strokeWidth="1.5" />
-                        )}
-                    </g>
-                )
-            })}
-            {/* Nodes */}
-            {heap.map((val, i) => {
-                const st = states[i] ?? "default"
-                return (
-                    <g key={i}>
-                        <circle cx={positions[i].x} cy={positions[i].y} r={R}
-                            fill={NODE_FILL[st]} stroke={NODE_STROKE[st]} strokeWidth="2"
-                            style={{ transition: "all 0.3s ease" }} />
-                        <text x={positions[i].x} y={positions[i].y} textAnchor="middle" dominantBaseline="middle"
-                            fill="hsl(var(--node-label))" fontSize="12" fontWeight="bold" className="select-none pointer-events-none">
-                            {val}
-                        </text>
-                        <text x={positions[i].x} y={positions[i].y + R + 13} textAnchor="middle"
-                            fill="hsl(var(--node-index-label))" fontSize="9" className="select-none pointer-events-none">
-                            [{i}]
-                        </text>
-                    </g>
-                )
-            })}
-        </svg>
-    )
-}
-
-// ── Array View ───────────────────────────────────────────────────────────────
-
-const ENTRY_BG: Record<NodeState, string> = {
-    default: "bg-muted/50 border-border",
-    comparing: "bg-blue-500/20 border-blue-500",
-    swapping: "bg-yellow-500/20 border-yellow-500",
-    inserted: "bg-green-500/20 border-green-500",
-    deleted: "bg-red-500/20 border-red-500",
-    heapified: "bg-purple-500/20 border-purple-500",
-}
-
-function HeapArrayView({ heap, states }: { heap: number[]; states: NodeState[] }) {
-    return (
-        <div className="flex gap-1 flex-wrap justify-center">
-            {heap.map((val, i) => (
-                <div key={i} className={`flex flex-col items-center border rounded px-2 py-1 min-w-[36px] text-center transition-all duration-300 ${ENTRY_BG[states[i] ?? "default"]}`}>
-                    <span className="text-xs font-bold">{val}</span>
-                    <span className="text-[9px] text-muted-foreground">[{i}]</span>
-                </div>
-            ))}
-        </div>
-    )
-}
-
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export default function HeapVisualizer({
@@ -300,9 +176,13 @@ export default function HeapVisualizer({
     const [inputValue, setInputValue] = useState("")
     const [steps, setSteps] = useState<string[]>([])
 
-    // Zoom / Pan state
-    const [scale, setScale] = useState(1)
-    const [pan, setPan] = useState({ x: 0, y: 0 })
+    /*
+      Bumped when the heap is cleared or its type flipped, and passed as the
+      renderer's `key`. Zoom and pan live in the renderer now, but starting a new
+      heap should still start from a default view rather than wherever the last
+      one was left panned to; remounting is the plainest way to say that.
+    */
+    const [viewGeneration, setViewGeneration] = useState(0)
 
     const onFrameChange = useCallback((snap: HeapFrame) => {
         setHeap(snap.heap)
@@ -350,7 +230,7 @@ export default function HeapVisualizer({
         if (player.isPlaying) return
         pendingFinalRef.current = null
         player.clear(); setHeap([]); setStates([]); setSteps([])
-        setScale(1); setPan({ x: 0, y: 0 })
+        setViewGeneration((n) => n + 1)
     }
 
     const handleRandom = () => {
@@ -375,7 +255,7 @@ export default function HeapVisualizer({
         if (player.isPlaying) return
         pendingFinalRef.current = null
         setHeapType(t); setHeap([]); setStates([]); setSteps([]); player.clear()
-        setScale(1); setPan({ x: 0, y: 0 })
+        setViewGeneration((n) => n + 1)
     }
 
     const snap = player.currentSnapshot
@@ -487,20 +367,10 @@ export default function HeapVisualizer({
                             <div>Build: <span className="font-mono">O(n)</span></div>
                             <div>Peek: <span className="font-mono">O(1)</span></div>
                         </div>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                            {([
-                                ["bg-blue-500/30 border-blue-500", "Comparing"],
-                                ["bg-yellow-500/30 border-yellow-500", "Swapping"],
-                                ["bg-green-500/30 border-green-500", "Inserted"],
-                                ["bg-red-500/30 border-red-500", "Deleted"],
-                                ["bg-purple-500/30 border-purple-500", "Heapified"],
-                            ] as const).map(([cls, label]) => (
-                                <div key={label} className="flex items-center gap-1.5">
-                                    <div className={`w-3 h-3 rounded-sm border ${cls}`} />
-                                    <span className="text-muted-foreground">{label}</span>
-                                </div>
-                            ))}
-                        </div>
+                        {/* Was hand-written here at /30 opacity while the cells it
+                            describes are drawn at /20, from a separate list that
+                            had to be kept in step by hand. */}
+                        <HeapLegend />
                     </CardContent>
                 </Card>
             </div>
@@ -510,57 +380,10 @@ export default function HeapVisualizer({
                 tree card absorbs the slack, so neither side is left half empty. */}
             <div className="order-2 md:col-start-2 md:row-start-1 flex flex-col gap-6 h-full">
                 {/* Tree Visualization Card */}
-                <Card className="flex-1 flex flex-col min-h-[400px]">
-                    <CardHeader className="pb-2">
-                        <CardTitle>Tree View</CardTitle>
-                        <CardDescription>Visual representation as a complete binary tree</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-                        {/* Zoom / Pan controls */}
-                        <div className="flex flex-wrap gap-2 px-4 pb-2">
-                            <Button size="sm" variant="outline" onClick={() => setScale((s) => Math.min(s * 1.2, 4))}>
-                                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => setScale((s) => Math.max(s / 1.2, 0.2))}>
-                                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, x: p.x - 40 }))}>
-                                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, x: p.x + 40 }))}>
-                                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-                            </Button>
-                            {/* pan.y was already in the viewBox but nothing ever set it. */}
-                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, y: p.y - 40 }))}>
-                                <MoveVertical className="h-4 w-4 mr-1" /> Pan Up
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => setPan((p) => ({ ...p, y: p.y + 40 }))}>
-                                <MoveVertical className="h-4 w-4 mr-1" /> Pan Down
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => { setScale(1); setPan({ x: 0, y: 0 }) }}>
-                                Reset View
-                            </Button>
-                        </div>
-
-                        {/*
-                            SVG canvas. The plate is the scroller itself: the old
-                            `absolute inset-0` child made this `overflow-auto` a dead
-                            scroller, and centring a scrolling box with `items-center`
-                            spilled the overflow both ways, so the leading half (the
-                            root node first) could never be reached because
-                            scrollLeft/scrollTop cannot go negative.
-                        */}
-                        <div className="flex flex-1 min-h-[300px] max-h-[60vh] w-full overflow-auto border-t p-4" style={{ overscrollBehavior: "contain" }}>
-                            {displayHeap.length === 0 ? (
-                                <div className="m-auto text-muted-foreground text-sm text-center">
-                                    Insert values to build the heap
-                                </div>
-                            ) : (
-                                <HeapTreeSVG heap={displayHeap} states={displayStates} scale={scale} pan={pan} />
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* showArray is off: the left column already carries the
+                    Array Representation card. A notebook has no left column,
+                    so the renderer draws it there by default. */}
+                <HeapRenderer key={viewGeneration} heap={displayHeap} states={displayStates} showArray={false} />
 
                 {/* Code Panel Card */}
                 <div className="h-[280px]">

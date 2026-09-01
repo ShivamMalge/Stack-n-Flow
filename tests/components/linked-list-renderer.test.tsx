@@ -57,3 +57,66 @@ describe("LinkedListRenderer", () => {
     expect(screen.getByText("hello")).toBeInTheDocument();
   });
 });
+
+/**
+ * The three lists differ only in what is drawn between and after the nodes, so
+ * they share one renderer. Before that they were three copies, and only the
+ * singly list had learned to shorten an id — the other two printed Python's
+ * 8-character uuids in full.
+ */
+describe("LinkedListRenderer variants", () => {
+  const arrows = (container: HTMLElement) => container.querySelectorAll("svg.lucide").length;
+
+  it("draws one connector per gap in a singly list", () => {
+    const { container } = render(React.createElement(LinkedListRenderer, { nodes }));
+    expect(arrows(container)).toBe(nodes.length - 1);
+  });
+
+  it("draws both directions between nodes of a doubly list", () => {
+    const { container } = render(
+      React.createElement(LinkedListRenderer, { nodes, variant: "doubly" }),
+    );
+    expect(arrows(container)).toBe((nodes.length - 1) * 2);
+  });
+
+  it("marks the wrap back to the head on a circular list", () => {
+    render(React.createElement(LinkedListRenderer, { nodes, variant: "circular" }));
+    expect(screen.getByText("Tail links back to head")).toBeInTheDocument();
+  });
+
+  it.each(["singly", "doubly"] as const)("draws no wrap on a %s list", (variant) => {
+    render(React.createElement(LinkedListRenderer, { nodes, variant }));
+    expect(screen.queryByText("Tail links back to head")).toBeNull();
+  });
+
+  // One node points back at itself, which the row cannot show and the bracket
+  // would only clutter.
+  it("draws no wrap for a circular list of one", () => {
+    render(
+      React.createElement(LinkedListRenderer, {
+        nodes: [{ id: 1, value: 10 }],
+        variant: "circular",
+      }),
+    );
+    expect(screen.queryByText("Tail links back to head")).toBeNull();
+  });
+
+  it.each(["singly", "doubly", "circular"] as const)("hides a long uuid on a %s list", (variant) => {
+    render(
+      React.createElement(LinkedListRenderer, {
+        nodes: [{ id: "c874f2a1", value: 1 }],
+        variant,
+      }),
+    );
+    expect(screen.queryByText(/^id:/)).toBeNull();
+  });
+
+  it.each([
+    ["singly", "Empty linked list"],
+    ["doubly", "Empty doubly linked list"],
+    ["circular", "Empty circular linked list"],
+  ] as const)("words the %s empty state for its own variant", (variant, label) => {
+    render(React.createElement(LinkedListRenderer, { nodes: [], variant }));
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+});

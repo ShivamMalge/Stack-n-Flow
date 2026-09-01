@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { resolveState, STATE_BOX } from "@/lib/visualizer-states"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowRight, Plus, Trash, Search } from "lucide-react"
+import { Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import LinkedListRenderer from "@/components/visualizers/linked-list/linked-list-renderer"
 
 const INSERT_CODE = [
   "def insert_tail(value):",
@@ -291,71 +291,7 @@ export default function CircularLinkedListVisualizer({
         </Card>
       }
       visualization={
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Visualization</CardTitle>
-            <CardDescription>Visual representation of the circular linked list</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Improved responsive circular linked list visualization */}
-            <div className="flex flex-1 justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[300px] max-h-[60vh]">
-              {nodes.length === 0 ? (
-                <div className="m-auto text-muted-foreground text-sm">Empty circular linked list</div>
-              ) : (
-                <div className="m-auto relative w-full max-w-4xl mx-auto px-4">
-                  <div className="flex flex-wrap items-center justify-center gap-y-12 gap-x-2">
-                    {nodes.map((node, index) => (
-                      <div key={node.id} className="flex items-center">
-                        <div
-                          className={`
-                            flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full border-2 shadow-sm
-                            transition-all duration-500 ease-in-out
-                            ${STATE_BOX[resolveState({ removed: node.isDeleting, comparing: node.highlighted, inserted: node.isNew })]}
-                            ${node.isNew ? "scale-110" : ""}
-                            ${node.isDeleting ? "scale-75 opacity-50" : ""}
-                          `}
-                        >
-                          <div className="text-base md:text-lg font-bold">{node.value}</div>
-                          <div className="text-xs text-muted-foreground">id: {node.id}</div>
-                        </div>
-
-                        {index < nodes.length - 1 && (
-                          <div className="flex items-center px-1">
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Improved Circular connection */}
-                  {nodes.length > 1 && (
-                    <div className="mt-8 flex flex-col items-center">
-                      <div className="flex items-center w-full justify-between max-w-md mx-auto relative px-8">
-                        <div className="absolute left-4 -top-8 bottom-0 flex flex-col items-center">
-                          <div className="h-4 w-0.5 border-l border-dashed border-primary/40"></div>
-                          <div className="w-full border-b border-dashed border-primary/40 rounded-bl-xl grow min-h-[1rem]"></div>
-                        </div>
-
-                        <div className="grow border-t border-dashed border-primary/40 mx-4 mt-4"></div>
-
-                        <div className="absolute right-4 -top-8 bottom-0 flex flex-col items-center">
-                          <div className="h-4 w-0.5 border-l border-dashed border-primary/40"></div>
-                          <div className="w-full border-b border-dashed border-primary/40 rounded-br-xl grow min-h-[1rem]"></div>
-                        </div>
-
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                          <span className="text-xs font-bold text-primary/60 uppercase tracking-widest mb-1">Back to head</span>
-                          <ArrowRight className="h-3 w-3 text-primary/60 transform -rotate-90 animate-bounce" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <LinkedListRenderer nodes={nodes} variant="circular" searchResult={searchResult} />
       }
       code={
         <CodePanel

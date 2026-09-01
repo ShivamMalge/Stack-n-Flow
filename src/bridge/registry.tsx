@@ -1,8 +1,4 @@
 import type React from "react";
-import HeapVisualizer from "../../components/visualizers/heap-visualizer";
-import CircularLinkedListVisualizer from "../../components/visualizers/circular-linked-list-visualizer";
-import DoublyLinkedListVisualizer from "../../components/visualizers/doubly-linked-list-visualizer";
-import CircularQueueVisualizer from "../../components/visualizers/circular-queue-visualizer";
 import BinarySearchVisualizer from "../../components/visualizers/algorithms/binary-search-visualizer";
 import QuickSortVisualizer from "../../components/visualizers/algorithms/quick-sort-visualizer";
 import StackRenderer from "../../components/visualizers/stack/stack-renderer";
@@ -12,6 +8,8 @@ import ArrayRenderer from "../../components/visualizers/array/array-renderer";
 import TreeRenderer from "../../components/visualizers/tree/tree-renderer";
 import GraphRenderer from "../../components/visualizers/graph/graph-renderer";
 import HashTableRenderer, { fromBuckets } from "../../components/visualizers/hash-table/hash-table-renderer";
+import HeapRenderer from "../../components/visualizers/heap/heap-renderer";
+import CircularQueueRenderer from "../../components/visualizers/circular-queue/circular-queue-renderer";
 
 export type BridgeVisualizerComponent = React.ComponentType<any>;
 
@@ -114,32 +112,41 @@ const componentRegistry: Record<string, RegistryEntry> = {
     rendererOnly: true,
   },
   HEAP: {
-    component: HeapVisualizer,
+    component: HeapRenderer,
     props: ({ nodes, metadata }) => ({
-      controlledHeap: nodes,
-      controlledStates: metadata.states || [],
+      heap: asArray(nodes),
+      states: Array.isArray(metadata.states) ? metadata.states : [],
     }),
-    rendererOnly: false,
+    rendererOnly: true,
   },
   CIRCULAR_LINKED_LIST: {
-    component: CircularLinkedListVisualizer,
-    props: ({ nodes }) => ({ controlledNodes: nodes, controlledArray: nodes }),
-    rendererOnly: false,
+    component: LinkedListRenderer,
+    props: ({ nodes, metadata }) => ({
+      nodes: asArray(nodes),
+      variant: "circular",
+      searchResult: metadata.searchResult,
+    }),
+    rendererOnly: true,
   },
   DOUBLY_LINKED_LIST: {
-    component: DoublyLinkedListVisualizer,
-    props: ({ nodes }) => ({ controlledNodes: nodes, controlledArray: nodes }),
-    rendererOnly: false,
+    component: LinkedListRenderer,
+    props: ({ nodes, metadata }) => ({
+      nodes: asArray(nodes),
+      variant: "doubly",
+      searchResult: metadata.searchResult,
+    }),
+    rendererOnly: true,
   },
   CIRCULAR_QUEUE: {
-    component: CircularQueueVisualizer,
+    component: CircularQueueRenderer,
     props: ({ nodes, metadata }) => ({
-      controlledQueue: nodes,
-      controlledFront: metadata.front,
-      controlledRear: metadata.rear,
-      controlledSize: metadata.size,
+      slots: asArray(nodes),
+      front: metadata.front,
+      rear: metadata.rear,
+      size: metadata.size,
+      capacity: metadata.capacity,
     }),
-    rendererOnly: false,
+    rendererOnly: true,
   },
   BINARY_SEARCH: {
     component: BinarySearchVisualizer,

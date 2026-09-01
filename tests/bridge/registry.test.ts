@@ -11,6 +11,8 @@ import ArrayRenderer from "@/components/visualizers/array/array-renderer"
 import TreeRenderer from "@/components/visualizers/tree/tree-renderer"
 import GraphRenderer from "@/components/visualizers/graph/graph-renderer"
 import HashTableRenderer from "@/components/visualizers/hash-table/hash-table-renderer"
+import HeapRenderer from "@/components/visualizers/heap/heap-renderer"
+import CircularQueueRenderer from "@/components/visualizers/circular-queue/circular-queue-renderer"
 
 /** Shorthand for the props a structure produces from a given payload. */
 const propsFor = (structure: string, nodes: unknown, metadata: Record<string, unknown> = {}) =>
@@ -36,6 +38,10 @@ describe("bridge registry", () => {
         expect(getRegistryEntry("AVL_TREE")!.component).toBe(TreeRenderer)
         expect(getRegistryEntry("GRAPH")!.component).toBe(GraphRenderer)
         expect(getRegistryEntry("HASH_TABLE")!.component).toBe(HashTableRenderer)
+        expect(getRegistryEntry("CIRCULAR_LINKED_LIST")!.component).toBe(LinkedListRenderer)
+        expect(getRegistryEntry("DOUBLY_LINKED_LIST")!.component).toBe(LinkedListRenderer)
+        expect(getRegistryEntry("HEAP")!.component).toBe(HeapRenderer)
+        expect(getRegistryEntry("CIRCULAR_QUEUE")!.component).toBe(CircularQueueRenderer)
     })
 })
 
@@ -56,9 +62,17 @@ describe("prop mappings", () => {
         expect(props.nodes).toEqual([{ id: "n1", value: 7 }])
     })
 
+    // All three lists share one renderer; the variant is what draws the second
+    // arrow and the wrap back to the head.
+    it("asks for the right list variant", () => {
+        expect(propsFor("LINKED_LIST", []).variant).toBeUndefined()
+        expect(propsFor("DOUBLY_LINKED_LIST", []).variant).toBe("doubly")
+        expect(propsFor("CIRCULAR_LINKED_LIST", []).variant).toBe("circular")
+    })
+
     // Python sends null for an empty structure. A renderer indexes straight into
     // the array, so null has to become [] before it reaches one.
-    it.each(["STACK", "QUEUE", "LINKED_LIST", "ARRAY"])("coerces null to an empty array (%s)", (structure) => {
+    it.each(["STACK", "QUEUE", "LINKED_LIST", "ARRAY", "CIRCULAR_LINKED_LIST", "DOUBLY_LINKED_LIST"])("coerces null to an empty array (%s)", (structure) => {
         const props = propsFor(structure, null)
         expect(Object.values(props).some((v) => Array.isArray(v) && v.length === 0)).toBe(true)
     })
@@ -119,15 +133,22 @@ describe("prop mappings", () => {
 
     it("maps heap values and their states", () => {
         const props = propsFor("HEAP", [5, 3], { states: ["default", "comparing"] })
-        expect(props.controlledHeap).toEqual([5, 3])
-        expect(props.controlledStates).toEqual(["default", "comparing"])
+        expect(props.heap).toEqual([5, 3])
+        expect(props.states).toEqual(["default", "comparing"])
+    })
+
+    // A heap with no states is drawn entirely in the neutral one, which is what
+    // Python sends when it is not mid-animation.
+    it("defaults heap states to an empty array", () => {
+        expect(propsFor("HEAP", [5, 3]).states).toEqual([])
     })
 
     it("carries the circular queue's front, rear and size", () => {
         const props = propsFor("CIRCULAR_QUEUE", [1, 2, 3], { front: 0, rear: 2, size: 3 })
-        expect(props.controlledFront).toBe(0)
-        expect(props.controlledRear).toBe(2)
-        expect(props.controlledSize).toBe(3)
+        expect(props.slots).toEqual([1, 2, 3])
+        expect(props.front).toBe(0)
+        expect(props.rear).toBe(2)
+        expect(props.size).toBe(3)
     })
 
     it("maps a binary search array and its result", () => {
@@ -175,11 +196,15 @@ describe("renderer extraction progress", () => {
         expect(waiting).not.toContain("AVL_TREE")
         expect(waiting).not.toContain("GRAPH")
         expect(waiting).not.toContain("HASH_TABLE")
+        expect(waiting).not.toContain("CIRCULAR_LINKED_LIST")
+        expect(waiting).not.toContain("DOUBLY_LINKED_LIST")
+        expect(waiting).not.toContain("HEAP")
+        expect(waiting).not.toContain("CIRCULAR_QUEUE")
     })
 
     it("counts down as renderers are extracted", () => {
         // Update this as P2 lands. It exists so the phase cannot quietly stall,
         // and so nothing regresses to mounting a full visualizer again.
-        expect(structuresAwaitingRenderer()).toHaveLength(6)
+        expect(structuresAwaitingRenderer()).toHaveLength(2)
     })
 })

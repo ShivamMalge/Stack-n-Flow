@@ -4,9 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash, Search, RotateCw } from "lucide-react"
+import { Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import CircularQueueRenderer from "@/components/visualizers/circular-queue/circular-queue-renderer"
 
 const ENQUEUE_CODE = [
   "def enqueue(value):",
@@ -244,80 +245,7 @@ export default function CircularQueueVisualizer({
         </Card>
       }
       visualization={
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Visualization</CardTitle>
-            <CardDescription>Visual representation of the circular queue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Improved responsive circular queue visualization */}
-            <div className="flex flex-1 justify-center overflow-auto py-12 bg-muted/5 border-t min-h-[300px] max-h-[60vh]">
-              {queue.length === 0 && size === 0 ? (
-                <div className="m-auto text-muted-foreground text-sm">Empty circular queue</div>
-              ) : (
-                <div className="m-auto relative w-full max-w-4xl mx-auto px-4">
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center gap-2 mb-6">
-                      <RotateCw className="h-5 w-5 text-primary/60" />
-                      <span className="text-xs uppercase font-bold text-muted-foreground tracking-widest">Fixed Size Array ({maxSize})</span>
-                    </div>
-
-                    <div className="flex flex-wrap justify-center gap-y-14 gap-x-2 md:gap-x-4">
-                      {Array(maxSize)
-                        .fill(0)
-                        .map((_, index) => {
-                          const item = queue[index]
-                          const isEmpty = !item || item.id === -1
-                          const isFront = index === front && size > 0
-                          const isRear = index === rear && size > 0
-
-                          return (
-                            <div key={index} className="relative group">
-                              <div
-                                className={`
-                                  flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-md border-2 shadow-sm
-                                  transition-all duration-500 ease-in-out
-                                  ${isEmpty ? "bg-muted/10 border-dashed border-muted-foreground/40" : "bg-card border-primary"}
-                                  ${item?.highlighted ? "bg-yellow-100 dark:bg-yellow-900 border-yellow-500 ring-2 ring-yellow-500/20" : ""}
-                                  ${item?.isNew ? "scale-105 border-green-500" : ""}
-                                  ${item?.isDequeuing ? "-translate-y-8 opacity-0 scale-75" : ""}
-                                `}
-                              >
-                                {!isEmpty && (
-                                  <>
-                                    <div className="text-base md:text-lg font-bold">{item.value}</div>
-                                    <div className="text-[9px] text-muted-foreground">id:{item.id}</div>
-                                  </>
-                                )}
-                              </div>
-
-                              {isFront && (
-                                <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-                                  <span className="text-[9px] font-bold text-blue-500 uppercase">Front</span>
-                                  <div className="w-1 h-3 bg-blue-500/40 rounded-full mt-0.5"></div>
-                                </div>
-                              )}
-
-                              {isRear && (
-                                <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-                                  <div className="w-1 h-3 bg-red-500/40 rounded-full mb-0.5"></div>
-                                  <span className="text-[9px] font-bold text-red-500 uppercase">Rear</span>
-                                </div>
-                              )}
-
-                              <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2">
-                                <div className="text-xs font-mono text-muted-foreground opacity-50">[{index}]</div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <CircularQueueRenderer slots={queue} front={front} rear={rear} size={size} capacity={maxSize} />
       }
       code={
         <CodePanel
