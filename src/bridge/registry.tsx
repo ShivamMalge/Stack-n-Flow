@@ -1,7 +1,4 @@
 import type React from "react";
-import ArrayVisualizer from "../../components/visualizers/array-visualizer";
-import TreeVisualizer from "../../components/visualizers/tree-visualizer";
-import AVLTreeVisualizer from "../../components/visualizers/avl-tree-visualizer";
 import GraphVisualizer from "../../components/visualizers/graph-visualizer";
 import HashTableVisualizer from "../../components/visualizers/hash-table-visualizer";
 import HeapVisualizer from "../../components/visualizers/heap-visualizer";
@@ -13,6 +10,8 @@ import QuickSortVisualizer from "../../components/visualizers/algorithms/quick-s
 import StackRenderer from "../../components/visualizers/stack/stack-renderer";
 import QueueRenderer from "../../components/visualizers/queue/queue-renderer";
 import LinkedListRenderer from "../../components/visualizers/linked-list/linked-list-renderer";
+import ArrayRenderer from "../../components/visualizers/array/array-renderer";
+import TreeRenderer from "../../components/visualizers/tree/tree-renderer";
 
 export type BridgeVisualizerComponent = React.ComponentType<any>;
 
@@ -48,6 +47,13 @@ export interface RegistryEntry {
 
 const asArray = (nodes: unknown) => (Array.isArray(nodes) ? nodes : []);
 
+/**
+ * A tree's null is not an array's null: it means "no root", and the empty
+ * array a renderer wants would draw a root that is not there.
+ */
+const asRoot = (nodes: unknown) =>
+  nodes && typeof nodes === "object" && !Array.isArray(nodes) ? (nodes as Record<string, unknown>) : null;
+
 const componentRegistry: Record<string, RegistryEntry> = {
   STACK: {
     component: StackRenderer,
@@ -65,19 +71,23 @@ const componentRegistry: Record<string, RegistryEntry> = {
     rendererOnly: true,
   },
   ARRAY: {
-    component: ArrayVisualizer,
-    props: ({ nodes }) => ({ controlledNodes: nodes, controlledArray: nodes }),
-    rendererOnly: false,
+    component: ArrayRenderer,
+    props: ({ nodes, metadata }) => ({ items: asArray(nodes), searchResult: metadata.searchResult }),
+    rendererOnly: true,
   },
   TREE: {
-    component: TreeVisualizer,
-    props: ({ nodes }) => ({ controlledRoot: nodes }),
-    rendererOnly: false,
+    component: TreeRenderer,
+    props: ({ nodes, metadata }) => ({ root: asRoot(nodes), searchResult: metadata.searchResult }),
+    rendererOnly: true,
   },
   AVL_TREE: {
-    component: AVLTreeVisualizer,
-    props: ({ nodes }) => ({ controlledRoot: nodes }),
-    rendererOnly: false,
+    component: TreeRenderer,
+    props: ({ nodes, metadata }) => ({
+      root: asRoot(nodes),
+      variant: "avl",
+      searchResult: metadata.searchResult,
+    }),
+    rendererOnly: true,
   },
   GRAPH: {
     component: GraphVisualizer,

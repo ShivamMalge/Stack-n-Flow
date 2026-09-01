@@ -1,6 +1,14 @@
 import * as React from "react";
 import { createRender, useModel } from "@anywidget/react";
-import { getRegistryEntry } from "./registry";
+import { getRegistryEntry, registeredStructures } from "./registry";
+
+/*
+  Re-exported so scripts/check-widget-bundle.mjs can enumerate what to render
+  from the shipped bundle rather than from a list it keeps in step by hand.
+  A list kept by hand is how a broken AVL tree reached Colab while a
+  stack-only check reported the bundle healthy.
+*/
+export { registeredStructures };
 
 /** Python sends `null` for an empty tree; the components expect null or an array. */
 type BridgeNodes = unknown[] | Record<string, unknown> | null;

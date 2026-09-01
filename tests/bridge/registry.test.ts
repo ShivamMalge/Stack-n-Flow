@@ -7,6 +7,8 @@ import {
 import StackRenderer from "@/components/visualizers/stack/stack-renderer"
 import QueueRenderer from "@/components/visualizers/queue/queue-renderer"
 import LinkedListRenderer from "@/components/visualizers/linked-list/linked-list-renderer"
+import ArrayRenderer from "@/components/visualizers/array/array-renderer"
+import TreeRenderer from "@/components/visualizers/tree/tree-renderer"
 
 /** Shorthand for the props a structure produces from a given payload. */
 const propsFor = (structure: string, nodes: unknown, metadata: Record<string, unknown> = {}) =>
@@ -27,6 +29,9 @@ describe("bridge registry", () => {
         expect(getRegistryEntry("STACK")!.component).toBe(StackRenderer)
         expect(getRegistryEntry("QUEUE")!.component).toBe(QueueRenderer)
         expect(getRegistryEntry("LINKED_LIST")!.component).toBe(LinkedListRenderer)
+        expect(getRegistryEntry("ARRAY")!.component).toBe(ArrayRenderer)
+        expect(getRegistryEntry("TREE")!.component).toBe(TreeRenderer)
+        expect(getRegistryEntry("AVL_TREE")!.component).toBe(TreeRenderer)
     })
 })
 
@@ -49,7 +54,7 @@ describe("prop mappings", () => {
 
     // Python sends null for an empty structure. A renderer indexes straight into
     // the array, so null has to become [] before it reaches one.
-    it.each(["STACK", "QUEUE", "LINKED_LIST"])("coerces null to an empty array (%s)", (structure) => {
+    it.each(["STACK", "QUEUE", "LINKED_LIST", "ARRAY"])("coerces null to an empty array (%s)", (structure) => {
         const props = propsFor(structure, null)
         expect(Object.values(props).some((v) => Array.isArray(v) && v.length === 0)).toBe(true)
     })
@@ -57,12 +62,26 @@ describe("prop mappings", () => {
     // A tree is the opposite: null means "no root", and [] would draw a root
     // that is not there.
     it.each(["TREE", "AVL_TREE"])("preserves null for %s, where it means no root", (structure) => {
-        expect(propsFor(structure, null).controlledRoot).toBeNull()
+        expect(propsFor(structure, null).root).toBeNull()
+    })
+
+    // An empty payload arrives as [] from some call sites, and a tree renderer
+    // handed [] would try to draw it as a root.
+    it.each(["TREE", "AVL_TREE"])("treats an empty array as no root for %s", (structure) => {
+        expect(propsFor(structure, []).root).toBeNull()
     })
 
     it("maps a tree root", () => {
         const root = { id: 1, value: 10, left: null, right: null }
-        expect(propsFor("TREE", root).controlledRoot).toEqual(root)
+        expect(propsFor("TREE", root).root).toEqual(root)
+    })
+
+    // The BST and the AVL share one renderer; the variant is what makes the AVL
+    // print balance factors and show the state legend.
+    it("asks for the avl variant only for the avl tree", () => {
+        const root = { id: 1, value: 10, left: null, right: null }
+        expect(propsFor("AVL_TREE", root).variant).toBe("avl")
+        expect(propsFor("TREE", root).variant).toBeUndefined()
     })
 
     it("splits graph nodes and edges", () => {
@@ -100,9 +119,17 @@ describe("prop mappings", () => {
         expect(props.controlledSearchResult).toBe("found")
     })
 
-    it("gives array-shaped structures both prop names they may expect", () => {
+    it("hands an array its items", () => {
+        const props = propsFor("ARRAY", [{ id: 1, value: 5 }], { searchResult: "Element found at index 0" })
+        expect(props.items).toEqual([{ id: 1, value: 5 }])
+        expect(props.searchResult).toBe("Element found at index 0")
+    })
+
+    // The structures still mounting a full visualizer disagree about what to
+    // call the same array, so those entries send both names.
+    it("gives a full visualizer both prop names it may expect", () => {
         const nodes = [{ id: 1, value: 5 }]
-        const props = propsFor("ARRAY", nodes)
+        const props = propsFor("QUICK_SORT", nodes)
         expect(props.controlledNodes).toEqual(nodes)
         expect(props.controlledArray).toEqual(nodes)
     })
@@ -126,11 +153,14 @@ describe("renderer extraction progress", () => {
         expect(waiting).not.toContain("STACK")
         expect(waiting).not.toContain("QUEUE")
         expect(waiting).not.toContain("LINKED_LIST")
+        expect(waiting).not.toContain("ARRAY")
+        expect(waiting).not.toContain("TREE")
+        expect(waiting).not.toContain("AVL_TREE")
     })
 
     it("counts down as renderers are extracted", () => {
         // Update this as P2 lands. It exists so the phase cannot quietly stall,
         // and so nothing regresses to mounting a full visualizer again.
-        expect(structuresAwaitingRenderer()).toHaveLength(11)
+        expect(structuresAwaitingRenderer()).toHaveLength(8)
     })
 })

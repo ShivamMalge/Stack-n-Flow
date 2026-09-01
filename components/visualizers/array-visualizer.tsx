@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { resolveState, STATE_BOX } from "@/lib/visualizer-states"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import ArrayRenderer from "@/components/visualizers/array/array-renderer"
 
 const INSERT_CODE = [
   "def insert(value, index):",
@@ -370,45 +370,7 @@ export default function ArrayVisualizer({
           </CardContent>
         </Card>
       }
-      visualization={
-        <Card className="h-full border-0 md:border md:shadow-sm">
-          {!mini && (
-            <CardHeader>
-              <CardTitle>Visualization</CardTitle>
-              <CardDescription>Visual representation of the array</CardDescription>
-            </CardHeader>
-          )}
-          <CardContent className={mini ? "p-0" : ""}>
-            {/* Improved responsive array visualization */}
-            <div className="flex flex-1 justify-center overflow-auto py-10 bg-muted/5 border-t min-h-[300px] max-h-[60vh]">
-              {array.length === 0 ? (
-                <div className="m-auto text-muted-foreground text-sm">Empty array</div>
-              ) : (
-                <div className="m-auto flex flex-wrap items-center justify-center gap-y-12 gap-x-2 px-4 max-w-full">
-                  {array.map((item, index) => (
-                    <div key={item.id} className="flex flex-col items-center group">
-                      <div
-                        className={`
-                          flex items-center justify-center w-14 h-14 md:w-16 md:h-16 border-2 shadow-sm
-                          transition-all duration-500 ease-in-out
-                          ${STATE_BOX[resolveState({ comparing: item.highlighted, inserted: item.isNew })]}
-                          ${item.isNew ? "scale-105" : ""}
-                          ${item.isDeleting ? "scale-75 opacity-0 -translate-y-8" : ""}
-                        `}
-                      >
-                        <div className="text-base md:text-lg font-bold">{item.value}</div>
-                      </div>
-                      <div className="mt-2 text-xs font-mono text-muted-foreground group-hover:text-primary transition-colors">
-                        [{index}]
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      }
+      visualization={<ArrayRenderer items={array} mini={mini} />}
       code={
         <CodePanel
           code={activeCode}

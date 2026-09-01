@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -146,6 +146,31 @@ export default function GraphVisualizer({
   const [internalEdges, setEdges] = useState<Edge[]>([])
   const nodes = controlledNodes !== undefined ? controlledNodes : internalNodes;
   const edges = controlledEdges !== undefined ? controlledEdges : internalEdges;
+
+  /*
+    Every node is drawn from a finite pair of coordinates, even when it did not
+    arrive with one.
+
+    Pratyaksha's `Graph.add_node(label, x, y)` types both coordinates as `Any`,
+    so a notebook can hand us None, a string, or nothing at all. That reached the
+    svg as transform="translate(undefined, undefined)", which the browser rejects
+    outright: the node and its edges vanished, with an error only visible in a
+    console no notebook user opens. Falling back to a ring placement keeps the
+    graph readable and leaves the node draggable.
+  */
+  const drawn = useMemo(() => {
+    const usable = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value)
+    const radius = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) / 2 - NODE_RADIUS * 2
+    return nodes.map((node, index) => {
+      if (usable(node.x) && usable(node.y)) return node
+      const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2
+      return {
+        ...node,
+        x: usable(node.x) ? node.x : CANVAS_WIDTH / 2 + radius * Math.cos(angle),
+        y: usable(node.y) ? node.y : CANVAS_HEIGHT / 2 + radius * Math.sin(angle),
+      }
+    })
+  }, [nodes])
   const [sourceNode, setSourceNode] = useState("")
   const [targetNode, setTargetNode] = useState("")
   const [nodeLabel, setNodeLabel] = useState("")
@@ -497,8 +522,8 @@ export default function GraphVisualizer({
             <div className="flex min-h-[300px] py-4 bg-muted/5 border-t overflow-auto">
               <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} className="m-auto shrink-0 max-w-none md:max-w-full">
                 {edges.map((edge) => {
-                  const src = nodes.find((n) => n.id === edge.source)
-                  const tgt = nodes.find((n) => n.id === edge.target)
+                  const src = drawn.find((n) => n.id === edge.source)
+                  const tgt = drawn.find((n) => n.id === edge.target)
                   if (!src || !tgt) return null
                   return (
                     <line key={edge.id}
@@ -510,7 +535,7 @@ export default function GraphVisualizer({
                     />
                   )
                 })}
-                {nodes.map((node) => (
+                {drawn.map((node) => (
                   <g key={node.id}
                     transform={`translate(${node.x}, ${node.y})`}
                     onMouseDown={(e) => handleNodeDrag(e, node.id)}

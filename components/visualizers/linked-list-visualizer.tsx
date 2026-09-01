@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { resolveState, STATE_BOX } from "@/lib/visualizer-states"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowRight, Plus, Trash, Search } from "lucide-react"
+import { Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
 import LinkedListRenderer from "@/components/visualizers/linked-list/linked-list-renderer"

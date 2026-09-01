@@ -2,21 +2,19 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Search, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from "lucide-react"
-import { useMobile } from "@/hooks/use-mobile"
+import { Plus, Search } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
-import { resolveState, STATE_SHAPE } from "@/lib/visualizer-states"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
-import { computeTreeLayout } from "@/lib/tree-layout"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import TreeRenderer from "@/components/visualizers/tree/tree-renderer"
 
 const SEARCH_CODE = [
   "def search(node, value):",
@@ -76,14 +74,10 @@ export default function AVLTreeVisualizer({
   const [traversalType, setTraversalType] = useState("inorder")
   const [searchResult, setSearchResult] = useState<string | null>(null)
   const [inputError, setInputError] = useState<string | null>(null)
-  const [scale, setScale] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
   const [rotationInfo, setRotationInfo] = useState<string | null>(null)
   const [steps, setSteps] = useState<string[]>([])
   const [activeCode, setActiveCode] = useState<string[]>([])
   const [activeLine, setActiveLine] = useState<number | null>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
-  const isMobile = useMobile()
 
   const onFrameChange = useCallback((snap: AVLFrame) => {
     setRoot(snap.root)
@@ -352,223 +346,6 @@ export default function AVLTreeVisualizer({
     setTimeout(() => player.play(), 50)
   }
 
-  // ── Tree Layout (crossing-free in-order assignment) ──────────────────────
-  const NODE_R = isMobile ? 14 : 18
-  const treeLayout = useMemo(() => computeTreeLayout(root as never, 65, 90), [root])
-  const [nodePositions, setNodePositions] = useState<Record<number, { x: number; y: number }>>({})
-
-  const svgPadding = 30
-  const layoutPositions = Array.from(treeLayout.values())
-  const minX = layoutPositions.length ? Math.min(...layoutPositions.map((p) => p.x)) : 0
-  const maxX = layoutPositions.length ? Math.max(...layoutPositions.map((p) => p.x)) : 0
-  const maxY = layoutPositions.length ? Math.max(...layoutPositions.map((p) => p.y)) : 0
-  const svgW = Math.max(300, maxX - minX + svgPadding * 2)
-  const svgH = Math.max(200, maxY + svgPadding * 2)
-
-  const renderTree = (node: TreeNode | null): React.ReactNode => {
-    if (!node) return null
-    const pos = treeLayout.get(node.id)
-    if (!pos) return null
-    const defaultX = pos.x - minX + svgPadding
-    const defaultY = pos.y + svgPadding
-    const drawX = nodePositions[node.id]?.x ?? defaultX
-    const drawY = nodePositions[node.id]?.y ?? defaultY
-    const balanceFactor = node.balanceFactor !== undefined ? node.balanceFactor : getBalanceFactor(node)
-
-    const getChildCoords = (child: TreeNode) => {
-      if (nodePositions[child.id]) return nodePositions[child.id]
-      const cp = treeLayout.get(child.id)
-      return cp ? { x: cp.x - minX + svgPadding, y: cp.y + svgPadding } : { x: drawX, y: drawY }
-    }
-
-    return (
-      <g key={node.id}>
-        {node.left && (() => { const c = getChildCoords(node.left!); return <line x1={drawX} y1={drawY + NODE_R} x2={c.x} y2={c.y - NODE_R} stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5" /> })()}
-        {node.right && (() => { const c = getChildCoords(node.right!); return <line x1={drawX} y1={drawY + NODE_R} x2={c.x} y2={c.y - NODE_R} stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5" /> })()}
-        <circle cx={drawX} cy={drawY} r={NODE_R}
-          className={`transition-all duration-300 ease-in-out cursor-grab active:cursor-grabbing stroke-[1.5]
-            ${STATE_SHAPE[resolveState({
-              removed: node.isDeleting,
-              swapping: node.isRotating,
-              comparing: node.highlighted,
-              inserted: node.isNew,
-              warning: Math.abs(balanceFactor) > 1,
-            })]}`}
-          onMouseDown={(e) => handleNodeDrag(e, node.id, drawX, drawY)}
-          onTouchStart={(e) => handleNodeTouchStart(e, node.id, drawX, drawY)}
-        />
-        <text x={drawX} y={drawY - 3} textAnchor="middle" dominantBaseline="middle"
-          className="text-xs font-medium fill-current pointer-events-none select-none">{node.value}</text>
-        <text x={drawX} y={drawY + 7} textAnchor="middle" dominantBaseline="middle"
-          className={`text-[9px] fill-current pointer-events-none ${Math.abs(balanceFactor) > 1 ? "font-bold" : ""}`}>{balanceFactor}</text>
-        {renderTree(node.left)}
-        {renderTree(node.right)}
-      </g>
-    )
-  }
-
-  // Replace the handleNodeDrag function with this more robust version
-  const handleNodeDrag = (
-    event: React.MouseEvent | React.TouchEvent,
-    nodeId: number,
-    initialX: number,
-    initialY: number,
-  ) => {
-    if (animating) return
-
-    // Prevent default behaviors
-    event.preventDefault()
-
-    // Get starting position
-    let startX: number, startY: number
-
-    if ("touches" in event) {
-      startX = event.touches[0].clientX
-      startY = event.touches[0].clientY
-    } else {
-      startX = event.clientX
-      startY = event.clientY
-    }
-
-    // Initialize position if not already set
-    if (!nodePositions[nodeId]) {
-      setNodePositions((prev) => ({
-        ...prev,
-        [nodeId]: { x: initialX, y: initialY },
-      }))
-    }
-
-    const currentX = nodePositions[nodeId]?.x || initialX
-    const currentY = nodePositions[nodeId]?.y || initialY
-
-    // Mouse move handler
-    const handleMouseMove = (e: MouseEvent) => {
-      const dx = (e.clientX - startX) / scale
-      const dy = (e.clientY - startY) / scale
-
-      setNodePositions((prev) => ({
-        ...prev,
-        [nodeId]: {
-          x: currentX + dx,
-          y: currentY + dy,
-        },
-      }))
-    }
-
-    // Touch move handler
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        const dx = (e.touches[0].clientX - startX) / scale
-        const dy = (e.touches[0].clientY - startY) / scale
-
-        setNodePositions((prev) => ({
-          ...prev,
-          [nodeId]: {
-            x: currentX + dx,
-            y: currentY + dy,
-          },
-        }))
-      }
-    }
-
-    // End handlers
-    const handleMouseUp = () => {
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
-    }
-
-    const handleTouchEnd = () => {
-      document.removeEventListener("touchmove", handleTouchMove)
-      document.removeEventListener("touchend", handleTouchEnd)
-    }
-
-    // Add event listeners
-    if ("touches" in event) {
-      document.addEventListener("touchmove", handleTouchMove, { passive: false })
-      document.addEventListener("touchend", handleTouchEnd)
-    } else {
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
-    }
-  }
-
-  const handleNodeTouchStart = (event: React.TouchEvent, nodeId: number, initialX: number, initialY: number) => {
-    if (animating) return
-
-    // Prevent default behaviors
-    event.preventDefault()
-
-    // Get starting position
-    const startX = event.touches[0].clientX
-    const startY = event.touches[0].clientY
-
-    // Initialize position if not already set
-    if (!nodePositions[nodeId]) {
-      setNodePositions((prev) => ({
-        ...prev,
-        [nodeId]: { x: initialX, y: initialY },
-      }))
-    }
-
-    const currentX = nodePositions[nodeId]?.x || initialX
-    const currentY = nodePositions[nodeId]?.y || initialY
-
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault() // Prevent scrolling
-
-      const dx = (e.touches[0].clientX - startX) / scale
-      const dy = (e.touches[0].clientY - startY) / scale
-
-      setNodePositions((prev) => ({
-        ...prev,
-        [nodeId]: {
-          x: currentX + dx,
-          y: currentY + dy,
-        },
-      }))
-    }
-
-    const handleTouchEnd = () => {
-      document.removeEventListener("touchmove", handleTouchMove)
-      document.removeEventListener("touchend", handleTouchEnd)
-    }
-
-    document.addEventListener("touchmove", handleTouchMove, { passive: false })
-    document.addEventListener("touchend", handleTouchEnd)
-  }
-
-  const handleZoomIn = () => {
-    setScale((prevScale) => prevScale * 1.1)
-  }
-
-  const handleZoomOut = () => {
-    setScale((prevScale) => prevScale / 1.1)
-  }
-
-  const handlePanLeft = () => {
-    setPan((prevPan) => ({ ...prevPan, x: prevPan.x - 20 }))
-  }
-
-  const handlePanRight = () => {
-    setPan((prevPan) => ({ ...prevPan, x: prevPan.x + 20 }))
-  }
-
-  // pan.y was already interpolated into the transform but nothing ever set it,
-  // so vertical clipping had no control at all.
-  const handlePanUp = () => {
-    setPan((prevPan) => ({ ...prevPan, y: prevPan.y - 20 }))
-  }
-
-  const handlePanDown = () => {
-    setPan((prevPan) => ({ ...prevPan, y: prevPan.y + 20 }))
-  }
-
-  const handleReset = () => {
-    setScale(1)
-    setPan({ x: 0, y: 0 })
-  }
-
-  // Replace the Visualization Panel section with this improved version
   return (
     <VisualizerLayout
       controls={
@@ -688,95 +465,12 @@ export default function AVLTreeVisualizer({
         </Card>
       }
       visualization={
-        <Card className="flex flex-col h-full">
-          <CardHeader>
-            <CardTitle>Visualization</CardTitle>
-            <CardDescription>
-              Visual representation of the AVL tree (numbers inside nodes show balance factors)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col flex-1 min-h-0 p-0 overflow-hidden">
-            {searchResult && <div className="px-6 mb-4 text-sm text-muted-foreground">{searchResult}</div>}
-
-            <div className="flex flex-wrap gap-2 mb-2 px-6">
-              <Button size="sm" variant="outline" onClick={handleZoomIn}>
-                <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleZoomOut}>
-                <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
-              </Button>
-              <Button size="sm" variant="outline" onClick={handlePanLeft}>
-                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Left
-              </Button>
-              <Button size="sm" variant="outline" onClick={handlePanRight}>
-                <MoveHorizontal className="h-4 w-4 mr-1" /> Pan Right
-              </Button>
-              <Button size="sm" variant="outline" onClick={handlePanUp}>
-                <MoveVertical className="h-4 w-4 mr-1" /> Pan Up
-              </Button>
-              <Button size="sm" variant="outline" onClick={handlePanDown}>
-                <MoveVertical className="h-4 w-4 mr-1" /> Pan Down
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleReset}>
-                Reset View
-              </Button>
-            </div>
-
-            {/*
-              The plate is the scroller itself: the old `absolute inset-0` child
-              made the outer `overflow-auto` a dead scroller, and centring a
-              scrolling box with `items-center` spilled the overflow both ways,
-              so the leading half (the root node first) could never be reached
-              because scrollLeft/scrollTop cannot go negative. `m-auto` on the
-              svg centres it while it fits and scrolls from the true origin once
-              it does not.
-            */}
-            <div className="flex flex-1 min-h-[300px] max-h-[60vh] w-full overflow-auto border-t p-4" style={{ overscrollBehavior: "contain" }}>
-              {root ? (
-                <svg
-                  ref={svgRef}
-                  width={svgW}
-                  height={svgH}
-                  viewBox={`0 0 ${svgW} ${svgH}`}
-                  style={{
-                    transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
-                    transformOrigin: "center",
-                    transition: "transform 0.2s ease",
-                    touchAction: "none",
-                  }}
-                  className="m-auto max-w-none"
-                >
-                  <g>{renderTree(root)}</g>
-                </svg>
-              ) : (
-                <div className="m-auto text-muted-foreground text-sm">Empty tree</div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap justify-center mt-4 gap-3 text-xs md:text-xs px-6 border-t pt-4">
-              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
-                <div className="w-2.5 h-2.5 bg-card border border-primary rounded-full mr-1.5"></div>
-                <span>Balanced</span>
-              </div>
-              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
-                <div className="w-2.5 h-2.5 bg-orange-200 border border-orange-500 rounded-full mr-1.5"></div>
-                <span>Unbalanced</span>
-              </div>
-              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
-                <div className="w-2.5 h-2.5 bg-blue-200 border border-blue-500 rounded-full mr-1.5"></div>
-                <span>Rotating</span>
-              </div>
-              <div className="flex items-center bg-background px-2 py-0.5 rounded border">
-                <div className="w-2.5 h-2.5 bg-green-200 border border-green-500 rounded-full mr-1.5"></div>
-                <span>New</span>
-              </div>
-            </div>
-
-            <div className="px-6 py-3 text-xs md:text-xs text-center text-muted-foreground bg-muted/5 mt-2">
-              Drag nodes to reposition. Balance factors shown inside nodes.
-            </div>
-          </CardContent>
-        </Card>
+        <TreeRenderer
+          root={root}
+          variant="avl"
+          searchResult={searchResult}
+          interactionsDisabled={animating}
+        />
       }
       code={
         <CodePanel
