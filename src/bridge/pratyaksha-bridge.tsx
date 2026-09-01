@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createRender, useModel } from "@anywidget/react";
-import { getVisualizerComponent, isRendererOnlyComponent } from "./registry";
+import { getRegistryEntry } from "./registry";
 
 /** Python sends `null` for an empty tree; the components expect null or an array. */
 type BridgeNodes = unknown[] | Record<string, unknown> | null;
@@ -68,65 +68,21 @@ export const VisualizerRouter: React.FC = () => {
     "pratyaksha-container w-full min-h-[160px]",
     isDark ? "dark" : "",
   ].filter(Boolean).join(" ");
-  const Component = getVisualizerComponent(structure);
+  const entry = getRegistryEntry(structure);
 
-  if (!Component) {
+  if (!entry) {
     return <div className="p-4 text-red-500">Unsupported structure: {structure}</div>;
   }
 
-  // Renderer-only components take `items`, not `controlled*`. Falling through to
-  // the generic branch below would hand them the wrong prop and crash on
-  // `items.length`, so an unmapped renderer reports the mismatch instead.
-  if (isRendererOnlyComponent(Component)) {
-    if (structure === "STACK" || structure === "QUEUE") {
-      return (
-        <div className={containerClass}>
-          <Component items={(nodes ?? []) as any} searchResult={metadata.searchResult} />
-        </div>
-      );
-    }
+  // Each registry entry owns the mapping from synced state to its own props, so
+  // the bridge no longer carries a branch per structure.
+  const { component: Component, props } = entry;
 
-    return (
-      <div className="p-4 text-red-500">
-        Renderer for {structure} is not wired to a prop mapping.
-      </div>
-    );
-  }
-
-  if (structure === "TREE" || structure === "AVL_TREE") {
-    return <div className={containerClass}><Component controlledRoot={nodes as any} /></div>;
-  }
-
-  if (structure === "GRAPH") {
-    return <div className={containerClass}><Component controlledNodes={nodes as any} controlledEdges={metadata.edges || []} /></div>;
-  }
-
-  if (structure === "HASH_TABLE") {
-    return <div className={containerClass}><Component controlledBuckets={nodes as any} /></div>;
-  }
-
-  if (structure === "HEAP") {
-    return <div className={containerClass}><Component controlledHeap={nodes as any} controlledStates={metadata.states || []} /></div>;
-  }
-
-  if (structure === "CIRCULAR_QUEUE") {
-    return (
-      <div className={containerClass}>
-        <Component
-          controlledQueue={nodes as any}
-          controlledFront={metadata.front}
-          controlledRear={metadata.rear}
-          controlledSize={metadata.size}
-        />
-      </div>
-    );
-  }
-
-  if (structure === "BINARY_SEARCH") {
-    return <div className={containerClass}><Component controlledArray={nodes as any} controlledSearchResult={metadata.searchResult} /></div>;
-  }
-
-  return <div className={containerClass}><Component controlledNodes={nodes as any} controlledArray={nodes as any} /></div>;
+  return (
+    <div className={containerClass}>
+      <Component {...props({ nodes, metadata })} />
+    </div>
+  );
 };
 
 const widget = {

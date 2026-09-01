@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowRight, Plus, Trash, Search } from "lucide-react"
 import CodePanel from "@/components/ui/code-panel"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import LinkedListRenderer from "@/components/visualizers/linked-list/linked-list-renderer"
 
 const INSERT_FRONT_CODE = [
   "def insert_front(value):",
@@ -389,56 +390,7 @@ export default function LinkedListVisualizer({
         </Card>
       }
       visualization={
-        <Card className="h-full border-0 md:border md:shadow-sm">
-          {!mini && (
-            <CardHeader>
-              <CardTitle>Visualization</CardTitle>
-              <CardDescription>Visual representation of the linked list</CardDescription>
-            </CardHeader>
-          )}
-          <CardContent className={mini ? "p-0" : ""}>
-            <div className="flex flex-1 justify-center overflow-auto py-8 bg-muted/5 border-t min-h-[250px] max-h-[60vh]">
-              {nodes.length === 0 ? (
-                <div className="m-auto text-muted-foreground text-sm">Empty linked list</div>
-              ) : (
-                <div className="m-auto flex flex-wrap items-center justify-center gap-y-8 gap-x-2 px-4 max-w-full">
-                  {nodes.map((node, index) => (
-                    <div key={node.id} className="flex items-center">
-                      <div
-                        className={`
-                          flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full border-2 
-                          transition-all duration-500 ease-in-out shadow-sm
-                          ${STATE_BOX[resolveState({ removed: node.isDeleting, comparing: node.highlighted, inserted: node.isNew })]}
-                          ${node.isNew ? "scale-110" : ""}
-                          ${node.isDeleting ? "scale-75 opacity-50" : ""}
-                        `}
-                      >
-                        <div className="text-base md:text-lg font-bold">{node.value}</div>
-                        <div className="text-xs text-muted-foreground font-mono">id: {node.id}</div>
-                      </div>
-
-                      {index < nodes.length - 1 && (
-                        <div className="flex items-center px-1">
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {!mini && searchResult && (
-              <div
-                className={`mt-4 p-2 rounded text-center ${searchResult === "Element found"
-                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                  }`}
-              >
-                {searchResult}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <LinkedListRenderer nodes={nodes} mini={mini} searchResult={searchResult} />
       }
       code={
         <CodePanel
