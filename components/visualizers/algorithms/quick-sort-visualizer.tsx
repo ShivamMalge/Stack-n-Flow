@@ -8,11 +8,11 @@ import { Plus, Shuffle } from "lucide-react"
 import AnimationControls from "@/components/ui/animation-controls"
 import CodePanel from "@/components/ui/code-panel"
 import VisualizerLayout from "@/components/visualizers/visualizer-layout"
+import QuickSortRenderer from "@/components/visualizers/algorithms/quick-sort/quick-sort-renderer"
 import { QUICK_SORT } from "@/lib/templates/algorithms"
 import { useAnimationPlayer, type AnimationFrame } from "@/hooks/useAnimationPlayer"
 import { MAX_INPUT_MESSAGE, parseBoundedInt } from "@/lib/constants"
 import InlineAlert from "@/components/ui/inline-alert"
-import { STATE_BAR, STATE_LABEL, swatchFor } from "@/lib/visualizer-states"
 
 type ArrayItem = {
   id: number
@@ -29,12 +29,6 @@ type QuickSortFrame = {
   /** Step in the code panel; see QUICK_SORT in lib/templates/algorithms.ts. */
   activeStep: number
 }
-
-// Tallest bar allowed, in pixels. The plate is 240px tall on mobile with 32px of
-// top padding, and each column also carries a ~24px index label under the bar,
-// which leaves ~184px for the bar itself. The old cap of 260px clipped any value
-// >= 94 against the top edge of the card.
-const MAX_BAR_HEIGHT = 180
 
 export default function QuickSortVisualizer({
   controlledArray,
@@ -379,63 +373,7 @@ export default function QuickSortVisualizer({
         </div>
       }
       visualization={
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Visualization</CardTitle>
-            <CardDescription>Visual representation of Quick Sort</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-center h-[240px] md:h-[300px] pt-8 px-2 overflow-x-hidden">
-              {array.length === 0 ? (
-                <div className="text-muted-foreground">Add elements to create an array</div>
-              ) : (
-                array.map((item, index) => {
-                  const height = Math.min(item.value * 2 + 20, MAX_BAR_HEIGHT)
-
-                  // Local flags mapped onto the shared vocabulary: highlighted →
-                  // comparing (it was blue here, amber everywhere else), isSwapping →
-                  // swapping, isPivot → pivot, and isSorted → visited, since a bar in
-                  // its final position is one the algorithm is finished with. One
-                  // class is emitted instead of a stack, so the winner is intent
-                  // rather than whichever colour Tailwind happened to emit last.
-                  return (
-                    <div key={`array-item-${item.id}-${index}`} className="flex flex-col items-center flex-1 max-w-[40px] mx-0.5">
-                      <div
-                        style={{ height: `${height}px` }}
-                        className={`
-                          w-full max-h-full rounded-t-sm md:rounded-t-md transition-all duration-300 ease-in-out flex items-end justify-center pb-1
-                          ${STATE_BAR[item.isSwapping ? "swapping" : item.isPivot ? "pivot" : item.highlighted ? "comparing" : item.isSorted ? "visited" : "default"]}
-                        `}
-                      >
-                        <span className="text-xs font-medium text-white">{item.value}</span>
-                      </div>
-                      <div className="mt-2 text-xs">{index}</div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-
-            {/* Current step description */}
-            {player.currentDescription && (
-              <div className="mt-3 text-center text-sm font-medium text-primary">
-                {player.currentDescription}
-              </div>
-            )}
-
-            {/* Swatches and wording come from the shared maps, so the legend cannot
-                drift from the bars it describes. "Sorted" is the domain word for
-                `visited` here. */}
-            <div className="flex flex-wrap justify-center mt-4 gap-x-4 gap-y-2">
-              {([["pivot", STATE_LABEL.pivot], ["comparing", STATE_LABEL.comparing], ["swapping", STATE_LABEL.swapping], ["visited", "Sorted"]] as const).map(([state, label]) => (
-                <div key={label} className="flex items-center">
-                  <div className={`w-4 h-4 rounded-sm mr-2 ${swatchFor(state, "bar")}`}></div>
-                  <span className="text-xs">{label}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <QuickSortRenderer array={array} description={player.currentDescription} />
       }
       code={
         <CodePanel template={QUICK_SORT} activeStep={player.currentSnapshot?.activeStep ?? null} />

@@ -13,6 +13,8 @@ import GraphRenderer from "@/components/visualizers/graph/graph-renderer"
 import HashTableRenderer from "@/components/visualizers/hash-table/hash-table-renderer"
 import HeapRenderer from "@/components/visualizers/heap/heap-renderer"
 import CircularQueueRenderer from "@/components/visualizers/circular-queue/circular-queue-renderer"
+import BinarySearchRenderer from "@/components/visualizers/algorithms/binary-search/binary-search-renderer"
+import QuickSortRenderer from "@/components/visualizers/algorithms/quick-sort/quick-sort-renderer"
 
 /** Shorthand for the props a structure produces from a given payload. */
 const propsFor = (structure: string, nodes: unknown, metadata: Record<string, unknown> = {}) =>
@@ -42,6 +44,8 @@ describe("bridge registry", () => {
         expect(getRegistryEntry("DOUBLY_LINKED_LIST")!.component).toBe(LinkedListRenderer)
         expect(getRegistryEntry("HEAP")!.component).toBe(HeapRenderer)
         expect(getRegistryEntry("CIRCULAR_QUEUE")!.component).toBe(CircularQueueRenderer)
+        expect(getRegistryEntry("BINARY_SEARCH")!.component).toBe(BinarySearchRenderer)
+        expect(getRegistryEntry("QUICK_SORT")!.component).toBe(QuickSortRenderer)
     })
 })
 
@@ -72,7 +76,19 @@ describe("prop mappings", () => {
 
     // Python sends null for an empty structure. A renderer indexes straight into
     // the array, so null has to become [] before it reaches one.
-    it.each(["STACK", "QUEUE", "LINKED_LIST", "ARRAY", "CIRCULAR_LINKED_LIST", "DOUBLY_LINKED_LIST"])("coerces null to an empty array (%s)", (structure) => {
+    it.each([
+        "STACK",
+        "QUEUE",
+        "LINKED_LIST",
+        "ARRAY",
+        "CIRCULAR_LINKED_LIST",
+        "DOUBLY_LINKED_LIST",
+        "BINARY_SEARCH",
+        "QUICK_SORT",
+        "HEAP",
+        "CIRCULAR_QUEUE",
+        "GRAPH",
+    ])("coerces null to an empty array (%s)", (structure) => {
         const props = propsFor(structure, null)
         expect(Object.values(props).some((v) => Array.isArray(v) && v.length === 0)).toBe(true)
     })
@@ -153,23 +169,18 @@ describe("prop mappings", () => {
 
     it("maps a binary search array and its result", () => {
         const props = propsFor("BINARY_SEARCH", [{ value: 1 }], { searchResult: "found" })
-        expect(props.controlledArray).toEqual([{ value: 1 }])
-        expect(props.controlledSearchResult).toBe("found")
+        expect(props.array).toEqual([{ value: 1 }])
+        expect(props.searchResult).toBe("found")
+    })
+
+    it("maps a quick sort array", () => {
+        expect(propsFor("QUICK_SORT", [{ value: 5 }]).array).toEqual([{ value: 5 }])
     })
 
     it("hands an array its items", () => {
         const props = propsFor("ARRAY", [{ id: 1, value: 5 }], { searchResult: "Element found at index 0" })
         expect(props.items).toEqual([{ id: 1, value: 5 }])
         expect(props.searchResult).toBe("Element found at index 0")
-    })
-
-    // The structures still mounting a full visualizer disagree about what to
-    // call the same array, so those entries send both names.
-    it("gives a full visualizer both prop names it may expect", () => {
-        const nodes = [{ id: 1, value: 5 }]
-        const props = propsFor("QUICK_SORT", nodes)
-        expect(props.controlledNodes).toEqual(nodes)
-        expect(props.controlledArray).toEqual(nodes)
     })
 
     it("never returns undefined props for any structure", () => {
@@ -181,30 +192,24 @@ describe("prop mappings", () => {
 })
 
 /**
- * P2 in pratyaksha_phases.md: every structure should mount a presentational
- * renderer rather than the full interactive visualizer, because in a notebook
- * the controls do nothing — Python drives the state.
+ * P2 in pratyaksha_phases.md: every structure mounts a presentational renderer
+ * rather than the full interactive visualizer, because in a notebook the
+ * controls do nothing — Python drives the state.
+ *
+ * This is done. The assertions stay so it cannot come undone: a structure added
+ * later that mounts a whole visualizer fails here rather than in someone's
+ * notebook, which is how the AVL tree reached Colab with controls that did
+ * nothing.
  */
-describe("renderer extraction progress", () => {
-    it("reports which structures still mount a full visualizer", () => {
-        const waiting = structuresAwaitingRenderer()
-        expect(waiting).not.toContain("STACK")
-        expect(waiting).not.toContain("QUEUE")
-        expect(waiting).not.toContain("LINKED_LIST")
-        expect(waiting).not.toContain("ARRAY")
-        expect(waiting).not.toContain("TREE")
-        expect(waiting).not.toContain("AVL_TREE")
-        expect(waiting).not.toContain("GRAPH")
-        expect(waiting).not.toContain("HASH_TABLE")
-        expect(waiting).not.toContain("CIRCULAR_LINKED_LIST")
-        expect(waiting).not.toContain("DOUBLY_LINKED_LIST")
-        expect(waiting).not.toContain("HEAP")
-        expect(waiting).not.toContain("CIRCULAR_QUEUE")
+describe("renderer extraction", () => {
+    it("leaves no structure mounting a full visualizer", () => {
+        expect(structuresAwaitingRenderer()).toEqual([])
     })
 
-    it("counts down as renderers are extracted", () => {
-        // Update this as P2 lands. It exists so the phase cannot quietly stall,
-        // and so nothing regresses to mounting a full visualizer again.
-        expect(structuresAwaitingRenderer()).toHaveLength(2)
+    it("covers every structure the bridge can be asked for", () => {
+        expect(registeredStructures()).toHaveLength(14)
+        for (const structure of registeredStructures()) {
+            expect(getRegistryEntry(structure)!.rendererOnly, structure).toBe(true)
+        }
     })
 })

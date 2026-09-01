@@ -49,22 +49,55 @@ tagged on the strength of the kernel test alone.
 
 ---
 
-## P2 — Renderer Extraction for the Remaining 12 Structures (≈ 1.5–2 weeks)
+## P2 — Renderer Extraction for the Remaining 12 Structures — DONE
 
-Today only Stack and Queue have true presentational renderers; the other 12 registry entries mount the full
-interactive Next.js components — notebook users see input boxes, tabs, and buttons that silently do nothing.
+All 14 registry entries mount a presentational renderer. Previously only Stack
+and Queue did, and the other twelve mounted the full interactive Next.js
+component, so notebook users saw input boxes, tabs and buttons that silently did
+nothing — Python owns the state, so none of them could work.
 
-- [ ] For each structure, split `<X>Visualizer` into `<X>Controller` (app-side state + inputs) and `<X>Renderer>`
-      (pure props → SVG/DOM), following the existing `components/visualizers/stack/` pattern.
-      Suggested order (teaching value ÷ effort): LinkedList → Array → BinaryTree → Graph → HashTable → Heap →
-      CircularQueue → AVL → Doubly/Circular LL → BST → B-Tree.
-- [ ] Update `src/bridge/registry.tsx` to consume renderers only; delete the `isRendererOnlyComponent` special case
-      once everything is renderer-only.
-- [ ] One vitest render-test per renderer (empty state + populated state), mirroring `stack-renderer.test.tsx`.
-- [ ] This phase also pays down web-app debt: the four ~600–900-line tree monoliths shrink, and the app's
-      controllers and the notebook share one rendering source of truth.
+- [x] Every `<X>Visualizer` split into a controller (app-side state and inputs)
+      and an `<X>Renderer` (props → SVG/DOM), following `components/visualizers/stack/`.
+- [x] `src/bridge/registry.tsx` consumes renderers only. `isRendererOnlyComponent`
+      is gone; each entry now owns its own mapping from synced state to its props,
+      replacing the chain of `if (structure === ...)` in the bridge.
+- [x] A vitest render test per renderer, mirroring `stack-renderer.test.tsx`.
+- [x] Web-app debt paid down along the way: the BST and AVL tree became one
+      `TreeRenderer` with a variant, and the three linked lists became one
+      `LinkedListRenderer` with a variant, so the app and the notebook draw from
+      one source rather than several that drift.
 
-**Exit criterion:** no notebook widget shows an interactive control that doesn't work.
+**Exit criterion — met:** no notebook widget shows an interactive control that
+doesn't work. What survived into the renderers is view state only: zoom, pan and
+node drag change how you are looking at a structure, not what it is, so they
+keep working when Python owns the data. Clicking a graph node to pick a BFS
+start does not, so the bridge passes no handler and the renderer drops the
+affordance with it.
+
+**Held by tests, not by memory:** `structuresAwaitingRenderer()` must be empty
+and every entry's `rendererOnly` must be true, asserted in
+`tests/bridge/registry.test.ts`. A structure added later that mounts a whole
+visualizer fails there rather than in someone's notebook.
+
+**Held by an instrument:** `npm run check:widget` renders all 14 structures from
+the shipped bundle and fails on any console error, naming the structure that
+caused it. It used to render Stack alone — which is exactly how the AVL tree
+reached Colab broken while the check reported the bundle healthy.
+
+Still copies of each other, and not in the bridge registry, so out of scope
+here: `binary-tree-visualizer.tsx`, `binary-search-tree-visualizer.tsx` and
+`b-tree-visualizer.tsx` each carry their own layout, drag and zoom code. The
+first two are plain binary trees and should move onto `TreeRenderer`.
+
+Palette drift found and left deliberately, because repainting shared tokens is a
+design decision rather than a refactor:
+- `STATE_SHAPE` gives `swapping` and `warning` the same orange, so the AVL
+  tree's "Rotating" and "Unbalanced" are one colour. The legend now draws from
+  the same table the nodes do, so it shows that honestly instead of claiming a
+  blue dot for rotation.
+- The heap carries three palettes that disagree: CSS variables for the svg,
+  Tailwind classes for the array cells, and `lib/visualizer-states` everywhere
+  else.
 
 ---
 

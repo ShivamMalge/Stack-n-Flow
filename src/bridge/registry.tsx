@@ -1,6 +1,4 @@
 import type React from "react";
-import BinarySearchVisualizer from "../../components/visualizers/algorithms/binary-search-visualizer";
-import QuickSortVisualizer from "../../components/visualizers/algorithms/quick-sort-visualizer";
 import StackRenderer from "../../components/visualizers/stack/stack-renderer";
 import QueueRenderer from "../../components/visualizers/queue/queue-renderer";
 import LinkedListRenderer from "../../components/visualizers/linked-list/linked-list-renderer";
@@ -10,6 +8,8 @@ import GraphRenderer from "../../components/visualizers/graph/graph-renderer";
 import HashTableRenderer, { fromBuckets } from "../../components/visualizers/hash-table/hash-table-renderer";
 import HeapRenderer from "../../components/visualizers/heap/heap-renderer";
 import CircularQueueRenderer from "../../components/visualizers/circular-queue/circular-queue-renderer";
+import BinarySearchRenderer from "../../components/visualizers/algorithms/binary-search/binary-search-renderer";
+import QuickSortRenderer from "../../components/visualizers/algorithms/quick-sort/quick-sort-renderer";
 
 export type BridgeVisualizerComponent = React.ComponentType<any>;
 
@@ -36,9 +36,12 @@ export interface RegistryEntry {
    * full interactive visualizer.
    *
    * Notebook users of a full visualizer see inputs, tabs and buttons that do
-   * nothing, because Python drives the state. Extracting the remaining ones is
-   * pratyaksha_phases.md P2; this flag is what measures the progress, and it
-   * goes away when every entry is true.
+   * nothing, because Python drives the state. Extracting them all was
+   * pratyaksha_phases.md P2, and this flag is what measured the progress.
+   *
+   * Every entry is true now. It is kept, with the test that asserts it, so a
+   * structure added later cannot quietly go back to mounting a whole visualizer
+   * — which is how the AVL tree reached Colab with controls that did nothing.
    */
   rendererOnly: boolean;
 }
@@ -149,17 +152,21 @@ const componentRegistry: Record<string, RegistryEntry> = {
     rendererOnly: true,
   },
   BINARY_SEARCH: {
-    component: BinarySearchVisualizer,
+    component: BinarySearchRenderer,
     props: ({ nodes, metadata }) => ({
-      controlledArray: nodes,
-      controlledSearchResult: metadata.searchResult,
+      array: asArray(nodes),
+      searchResult: metadata.searchResult,
+      description: metadata.description ?? null,
     }),
-    rendererOnly: false,
+    rendererOnly: true,
   },
   QUICK_SORT: {
-    component: QuickSortVisualizer,
-    props: ({ nodes }) => ({ controlledNodes: nodes, controlledArray: nodes }),
-    rendererOnly: false,
+    component: QuickSortRenderer,
+    props: ({ nodes, metadata }) => ({
+      array: asArray(nodes),
+      description: metadata.description ?? null,
+    }),
+    rendererOnly: true,
   },
 };
 
