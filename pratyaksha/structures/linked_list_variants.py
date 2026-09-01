@@ -7,22 +7,22 @@ from .base import BaseTelemetryStructure
 
 
 class CircularLinkedList(BaseLinkedList):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.CIRCULAR_LINKED_LIST,
             reducer=_reduce_linked_list,
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None),
         )
-        BaseTelemetryStructure.__init__(self, run)
+        BaseTelemetryStructure.__init__(self, run, theme=theme)
 
 
 class DoublyLinkedList(BaseLinkedList):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.DOUBLY_LINKED_LIST,
             reducer=_reduce_linked_list,
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None),
         )
-        BaseTelemetryStructure.__init__(self, run)
+        BaseTelemetryStructure.__init__(self, run, theme=theme)

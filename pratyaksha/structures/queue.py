@@ -34,14 +34,14 @@ def _reduce_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
 
 
 class Queue(BaseTelemetryStructure):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.QUEUE,
             reducer=_reduce_queue,
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
 
     def enqueue(self, value: Any):
         self._emit("enqueue", {"id": self._gen_id(), "value": value})

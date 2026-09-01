@@ -54,7 +54,13 @@ export default function QueueRenderer({
                     `}
                   >
                     <div className="text-base md:text-lg font-bold">{item.value}</div>
-                    <div className="text-xs text-muted-foreground font-mono truncate max-w-full px-1">id: {item.id}</div>
+                    {/* The web app numbers nodes 1, 2, 3; Python sends 8-character
+                        UUIDs, which truncate to "id: c874..." in a 56px tile and
+                        tell the reader nothing. Show the id only when it is short
+                        enough to be a label rather than noise. */}
+                    {String(item.id).length <= 4 && (
+                      <div className="text-xs text-muted-foreground font-mono truncate max-w-full px-1">id: {item.id}</div>
+                    )}
                   </div>
 
                   {index < items.length - 1 && (

@@ -33,14 +33,14 @@ def _reduce_array(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
 
 
 class ArrayList(BaseTelemetryStructure):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.ARRAY,
             reducer=_reduce_array,
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
 
     def append(self, value: Any):
         self._emit("append", {"id": self._gen_id(), "value": value})

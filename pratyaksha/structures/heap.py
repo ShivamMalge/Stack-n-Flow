@@ -22,7 +22,7 @@ def _reduce_heap(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemetr
 
 
 class Heap(BaseTelemetryStructure):
-    def __init__(self, heap_type: str = "min"):
+    def __init__(self, heap_type: str = "min", theme: str = "auto"):
         self.heap_type = heap_type
         run = TelemetryRun(
             structure=StructureType.HEAP,
@@ -30,7 +30,7 @@ class Heap(BaseTelemetryStructure):
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None, states=[]),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
         self.states = []
 
     def insert(self, value: Any):

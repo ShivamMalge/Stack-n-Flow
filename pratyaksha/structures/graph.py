@@ -38,14 +38,14 @@ def _reduce_graph(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
 
 
 class Graph(BaseTelemetryStructure):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.GRAPH,
             reducer=_reduce_graph,
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None, edges=[]),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
         self.edges = []
 
     def add_node(self, label: str, x: Any, y: Any):

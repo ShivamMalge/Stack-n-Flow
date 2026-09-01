@@ -34,14 +34,14 @@ def _reduce_stack(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemet
 
 
 class Stack(BaseTelemetryStructure):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.STACK,
             reducer=_reduce_stack,
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
 
     def push(self, value: Any):
         self._emit("push", {"id": self._gen_id(), "value": value})

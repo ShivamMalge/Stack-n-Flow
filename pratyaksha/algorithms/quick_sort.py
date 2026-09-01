@@ -8,7 +8,7 @@ from .base import BaseTelemetryAlgorithm
 
 
 class QuickSort(BaseTelemetryAlgorithm):
-    def __init__(self, array: Iterable[Any] | None = None):
+    def __init__(self, array: Iterable[Any] | None = None, theme: str = "auto"):
         nodes = [{"id": index, "value": value} for index, value in enumerate(array)] if array else []
         run = TelemetryRun(
             structure=StructureType.QUICK_SORT,
@@ -16,4 +16,4 @@ class QuickSort(BaseTelemetryAlgorithm):
             initial_nodes=nodes,
             initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)

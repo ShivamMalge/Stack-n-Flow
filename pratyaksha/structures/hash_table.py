@@ -55,7 +55,7 @@ def _reduce_hash_table(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Te
 
 
 class HashTable(BaseTelemetryStructure):
-    def __init__(self, size: int = DEFAULT_TABLE_SIZE):
+    def __init__(self, size: int = DEFAULT_TABLE_SIZE, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.HASH_TABLE,
             reducer=_reduce_hash_table,
@@ -63,7 +63,7 @@ class HashTable(BaseTelemetryStructure):
             initial_metadata={"size": size, **telemetry_metadata(0, None)},
         )
         self.size = size
-        super().__init__(run)
+        super().__init__(run, theme=theme)
 
     def insert(self, key: Any, value: Any):
         key = _normalize_key(key)

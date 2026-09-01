@@ -126,3 +126,82 @@ class TestHashTableKeys:
 
         entries = [entry for bucket in table.nodes for entry in bucket]
         assert len(entries) == 1
+
+
+class TestTheme:
+    """The widget carries the app's theme tokens, which default to light.
+
+    In a dark notebook that rendered as a white slab, which is what a reader
+    actually notices first.
+    """
+
+    def test_defaults_to_auto(self):
+        from pratyaksha import Stack
+
+        assert Stack().widget.theme == "auto"
+
+    def test_constructor_accepts_a_theme(self):
+        from pratyaksha import Queue
+
+        assert Queue(theme="dark").widget.theme == "dark"
+
+    def test_set_theme_switches_it(self):
+        from pratyaksha import Stack
+
+        stack = Stack()
+        stack.set_theme("light")
+        assert stack.widget.theme == "light"
+
+    def test_set_theme_rejects_anything_else(self):
+        import pytest
+
+        from pratyaksha import Stack
+
+        with pytest.raises(ValueError, match="auto"):
+            Stack().set_theme("purple")
+
+    def test_theme_is_synced_to_the_front_end(self):
+        from pratyaksha import Stack
+
+        assert "theme" in Stack().widget.trait_names()
+        assert Stack().widget.trait_metadata("theme", "sync") is True
+
+
+class TestThemeAcrossEveryStructure:
+    """A theme that works on Stack and silently ignores AVLTree is worse than none.
+
+    AVLTree called ``BaseTelemetryStructure.__init__`` directly rather than
+    through ``super()``, so it accepted ``theme=`` and dropped it. Nothing but a
+    sweep over the public API would have caught that.
+    """
+
+    @staticmethod
+    def _public_classes():
+        import inspect
+
+        import pratyaksha
+
+        for name in pratyaksha.__all__:
+            obj = getattr(pratyaksha, name)
+            if inspect.isclass(obj) and name not in ("VisualizerWidget", "StructureType"):
+                yield name, obj
+
+    def test_every_class_accepts_a_theme(self):
+        import inspect
+
+        for name, cls in self._public_classes():
+            params = inspect.signature(cls.__init__).parameters
+            assert "theme" in params, f"{name} has no theme parameter"
+
+    def test_every_class_actually_applies_it(self):
+        import inspect
+
+        for name, cls in self._public_classes():
+            params = inspect.signature(cls.__init__).parameters
+            # Supply anything else the constructor needs positionally.
+            required = [
+                p for n, p in params.items()
+                if n not in ("self", "theme") and p.default is inspect.Parameter.empty
+            ]
+            args = [[1, 2]] * len(required)
+            assert cls(*args, theme="dark").widget.theme == "dark", f"{name} dropped the theme"

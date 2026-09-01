@@ -19,16 +19,23 @@ class BaseTelemetryObject:
     other.
     """
 
-    def __init__(self, run: TelemetryRun):
+    def __init__(self, run: TelemetryRun, theme: str = "auto"):
         # The structure name is derived from the run rather than passed
         # separately, so a snapshot cannot be labelled one structure while the
         # widget renders another.
         self.widget = VisualizerWidget()
         self.widget.structure = str(run.structure)
+        self.widget.theme = theme
         self._run = run
         self.nodes: Any = []
         self.metadata: Dict[str, Any] = {}
         self._sync_latest()
+
+    def set_theme(self, theme: str) -> None:
+        """Switch between "auto", "light" and "dark" after construction."""
+        if theme not in ("auto", "light", "dark"):
+            raise ValueError('theme must be "auto", "light" or "dark"')
+        self.widget.theme = theme
 
     def _gen_id(self) -> str:
         return str(uuid.uuid4())[:NODE_ID_LENGTH]

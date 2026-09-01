@@ -16,24 +16,58 @@ export const VisualizerRouter: React.FC = () => {
   // starting empty arrived as [] and then flipped to null on first update.
   const [nodes, setNodes] = React.useState<BridgeNodes>(() => model.get("nodes") ?? null);
   const [metadata, setMetadata] = React.useState<Record<string, any>>(model.get("metadata") || {});
+  const [theme, setTheme] = React.useState<string>(model.get("theme") || "auto");
+
+  /*
+    The widget carries the web app's theme tokens, whose defaults are the light
+    palette, so a dark notebook got a white slab. Tailwind here uses the class
+    strategy, so putting `dark` on the container is enough for both the tokens
+    and every `dark:` variant inside it.
+
+    "auto" follows the browser's colour scheme. That is the best guess
+    available: the widget renders inside a sandboxed output frame and cannot see
+    the notebook's own theme setting, so a user whose OS is light and whose
+    Colab is dark has to say so with theme="dark".
+  */
+  const [prefersDark, setPrefersDark] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    setPrefersDark(query.matches);
+    const onChange = (event: MediaQueryListEvent) => setPrefersDark(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
 
   React.useEffect(() => {
     const handleStructureChange = () => setStructure(model.get("structure") || DEFAULT_STRUCTURE);
     const handleNodesChange = () => setNodes(model.get("nodes") ?? null);
     const handleMetadataChange = () => setMetadata(model.get("metadata") || {});
 
+    const handleThemeChange = () => setTheme(model.get("theme") || "auto");
+
+    model.on("change:theme", handleThemeChange);
     model.on("change:structure", handleStructureChange);
     model.on("change:nodes", handleNodesChange);
     model.on("change:metadata", handleMetadataChange);
 
     return () => {
+      model.off("change:theme", handleThemeChange);
       model.off("change:structure", handleStructureChange);
       model.off("change:nodes", handleNodesChange);
       model.off("change:metadata", handleMetadataChange);
     };
   }, [model]);
 
-  const containerClass = "pratyaksha-container w-full h-full min-h-[400px]";
+  const isDark = theme === "dark" || (theme === "auto" && prefersDark);
+  // No h-full and a much smaller floor: h-full stretched the card to the
+  // container, and a 400px floor left a stack of two sitting in a mostly empty
+  // white rectangle. The renderers carry their own minimums.
+  const containerClass = [
+    "pratyaksha-container w-full min-h-[160px]",
+    isDark ? "dark" : "",
+  ].filter(Boolean).join(" ");
   const Component = getVisualizerComponent(structure);
 
   if (!Component) {

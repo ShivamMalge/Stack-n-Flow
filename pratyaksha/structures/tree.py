@@ -27,28 +27,28 @@ def _reduce_tree(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> Telemetr
 
 
 class BinaryTree(BaseTelemetryStructure):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.TREE,
             reducer=_reduce_tree,
             initial_nodes=None,
             initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
 
     def set_root(self, value: Any):
         self._emit("set_root", {"id": self._gen_id(), "value": value})
 
 
 class AVLTree(BinaryTree):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.AVL_TREE,
             reducer=_reduce_tree,
             initial_nodes=None,
             initial_metadata=telemetry_metadata(0, None),
         )
-        BaseTelemetryStructure.__init__(self, run)
+        BaseTelemetryStructure.__init__(self, run, theme=theme)
 
     def set_root(self, value: Any):
         self._emit("set_root", {"id": self._gen_id(), "value": value})

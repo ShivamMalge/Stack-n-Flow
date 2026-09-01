@@ -40,7 +40,7 @@ def _reduce_circular_queue(snapshot: TelemetrySnapshot, event: TelemetryEvent) -
 
 
 class CircularQueue(BaseTelemetryStructure):
-    def __init__(self, max_size: int = DEFAULT_CAPACITY):
+    def __init__(self, max_size: int = DEFAULT_CAPACITY, theme: str = "auto"):
         self.max_size = max_size
         initial_nodes: List[Dict[str, Any]] = [{"id": "empty", "value": 0} for _ in range(max_size)]
         initial_metadata = {
@@ -53,7 +53,7 @@ class CircularQueue(BaseTelemetryStructure):
             initial_nodes=initial_nodes,
             initial_metadata=initial_metadata,
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
         self.front = self.metadata["front"]
         self.rear = self.metadata["rear"]
         self.size = self.metadata["size"]

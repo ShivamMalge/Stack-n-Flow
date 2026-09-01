@@ -22,7 +22,7 @@ def _reduce_binary_search(snapshot: TelemetrySnapshot, event: TelemetryEvent) ->
 
 
 class BinarySearch(BaseTelemetryAlgorithm):
-    def __init__(self, array: Iterable[Any] | None = None):
+    def __init__(self, array: Iterable[Any] | None = None, theme: str = "auto"):
         nodes = [{"value": v} for v in sorted(array)] if array else []
         run = TelemetryRun(
             structure=StructureType.BINARY_SEARCH,
@@ -30,7 +30,7 @@ class BinarySearch(BaseTelemetryAlgorithm):
             initial_nodes=nodes,
             initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
 
     def set_result(self, message: str):
         self._emit("set_result", {"message": message})

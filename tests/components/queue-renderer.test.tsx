@@ -44,3 +44,18 @@ describe("QueueVisualizer compatibility", () => {
     expect(screen.getByText("30")).toBeInTheDocument();
   });
 });
+
+describe("QueueRenderer node ids", () => {
+  it("shows a short id, as the web app uses", () => {
+    render(React.createElement(QueueRenderer, { items: [{ id: 7, value: "A" }] }));
+    expect(screen.getByText("id: 7")).toBeInTheDocument();
+  });
+
+  // Python generates 8-character UUIDs. In a 56px tile those truncate to
+  // "id: c874..." and carry no information at all.
+  it("hides a long uuid rather than truncating it to noise", () => {
+    render(React.createElement(QueueRenderer, { items: [{ id: "c874f2a1", value: "A" }] }));
+    expect(screen.queryByText(/^id:/)).toBeNull();
+    expect(screen.getByText("A")).toBeInTheDocument();
+  });
+});

@@ -32,14 +32,14 @@ def _reduce_linked_list(snapshot: TelemetrySnapshot, event: TelemetryEvent) -> T
 
 
 class LinkedList(BaseTelemetryStructure):
-    def __init__(self):
+    def __init__(self, theme: str = "auto"):
         run = TelemetryRun(
             structure=StructureType.LINKED_LIST,
             reducer=_reduce_linked_list,
             initial_nodes=[],
             initial_metadata=telemetry_metadata(0, None),
         )
-        super().__init__(run)
+        super().__init__(run, theme=theme)
 
     def insert_front(self, value: Any):
         self._emit("insert_front", {"id": self._gen_id(), "value": value})

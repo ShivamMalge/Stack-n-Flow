@@ -34,3 +34,10 @@ class VisualizerWidget(anywidget.AnyWidget):
     structure: str = traitlets.Unicode("STACK").tag(sync=True)
     nodes = traitlets.Any([]).tag(sync=True)
     metadata: dict = traitlets.Dict({}).tag(sync=True)
+
+    #: "auto", "light" or "dark". The widget carries the web app's own theme
+    #: tokens, which default to the light palette, so in a dark notebook it
+    #: rendered as a white slab. "auto" follows the browser's colour scheme;
+    #: set it explicitly when that guesses wrong, which it will if the notebook
+    #: theme and the OS theme disagree.
+    theme: str = traitlets.Unicode("auto").tag(sync=True)
